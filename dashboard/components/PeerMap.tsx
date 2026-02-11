@@ -2,7 +2,25 @@
 
 import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Globe, ArrowDownLeft, ArrowUpRight, Users, ChevronUp, ChevronDown } from 'lucide-react';
+import { 
+  Globe, 
+  ArrowDownLeft, 
+  ArrowUpRight, 
+  Users, 
+  ChevronUp, 
+  ChevronDown,
+  Plus,
+  Minus,
+  Ban,
+  Shield,
+  Network,
+  Signal,
+  Clock,
+  AlertTriangle,
+  Star,
+  Settings,
+  MapPin
+} from 'lucide-react';
 import type { PeersData, PeerInfo } from '@/lib/types';
 
 // Dynamically import PeerMapChart to avoid SSR issues with echarts
@@ -19,13 +37,60 @@ interface PeerMapProps {
   peers: PeersData;
 }
 
-type SortField = 'country' | 'direction' | 'client';
+type SortField = 'country' | 'direction' | 'client' | 'latency' | 'score' | 'version';
 type SortDirection = 'asc' | 'desc';
+
+// Extended peer info with scoring data
+interface ExtendedPeerInfo extends PeerInfo {
+  latency: number;
+  uptime: number;
+  score: number;
+  protocolVersion: string;
+  bandwidth: number;
+  trustLevel: 'untrusted' | 'basic' | 'trusted' | 'whitelisted';
+  lastSeen: string;
+}
+
+// Mock extended peer data for scoring
+const generateExtendedPeerData = (peers: PeerInfo[]): ExtendedPeerInfo[] => {
+  return peers.map((peer, index) => ({
+    ...peer,
+    latency: Math.floor(Math.random() * 150) + 10, // 10-160ms
+    uptime: Math.floor(Math.random() * 30) + 70, // 70-100%
+    score: Math.floor(Math.random() * 40) + 60, // 60-100
+    protocolVersion: ['eth/100', 'eth/63', 'eth/62'][Math.floor(Math.random() * 3)],
+    bandwidth: Math.floor(Math.random() * 5000) + 500, // 0.5-5.5 MB/s
+    trustLevel: ['untrusted', 'basic', 'trusted', 'whitelisted'][Math.floor(Math.random() * 4)] as any,
+    lastSeen: new Date(Date.now() - Math.floor(Math.random() * 3600000)).toISOString(),
+  }));
+};
+
+// Mock banned peers
+const mockBannedPeers: BannedPeer[] = [
+  { id: 'banned-1', ip: '203.0.113.45', reason: 'Protocol violation', bannedAt: '2026-02-10T10:30:00Z', expiresAt: '2026-02-17T10:30:00Z' },
+  { id: 'banned-2', ip: '198.51.100.22', reason: 'Invalid block propagation', bannedAt: '2026-02-09T15:20:00Z', expiresAt: null },
+  { id: 'banned-3', ip: '192.0.2.156', reason: 'Repeated failed handshakes', bannedAt: '2026-02-08T08:45:00Z', expiresAt: '2026-02-15T08:45:00Z' },
+];
+
+interface BannedPeer {
+  id: string;
+  ip: string;
+  reason: string;
+  bannedAt: string;
+  expiresAt: string | null;
+}
 
 export default function PeerMap({ peers }: PeerMapProps) {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-  const [sortField, setSortField] = useState<SortField>('country');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortField, setSortField] = useState<SortField>('score');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [showAddPeerModal, setShowAddPeerModal] = useState(false);
+  const [showBannedPeers, setShowBannedPeers] = useState(false);
+  const [newPeerEnode, setNewPeerEnode] = useState('');
+  const [activeTab, setActiveTab] = useState<'peers' | 'scoring' | 'banned'>('peers');
+
+  // Generate extended peer data
+  const extendedPeers = useMemo(() => generateExtendedPeerData(peers.peers || []), [peers.peers]);
 
   // Top countries for sidebar
   const sortedCountries = useMemo(() => {
@@ -34,9 +99,28 @@ export default function PeerMap({ peers }: PeerMapProps) {
       .slice(0, 10);
   }, [peers.countries]);
 
+  // Calculate geographic diversity score
+  const geoDiversityScore = useMemo(() => {
+    const countries = Object.keys(peers.countries || {}).length;
+    const continents = new Set(extendedPeers.map(p => getContinent(p.countryCode))).size;
+    // Score based on countries (max 50) + continents (max 50)
+    const countryScore = Math.min(50, countries * 2);
+    const continentScore = continents * 8; // 6 continents max = 48
+    return Math.min(100, countryScore + continentScore);
+  }, [peers.countries, extendedPeers]);
+
+  // Protocol version distribution
+  const protocolDistribution = useMemo(() => {
+    const dist: Record<string, number> = {};
+    extendedPeers.forEach(p => {
+      dist[p.protocolVersion] = (dist[p.protocolVersion] || 0) + 1;
+    });
+    return dist;
+  }, [extendedPeers]);
+
   // Sort peers for table
   const sortedPeers = useMemo(() => {
-    let list = [...(peers.peers || [])];
+    let list = [...extendedPeers];
     
     // Filter by selected country if any
     if (selectedCountry) {
@@ -56,16 +140,31 @@ export default function PeerMap({ peers }: PeerMapProps) {
         case 'client':
           comparison = a.name.localeCompare(b.name);
           break;
+        case 'latency':
+          comparison = a.latency - b.latency;
+          break;
+        case 'score':
+          comparison = a.score - b.score;
+          break;
+        case 'version':
+          comparison = a.protocolVersion.localeCompare(b.protocolVersion);
+          break;
       }
       return sortDirection === 'asc' ? comparison : -comparison;
     });
     
     return list;
-  }, [peers.peers, sortField, sortDirection, selectedCountry]);
+  }, [extendedPeers, sortField, sortDirection, selectedCountry]);
 
   // Stats
-  const inboundCount = peers.peers?.filter(p => p.inbound).length || 0;
-  const outboundCount = peers.peers?.filter(p => !p.inbound).length || 0;
+  const inboundCount = extendedPeers.filter(p => p.inbound).length;
+  const outboundCount = extendedPeers.filter(p => !p.inbound).length;
+  const avgLatency = extendedPeers.length > 0 
+    ? Math.round(extendedPeers.reduce((sum, p) => sum + p.latency, 0) / extendedPeers.length)
+    : 0;
+  const avgScore = extendedPeers.length > 0
+    ? Math.round(extendedPeers.reduce((sum, p) => sum + p.score, 0) / extendedPeers.length)
+    : 0;
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -76,9 +175,47 @@ export default function PeerMap({ peers }: PeerMapProps) {
     }
   };
 
+  const handleAddPeer = () => {
+    // TODO: Connect to API
+    console.log('Adding peer:', newPeerEnode);
+    setShowAddPeerModal(false);
+    setNewPeerEnode('');
+  };
+
+  const handleRemovePeer = (peerId: string) => {
+    // TODO: Connect to API
+    console.log('Removing peer:', peerId);
+  };
+
+  const handleBanPeer = (peerId: string) => {
+    // TODO: Connect to API
+    console.log('Banning peer:', peerId);
+  };
+
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return null;
     return sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return '#10B981';
+    if (score >= 70) return '#F59E0B';
+    return '#EF4444';
+  };
+
+  const getLatencyColor = (latency: number) => {
+    if (latency <= 50) return '#10B981';
+    if (latency <= 100) return '#F59E0B';
+    return '#EF4444';
+  };
+
+  const getTrustIcon = (level: string) => {
+    switch (level) {
+      case 'whitelisted': return <Star className="w-4 h-4 text-[#1E90FF]" />;
+      case 'trusted': return <Shield className="w-4 h-4 text-[#10B981]" />;
+      case 'basic': return <Signal className="w-4 h-4 text-[#F59E0B]" />;
+      default: return <AlertTriangle className="w-4 h-4 text-[#6B7280]" />;
+    }
   };
 
   return (
@@ -115,6 +252,150 @@ export default function PeerMap({ peers }: PeerMapProps) {
           </div>
         </div>
       </div>
+
+      {/* Scoring Overview Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="p-4 rounded-xl bg-[#111827] border border-[rgba(255,255,255,0.06)]">
+          <div className="flex items-center gap-2 mb-2">
+            <Signal className="w-4 h-4 text-[#1E90FF]" />
+            <span className="text-xs text-[#6B7280]">Avg Latency</span>
+          </div>
+          <div className="text-xl font-bold font-mono-nums" style={{ color: getLatencyColor(avgLatency) }}>
+            {avgLatency}ms
+          </div>
+        </div>
+        
+        <div className="p-4 rounded-xl bg-[#111827] border border-[rgba(255,255,255,0.06)]">
+          <div className="flex items-center gap-2 mb-2">
+            <Star className="w-4 h-4 text-[#F59E0B]" />
+            <span className="text-xs text-[#6B7280]">Avg Score</span>
+          </div>
+          <div className="text-xl font-bold font-mono-nums" style={{ color: getScoreColor(avgScore) }}>
+            {avgScore}/100
+          </div>
+        </div>
+        
+        <div className="p-4 rounded-xl bg-[#111827] border border-[rgba(255,255,255,0.06)]">
+          <div className="flex items-center gap-2 mb-2">
+            <MapPin className="w-4 h-4 text-[#10B981]" />
+            <span className="text-xs text-[#6B7280]">Geo Diversity</span>
+          </div>
+          <div className="text-xl font-bold font-mono-nums text-[#10B981]">
+            {geoDiversityScore}%
+          </div>
+        </div>
+        
+        <div className="p-4 rounded-xl bg-[#111827] border border-[rgba(255,255,255,0.06)]">
+          <div className="flex items-center gap-2 mb-2">
+            <Network className="w-4 h-4 text-[#1E90FF]" />
+            <span className="text-xs text-[#6B7280]">Protocol</span>
+          </div>
+          <div className="text-sm text-[#F9FAFB]">
+            {Object.entries(protocolDistribution).map(([ver, count]) => (
+              <span key={ver} className={`block ${ver === 'eth/100' ? 'text-[#10B981]' : ver === 'eth/63' ? 'text-[#F59E0B]' : 'text-[#EF4444]'}`}>
+                {ver}: {count}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <button 
+          onClick={() => setShowAddPeerModal(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(30,144,255,0.15)] text-[#1E90FF] hover:bg-[rgba(30,144,255,0.25)] transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Add Static Peer
+        </button>
+        <button 
+          onClick={() => setShowBannedPeers(!showBannedPeers)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showBannedPeers ? 'bg-[rgba(239,68,68,0.25)] text-[#EF4444]' : 'bg-[rgba(239,68,68,0.15)] text-[#EF4444] hover:bg-[rgba(239,68,68,0.25)]'}`}
+        >
+          <Ban className="w-4 h-4" />
+          Banned Peers ({mockBannedPeers.length})
+        </button>
+        <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(16,185,129,0.15)] text-[#10B981] hover:bg-[rgba(16,185,129,0.25)] transition-colors">
+          <Settings className="w-4 h-4" />
+          Optimize Peers
+        </button>
+      </div>
+
+      {/* Add Peer Modal */}
+      {showAddPeerModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#111827] rounded-2xl p-6 max-w-lg w-full border border-[rgba(255,255,255,0.1)]">
+            <h3 className="text-lg font-semibold text-[#F9FAFB] mb-4">Add Static Peer</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-[#6B7280] mb-2">Enode URL</label>
+                <input
+                  type="text"
+                  value={newPeerEnode}
+                  onChange={(e) => setNewPeerEnode(e.target.value)}
+                  placeholder="enode://pubkey@ip:port"
+                  className="w-full px-4 py-2 rounded-lg bg-[#0A0E1A] border border-[rgba(255,255,255,0.1)] text-[#F9FAFB] text-sm focus:outline-none focus:border-[#1E90FF]"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={handleAddPeer}
+                  className="flex-1 py-2 rounded-lg bg-[#1E90FF] text-white font-medium hover:bg-[#1a7fd9] transition-colors"
+                >
+                  Add Peer
+                </button>
+                <button 
+                  onClick={() => setShowAddPeerModal(false)}
+                  className="flex-1 py-2 rounded-lg bg-[rgba(255,255,255,0.1)] text-[#F9FAFB] hover:bg-[rgba(255,255,255,0.15)] transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banned Peers Section */}
+      {showBannedPeers && (
+        <div className="mb-6 p-4 rounded-xl bg-[#111827] border border-[rgba(239,68,68,0.3)]">
+          <h3 className="text-sm font-semibold text-[#EF4444] mb-3 flex items-center gap-2">
+            <Ban className="w-4 h-4" />
+            Banned Peers ({mockBannedPeers.length})
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[rgba(255,255,255,0.06)]">
+                  <th className="text-left py-2 px-3 text-xs font-medium text-[#6B7280]">IP Address</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-[#6B7280]">Reason</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-[#6B7280]">Banned At</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-[#6B7280]">Expires</th>
+                  <th className="text-right py-2 px-3 text-xs font-medium text-[#6B7280]">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[rgba(255,255,255,0.03)]">
+                {mockBannedPeers.map((peer) => (
+                  <tr key={peer.id} className="hover:bg-[rgba(255,255,255,0.02)]">
+                    <td className="py-2 px-3 text-sm font-mono-nums text-[#F9FAFB]">{peer.ip}</td>
+                    <td className="py-2 px-3 text-sm text-[#9CA3AF]">{peer.reason}</td>
+                    <td className="py-2 px-3 text-sm text-[#6B7280]">{new Date(peer.bannedAt).toLocaleDateString()}</td>
+                    <td className="py-2 px-3 text-sm text-[#6B7280]">
+                      {peer.expiresAt ? new Date(peer.expiresAt).toLocaleDateString() : 'Permanent'}
+                    </td>
+                    <td className="py-2 px-3 text-right">
+                      <button className="text-xs text-[#1E90FF] hover:text-[#60a5fa] transition-colors">
+                        Unban
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
         {/* Map */}
@@ -180,12 +461,34 @@ export default function PeerMap({ peers }: PeerMapProps) {
         </div>
       </div>
 
-      {/* Peer List Table */}
+      {/* Peer List Table with Scoring */}
       <div className="mt-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-          <h3 className="text-lg font-semibold text-[#F9FAFB]">Connected Peers</h3>
-          <div className="flex items-center gap-2 text-sm">
+          <h3 className="text-lg font-semibold text-[#F9FAFB]">Connected Peers with Scoring</h3>
+          <div className="flex items-center gap-2 text-sm flex-wrap">
             <span className="text-[#6B7280]">Sort by:</span>
+            <button
+              onClick={() => handleSort('score')}
+              className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-colors ${
+                sortField === 'score' 
+                  ? 'bg-[rgba(30,144,255,0.15)] text-[#1E90FF]' 
+                  : 'text-[#6B7280] hover:text-[#F9FAFB]'
+              }`}
+            >
+              Score
+              <SortIcon field="score" />
+            </button>
+            <button
+              onClick={() => handleSort('latency')}
+              className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-colors ${
+                sortField === 'latency' 
+                  ? 'bg-[rgba(30,144,255,0.15)] text-[#1E90FF]' 
+                  : 'text-[#6B7280] hover:text-[#F9FAFB]'
+              }`}
+            >
+              Latency
+              <SortIcon field="latency" />
+            </button>
             <button
               onClick={() => handleSort('country')}
               className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-colors ${
@@ -198,35 +501,37 @@ export default function PeerMap({ peers }: PeerMapProps) {
               <SortIcon field="country" />
             </button>
             <button
-              onClick={() => handleSort('direction')}
+              onClick={() => handleSort('version')}
               className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-colors ${
-                sortField === 'direction' 
+                sortField === 'version' 
                   ? 'bg-[rgba(30,144,255,0.15)] text-[#1E90FF]' 
                   : 'text-[#6B7280] hover:text-[#F9FAFB]'
               }`}
             >
-              Direction
-              <SortIcon field="direction" />
+              Version
+              <SortIcon field="version" />
             </button>
           </div>
         </div>
 
         <div className="overflow-x-auto -mx-4 sm:mx-0 rounded-xl border border-[rgba(255,255,255,0.06)]">
-          <table className="w-full min-w-[600px]">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-[#111827]">
               <tr className="border-b border-[rgba(255,255,255,0.06)]">
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">#</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Trust</th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">IP Address</th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Country</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">City</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Latency</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Score</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Version</th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Direction</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Client</th>
+                <th className="text-right py-3 px-4 text-xs font-medium text-[#6B7280]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[rgba(255,255,255,0.03)]">
               {sortedPeers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-[#6B7280]">
+                  <td colSpan={8} className="py-8 text-center text-[#6B7280]">
                     No peers connected
                   </td>
                 </tr>
@@ -236,7 +541,9 @@ export default function PeerMap({ peers }: PeerMapProps) {
                     key={peer.id} 
                     className="hover:bg-[rgba(255,255,255,0.02)] transition-colors"
                   >
-                    <td className="py-2 sm:py-3 px-4 text-xs text-[#6B7280]">{index + 1}</td>
+                    <td className="py-2 sm:py-3 px-4">
+                      {getTrustIcon(peer.trustLevel)}
+                    </td>
                     <td className="py-2 sm:py-3 px-4 text-xs sm:text-sm font-mono-nums text-[#F9FAFB]">
                       {peer.ip}:{peer.port}
                     </td>
@@ -244,7 +551,38 @@ export default function PeerMap({ peers }: PeerMapProps) {
                       <span className="mr-1 sm:mr-2 inline-flex align-middle">{getCountryFlag(peer.countryCode)}</span>
                       <span className="hidden sm:inline">{peer.country}</span>
                     </td>
-                    <td className="py-2 sm:py-3 px-4 text-xs sm:text-sm text-[#6B7280]">{peer.city}</td>
+                    <td className="py-2 sm:py-3 px-4">
+                      <span className="text-xs font-medium" style={{ color: getLatencyColor(peer.latency) }}>
+                        {peer.latency}ms
+                      </span>
+                    </td>
+                    <td className="py-2 sm:py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-1.5 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full"
+                            style={{ 
+                              width: `${peer.score}%`,
+                              backgroundColor: getScoreColor(peer.score)
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium" style={{ color: getScoreColor(peer.score) }}>
+                          {peer.score}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-2 sm:py-3 px-4">
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        peer.protocolVersion === 'eth/100' 
+                          ? 'bg-[rgba(16,185,129,0.15)] text-[#10B981]' 
+                          : peer.protocolVersion === 'eth/63'
+                          ? 'bg-[rgba(245,158,11,0.15)] text-[#F59E0B]'
+                          : 'bg-[rgba(239,68,68,0.15)] text-[#EF4444]'
+                      }`}>
+                        {peer.protocolVersion}
+                      </span>
+                    </td>
                     <td className="py-2 sm:py-3 px-4">
                       <span className={`text-xs px-2 py-1 rounded-full ${
                         peer.inbound 
@@ -255,8 +593,23 @@ export default function PeerMap({ peers }: PeerMapProps) {
                         {peer.inbound ? 'In' : 'Out'}
                       </span>
                     </td>
-                    <td className="py-2 sm:py-3 px-4 text-xs sm:text-sm text-[#6B7280] truncate max-w-[100px] sm:max-w-[200px]">
-                      {peer.name}
+                    <td className="py-2 sm:py-3 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => handleRemovePeer(peer.id)}
+                          className="p-1 rounded hover:bg-[rgba(239,68,68,0.15)] text-[#6B7280] hover:text-[#EF4444] transition-colors"
+                          title="Remove peer"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleBanPeer(peer.id)}
+                          className="p-1 rounded hover:bg-[rgba(239,68,68,0.15)] text-[#6B7280] hover:text-[#EF4444] transition-colors"
+                          title="Ban peer"
+                        >
+                          <Ban className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -287,4 +640,17 @@ function getCountryFlag(countryCode: string): React.ReactNode {
       {countryCode.toUpperCase()}
     </span>
   );
+}
+
+function getContinent(countryCode: string): string {
+  // Simplified continent mapping
+  const continentMap: Record<string, string> = {
+    'US': 'NA', 'CA': 'NA', 'MX': 'NA',
+    'GB': 'EU', 'DE': 'EU', 'FR': 'EU', 'IT': 'EU', 'ES': 'EU', 'NL': 'EU', 'BE': 'EU',
+    'CN': 'AS', 'JP': 'AS', 'KR': 'AS', 'IN': 'AS', 'SG': 'AS', 'HK': 'AS',
+    'AU': 'OC', 'NZ': 'OC',
+    'BR': 'SA', 'AR': 'SA', 'CL': 'SA',
+    'ZA': 'AF', 'NG': 'AF', 'EG': 'AF',
+  };
+  return continentMap[countryCode] || 'Unknown';
 }
