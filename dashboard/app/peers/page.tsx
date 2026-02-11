@@ -449,7 +449,7 @@ export default function PeersPage() {
         </div>
 
         {/* Banned Peers */}
-        <<div className="card-xdc">
+        <div className="card-xdc">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[rgba(239,68,68,0.1)] flex items-center justify-center text-[#EF4444]">
               <ShieldAlert className="w-5 h-5" />

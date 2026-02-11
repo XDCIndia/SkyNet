@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { fetchFleetMetrics, calculateHealthScore, getGrowthTimeline } from '@/lib/aggregator';
+import type { HealthScore } from '@/lib/aggregator';
 import { useEffect } from 'react';
 import { 
   Server, 
@@ -14,7 +15,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Download,
-  Share2
+  Share2,
+  TrendingUp
 } from 'lucide-react';
 
 // Health Score Gauge Component
@@ -337,7 +339,7 @@ export default function ExecutiveDashboard() {
   const [sortField, setSortField] = useState<keyof Validator>('rank');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showSocialCard, setShowSocialCard] = useState(false);
-  const [healthScore, setHealthScore] = useState({ score: 92, rating: 'excellent' as const, breakdown: { nodeUptime: 23, syncStatus: 24, peerDiversity: 22, consensusParticipation: 23 } });
+  const [healthScore, setHealthScore] = useState<HealthScore>({ score: 92, rating: 'excellent', breakdown: { nodeUptime: 23, syncStatus: 24, peerDiversity: 22, consensusParticipation: 23 } });
 
   useEffect(() => {
     fetchFleetMetrics().then(stats => {

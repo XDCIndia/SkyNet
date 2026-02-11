@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Header from '@/components/Header';
-import Dock from '@/components/Dock';
+import NavigationDock from '@/components/NavigationDock';
 import HeroSection from '@/components/HeroSection';
 import StatsGrid from '@/components/StatsGrid';
 import ConsensusPanel from '@/components/ConsensusPanel';
@@ -269,7 +269,7 @@ export default function Home() {
         ethstatsName={metrics.blockchain.ethstatsName}
       />
 
-      <Dock />
+      <NavigationDock />
 
       <main className="max-w-[1440px] mx-auto px-4 lg:px-6 py-6">
         {error && (
