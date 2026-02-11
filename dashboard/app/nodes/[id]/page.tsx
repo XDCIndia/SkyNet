@@ -20,6 +20,7 @@ import {
   Terminal,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
   Play,
   Pause,
   Network,
@@ -631,6 +632,14 @@ export default function NodeDetailPage() {
           </div>
           
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/')}
+              className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Back
+            </button>
+            
             <div className="text-right mr-4">
               <div className="text-xs text-[#6B7280]">Last seen</div>
               <div className="text-sm font-medium">{formatTimeAgo(status.lastSeen)}</div>

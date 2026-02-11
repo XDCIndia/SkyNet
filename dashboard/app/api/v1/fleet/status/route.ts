@@ -67,42 +67,82 @@ export async function GET(request: NextRequest) {
     // Calculate fleet stats
     const nodes = nodesResult.rows;
     const totalNodes = nodes.length;
-    const healthyNodes = nodes.filter(n => 
+    
+    // Calculate mainnet head (max block height across healthy nodes)
+    const healthyNodesList = nodes.filter(n => 
       n.is_active && 
       n.last_seen && 
-      new Date(n.last_seen) > new Date(Date.now() - 5 * 60 * 1000)
-    ).length;
+      new Date(n.last_seen) > new Date(Date.now() - 2 * 60 * 1000)
+    );
+    const mainnetHead = Math.max(...healthyNodesList.map(n => n.block_height || 0).filter(Boolean), 0);
+    
+    const healthyNodes = healthyNodesList.length;
     const syncingNodes = nodes.filter(n => n.is_syncing).length;
-    const offlineNodes = totalNodes - healthyNodes;
+    
+    // Degraded = last seen 2-5 min ago
+    const degradedNodes = nodes.filter(n => {
+      if (!n.last_seen) return false;
+      const diff = Date.now() - new Date(n.last_seen).getTime();
+      return diff >= 2 * 60 * 1000 && diff < 5 * 60 * 1000;
+    }).length;
+    
+    const offlineNodes = nodes.filter(n => {
+      if (!n.last_seen) return true;
+      const diff = Date.now() - new Date(n.last_seen).getTime();
+      return diff >= 5 * 60 * 1000;
+    }).length;
 
     // Calculate overall health score
     const healthScore = totalNodes > 0 
       ? Math.round((healthyNodes / totalNodes) * 100) 
       : 0;
+    
+    // Calculate total peers across all nodes
+    const totalPeers = nodes.reduce((sum, n) => sum + (n.peer_count || 0), 0);
 
     return NextResponse.json({
       fleet: {
         totalNodes,
         healthyNodes,
+        degradedNodes,
         offlineNodes,
         syncingNodes,
         healthScore,
+        totalPeers,
+        mainnetHead,
       },
-      nodes: nodes.map(n => ({
-        id: n.id,
-        name: n.name,
-        host: n.host,
-        role: n.role,
-        isActive: n.is_active,
-        status: n.last_seen && new Date(n.last_seen) > new Date(Date.now() - 5 * 60 * 1000)
-          ? (n.is_syncing ? 'syncing' : 'healthy')
-          : 'offline',
-        blockHeight: n.block_height,
-        syncPercent: n.sync_percent,
-        peerCount: n.peer_count,
-        clientVersion: n.client_version,
-        lastSeen: n.last_seen,
-      })),
+      nodes: nodes.map(n => {
+        const nodeStatus = n.last_seen 
+          ? (new Date(n.last_seen) > new Date(Date.now() - 2 * 60 * 1000)
+              ? (n.is_syncing ? 'syncing' : 'healthy')
+              : new Date(n.last_seen) > new Date(Date.now() - 5 * 60 * 1000)
+                ? 'degraded'
+                : 'offline')
+          : 'offline';
+        const blocksBehind = n.block_height && mainnetHead > 0 ? mainnetHead - n.block_height : 0;
+        
+        return {
+          id: n.id,
+          name: n.name,
+          host: n.host,
+          role: n.role,
+          isActive: n.is_active,
+          status: nodeStatus,
+          blockHeight: n.block_height,
+          blocksBehind: blocksBehind > 0 ? blocksBehind : 0,
+          syncPercent: n.sync_percent,
+          peerCount: n.peer_count,
+          cpuPercent: n.cpu_percent,
+          memoryPercent: n.memory_percent,
+          diskPercent: n.disk_percent,
+          clientVersion: n.client_version,
+          lastSeen: n.last_seen,
+        };
+      }),
+      syncingNodes: nodes.filter(n => {
+        const blocksBehind = n.block_height && mainnetHead > 0 ? mainnetHead - n.block_height : 0;
+        return blocksBehind > 10;
+      }).map(n => n.id),
       incidents: {
         critical: parseInt(incidentsResult.rows[0]?.critical || '0'),
         warning: parseInt(incidentsResult.rows[0]?.warning || '0'),

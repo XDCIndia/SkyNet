@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useWebSocket } from '@/lib/hooks/useWebSocket';
 import { 
@@ -73,6 +74,7 @@ function LatencyBadge({ latency }: { latency: number }) {
 }
 
 export default function PeersPage() {
+  const router = useRouter();
   const [livePeers, setLivePeers] = useState<Peer[]>([]);
   const [bannedPeers, setBannedPeers] = useState<BannedPeer[]>([]);
   const [countries, setCountries] = useState<Record<string, { name: string; count: number }>>({});
@@ -206,7 +208,14 @@ export default function PeersPage() {
             <h1 className="text-2xl font-semibold text-[#F9FAFB]">Peers & Network</h1>
             <p className="text-[#6B7280] mt-1">Manage peer connections and network topology</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/peers/healthy')}
+              className="flex items-center gap-2 px-4 py-2 bg-[#10B981]/10 hover:bg-[#10B981]/20 text-[#10B981] rounded-lg text-sm transition-colors"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Healthy Peers
+            </button>
             {wsConnected && (
               <div className="flex items-center gap-2">
                 <Wifi className="w-4 h-4 text-[#10B981]" />

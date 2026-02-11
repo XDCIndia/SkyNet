@@ -8,13 +8,8 @@ import {
   Wrench,
   Globe,
   Pickaxe,
-  Server,
-  AlertTriangle,
-  Settings,
   ChevronLeft,
   ChevronRight,
-  Activity,
-  Shield,
 } from 'lucide-react';
 
 interface NavItem {
@@ -30,10 +25,8 @@ const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, path: '/', section: 'Overview' },
   { id: 'executive', label: 'Executive', icon: <Building2 className="w-5 h-5" />, path: '/executive', section: 'Overview' },
   { id: 'fleet', label: 'Fleet', icon: <Wrench className="w-5 h-5" />, path: '/fleet', section: 'Operations' },
-  { id: 'nodes', label: 'War Room', icon: <Server className="w-5 h-5" />, path: '/fleet', section: 'Operations' },
   { id: 'peers', label: 'Peers', icon: <Globe className="w-5 h-5" />, path: '/peers', section: 'Network' },
   { id: 'masternodes', label: 'Masternodes', icon: <Pickaxe className="w-5 h-5" />, path: '/masternodes', section: 'Network' },
-  { id: 'alerts', label: 'Alerts', icon: <AlertTriangle className="w-5 h-5" />, path: '/fleet', section: 'System' },
 ];
 
 export default function Sidebar() {
