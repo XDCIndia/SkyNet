@@ -43,7 +43,7 @@ export async function authenticateRequest(req: NextRequest): Promise<AuthResult>
 
   // Check if token is a node-specific API key in the database
   try {
-    const { getPool } = await import('./index');
+    const { getPool } = await import('./db');
     const pool = getPool();
     const result = await pool.query(
       `SELECT node_id, permissions FROM netown.api_keys 
