@@ -1,316 +1,309 @@
-# XDC Node Setup — Roadmap
+# XDCNetOwn Roadmap
 
-> XDC-specific improvements for node operators
+## Vision
 
-**Repository:** [github.com/AnilChinchawale/XDC-Node-Setup](https://github.com/AnilChinchawale/XDC-Node-Setup)
+The definitive network monitoring and management platform for XDC Network — from 3 nodes to 3000.
 
----
-
-## Current State (v2.0) ✅
-
-### Core Infrastructure — COMPLETE
-
-| Feature | Status | Script/Config |
-|---------|--------|---------------|
-| One-line installer | ✅ Done | `setup.sh` |
-| Security hardening (SSH, UFW, fail2ban, auditd) | ✅ Done | `security-harden.sh` |
-| Node health monitoring | ✅ Done | `node-health-check.sh` |
-| Version management & auto-update | ✅ Done | `version-check.sh` |
-| Backup system (encrypted, retention) | ✅ Done | `backup.sh` |
-| Notification system (Platform API, TG, Email) | ✅ Done | `lib/notify.sh` |
-| Docker Compose deployment | ✅ Done | `docker/` |
-| Grafana dashboards | ✅ Done | `monitoring/grafana/` |
-| Prometheus alerting | ✅ Done | `monitoring/alerts.yml` |
-| Security scorecard (0-100) | ✅ Done | `node-health-check.sh` |
-| CLI tool (`xdc-node`) | ✅ Done | `cli/xdc-node` |
-| Web dashboard | ✅ Done | `dashboard/` |
-
-### XDC-Specific Features — COMPLETE (v2.1)
-
-| Feature | Status | Script |
-|---------|--------|--------|
-| Masternode setup wizard | ✅ Done | `masternode-setup.sh` |
-| Bootnode optimizer | ✅ Done | `bootnode-optimize.sh` |
-| Snapshot manager | ✅ Done | `snapshot-manager.sh` |
-| XDC monitor (epoch, rewards, fork) | ✅ Done | `xdc-monitor.sh` |
-| Sync optimizer | ✅ Done | `sync-optimizer.sh` |
-| RPC security | ✅ Done | `rpc-security.sh` |
-| Network intelligence | ✅ Done | `network-intel.sh` |
-| Masternode guide | ✅ Done | `docs/MASTERNODE-GUIDE.md` |
-| Sync guide | ✅ Done | `docs/SYNC-GUIDE.md` |
-| RPC profiles (public, validator, archive, dev) | ✅ Done | `configs/rpc-profiles/` |
-| Bootnode configs (mainnet, testnet) | ✅ Done | `configs/bootnodes-*.json` |
-| Snapshot configs | ✅ Done | `configs/snapshots.json` |
+We are building the infrastructure that will power the XDC Network's growth, providing operators with the observability they need to maintain a healthy, decentralized blockchain. Our goal is to be the **Datadog of blockchain node monitoring** — but purpose-built for XDC, open source, and cost-effective at scale.
 
 ---
 
-## Phase 3: Advanced Masternode Features (Q1 2026) ✅ COMPLETE
+## Phase 1: Foundation ✅ (Current)
 
-### 3.1 Reward Analytics
-- [x] Historical reward tracking with graphs
-- [x] Reward vs. expected comparison
-- [x] APY calculation with actual data
-- [x] Missed block analysis and reporting
-- [x] Slashing event detection and alerts
+**Status:** In Production  
+**Nodes:** 3  
+**Timeline:** Completed Q4 2025
 
-**Files:** `scripts/masternode-rewards.sh`, `scripts/lib/rewards-db.sh`, `dashboard/src/app/masternode/page.tsx`
+### Delivered
+- ✅ Dashboard with real-time fleet monitoring (Next.js + PostgreSQL)
+- ✅ Heartbeat agent (`netown-agent.sh`) on 3 production servers
+- ✅ PostgreSQL-backed node registry with health status
+- ✅ Masternode integration via XDCValidator contract
+- ✅ Healthy peer list with automated port checking
+- ✅ Auto-incident detection and Telegram alerts
+- ✅ Agent integration guide and documentation
 
-### 3.2 Masternode Clustering
-- [x] Multi-node masternode management
-- [x] Failover between backup nodes
-- [x] Coordinated key management
-- [x] Cross-node monitoring dashboard
-- [x] Automated recovery procedures
-
-**Files:** `scripts/masternode-cluster.sh`, `configs/cluster.conf.template`, `dashboard/src/app/api/masternode/cluster/route.ts`
-
-### 3.3 Stake Management
-- [x] Stake delegation monitoring
-- [x] Auto-compound rewards
-- [x] Withdrawal planning tools
-- [x] Tax reporting export
-
-**Files:** `scripts/stake-manager.sh`, `docs/MN-ADVANCED.md`
-
----
-
-## Phase 4: XDPoS v2 Deep Integration (Q2 2026) ✅ COMPLETE
-
-### 4.1 Consensus Monitoring
-- [x] Real-time epoch visualization
-- [x] Masternode rotation tracking
-- [x] Vote tracking and analysis
-- [x] Block finality monitoring
-- [x] Penalty prediction
-
-**Files:** `scripts/consensus-monitor.sh`, `dashboard/src/app/consensus/page.tsx`, `dashboard/src/app/api/consensus/route.ts`
-
-### 4.2 Network Participation
-- [x] Validator performance rankings
-- [x] Network-wide stats aggregation
-- [x] Peer reputation system
-- [x] Geographic diversity scoring
-- [x] Client diversity incentives
-
-**Files:** `scripts/network-stats.sh`, `dashboard/src/app/api/network-stats/route.ts`
-
-### 4.3 Governance Tools
-- [x] Proposal tracking
-- [x] Voting interface
-- [x] Impact analysis
-- [x] Community sentiment tracking
-
-**Files:** `scripts/governance.sh`, `scripts/lib/xdc-contracts.sh`, `configs/xdpos-v2.json`, `docs/XDPOS-V2.md`
+### Architecture
+```
+┌─────────┐ ┌─────────┐ ┌─────────┐
+│ Node 1  │ │ Node 2  │ │ Node 3  │
+└────┬────┘ └────┬────┘ └────┬────┘
+     │           │           │
+     └───────────┼───────────┘
+                 ▼
+        ┌─────────────────┐
+        │  XDCNetOwn API  │
+        │   (Next.js)     │
+        └────────┬────────┘
+                 ▼
+        ┌─────────────────┐
+        │   PostgreSQL    │
+        │  (Fleet + Data) │
+        └─────────────────┘
+```
 
 ---
 
-## Phase 5: Enterprise Features (Q3 2026)
+## Phase 2: Scale to 50 Nodes (Q1 2026)
 
-### 5.1 Multi-Region Deployment
-- [ ] One-click multi-region setup
-- [ ] Global load balancing
-- [ ] Latency-optimized routing
-- [ ] Disaster recovery automation
-- [ ] Region health monitoring
+**Goal:** Validate queue-based architecture, improve reliability  
+**Target:** 50 monitored nodes  
+**Estimated Cost:** $100/month
 
-### 5.2 SLA Monitoring
-- [ ] Uptime tracking (99.9%/99.99%/99.999%)
-- [ ] Response time monitoring
-- [ ] Automated SLA reports
-- [ ] SLA breach alerting
-- [ ] Performance degradation detection
+### Deliverables
 
-### 5.3 Compliance Automation
-- [ ] Automated compliance scans
-- [ ] Evidence collection
-- [ ] Audit trail generation
-- [ ] Report scheduling
-- [ ] Remediation tracking
+#### Agent v2 (Go Binary)
+- [ ] Rewrite `netown-agent` in Go (cross-platform, single binary)
+- [ ] Local metric buffering (survive network blips)
+- [ ] Auto-discovery of node type (geth/erigon/XDC)
+- [ ] Configurable push interval (30s default, 10s min)
+- [ ] Self-update capability
+- [ ] Resource budget: <50MB RAM, <1% CPU
 
----
+#### Infrastructure
+- [ ] Deploy NATS message queue cluster (3-node HA)
+- [ ] Migrate metrics to TimescaleDB (PostgreSQL extension)
+- [ ] Add Redis for real-time state caching
+- [ ] Deploy Prometheus for internal monitoring
 
-## Phase 6: Developer Experience (Q4 2026)
+#### Dashboard Enhancements
+- [ ] Replace polling with Server-Sent Events (SSE)
+- [ ] Virtual scrolling for node lists (handles 1000+ rows)
+- [ ] World map with node geolocation (Leaflet + OpenStreetMap)
+- [ ] Alert notification system (Telegram, Slack, webhook)
+- [ ] Basic filtering and search
 
-### 6.1 Terraform Provider
-- [ ] `terraform-provider-xdc-node`
-- [ ] AWS/GCP/Azure modules
-- [ ] Hetzner/DigitalOcean support
-- [ ] Example configurations
-- [ ] State management best practices
+#### API v2
+- [ ] Queue consumer architecture (decouple from direct HTTP)
+- [ ] Rate limiting per API key
+- [ ] Improved error handling and retry logic
 
-### 6.2 Kubernetes Operator
-- [ ] Custom Resource Definition (CRD)
-- [ ] Helm chart
-- [ ] Auto-scaling based on load
-- [ ] Rolling updates
-- [ ] Backup integration
-
-### 6.3 One-Click Cloud Deploy
-- [ ] AWS CloudFormation template
-- [ ] DigitalOcean 1-Click App
-- [ ] Google Cloud Deploy Manager
-- [ ] Azure ARM template
-- [ ] Hetzner Cloud init
-
----
-
-## Phase 7: Community & Ecosystem (Ongoing)
-
-### 7.1 Plugin System
-- [ ] Plugin API specification
-- [ ] Custom health check plugins
-- [ ] Custom notification channels
-- [ ] Custom metrics exporters
-- [ ] Plugin marketplace
-
-### 7.2 Network Dashboard
-- [ ] Public XDC network stats
-- [ ] Global node map
-- [ ] Real-time block explorer integration
-- [ ] Network health dashboard
-- [ ] Client version distribution
-
-### 7.3 Documentation & Education
-- [ ] Interactive tutorials
-- [ ] Video guides
-- [ ] Troubleshooting decision tree
-- [ ] Community forum integration
-- [ ] Localization (multi-language)
+### Architecture Changes
+```
+┌─────────┐ ┌─────────┐ ┌─────────┐
+│ Node 1  │ │ Node 2  │ │ ... 50  │
+│ (agent) │ │ (agent) │ │ (agent) │
+└────┬────┘ └────┬────┘ └────┬────┘
+     │           │           │
+     └───────────┼───────────┘
+                 ▼ gRPC/HTTP2
+        ┌─────────────────┐
+        │  NATS Queue     │
+        │  (3-node HA)    │
+        └────────┬────────┘
+                 ▼
+        ┌─────────────────┐
+        │  XDCNetOwn API  │
+        │   (v2 - SSE)    │
+        └────────┬────────┘
+                 ▼
+    ┌────────────┼────────────┐
+    ▼            ▼            ▼
+┌────────┐  ┌──────────┐  ┌────────┐
+│PostgreSQL│  │TimescaleDB│  │ Redis  │
+│(Fleet)  │  │(Metrics)  │  │(Cache) │
+└────────┘  └──────────┘  └────────┘
+```
 
 ---
 
-## Priority Matrix
+## Phase 3: Regional Architecture (Q2 2026)
 
-| Phase | Impact | Effort | Status | Timeline |
-|-------|--------|--------|--------|----------|
-| Core Infrastructure | 🔴 High | 🔴 High | ✅ Complete | Done |
-| XDC-Specific Features | 🔴 High | 🟡 Medium | ✅ Complete | Done |
-| Advanced Masternode | 🔴 High | 🟡 Medium | ✅ Complete | Q1 2026 |
-| XDPoS v2 Integration | 🟡 Medium | 🟡 Medium | ✅ Complete | Q2 2026 |
-| Enterprise Features | 🟡 Medium | 🔴 High | 📋 Planned | Q3 2026 |
-| Developer Experience | 🔴 High | 🔴 High | 📋 Planned | Q4 2026 |
-| Community & Ecosystem | 🟡 Medium | 🟡 Medium | 📋 Ongoing | Ongoing |
+**Goal:** Geographic distribution, enterprise reliability  
+**Target:** 200 monitored nodes  
+**Estimated Cost:** $500/month
+
+### Deliverables
+
+#### Regional Collectors
+- [ ] Deploy regional Prometheus collectors:
+  - [ ] EU-West (Amsterdam)
+  - [ ] US-East (Virginia)
+  - [ ] Asia-Pacific (Singapore)
+- [ ] Thanos federation for global query view
+- [ ] Regional failover and HA
+
+#### Advanced Alerting
+- [ ] Anomaly detection (statistical, not just thresholds)
+- [ ] Escalation policies (warn → alert → page)
+- [ ] PagerDuty integration
+- [ ] Alert grouping and deduplication
+- [ ] On-call rotation support
+
+#### Reporting
+- [ ] Weekly/monthly PDF report generation
+- [ ] SLA compliance tracking
+- [ ] Uptime reports with board-ready summaries
+- [ ] Scheduled report delivery
+
+#### Multi-Tenancy
+- [ ] Organization isolation
+- [ ] Role-based access control (RBAC)
+- [ ] Team management
+- [ ] API key per organization
+
+### Architecture Changes
+```
+                       ┌─────────────┐
+                       │   Thanos    │
+                       │   Query     │
+                       └──────┬──────┘
+                              │
+           ┌──────────────────┼──────────────────┐
+           │                  │                  │
+           ▼                  ▼                  ▼
+    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+    │ EU-West     │    │ US-East     │    │ Asia-Pacific│
+    │ Collector   │    │ Collector   │    │ Collector   │
+    │(Prometheus) │    │(Prometheus) │    │(Prometheus) │
+    └──────┬──────┘    └──────┬──────┘    └──────┬──────┘
+           │                  │                  │
+    ┌──────┴──────┐    ┌──────┴──────┐    ┌──────┴──────┐
+    │ Local Nodes │    │ Local Nodes │    │ Local Nodes │
+    │ 60-70 nodes │    │ 60-70 nodes │    │ 60-70 nodes │
+    └─────────────┘    └─────────────┘    └─────────────┘
+           │                  │                  │
+           └──────────────────┼──────────────────┘
+                              ▼
+                    ┌─────────────────┐
+                    │   Central API   │
+                    └────────┬────────┘
+                             ▼
+                   ┌─────────────────┐
+                   │  PostgreSQL +   │
+                   │  TimescaleDB    │
+                   └─────────────────┘
+```
 
 ---
 
-## Unique Differentiators
+## Phase 4: Enterprise (Q3 2026)
 
-What sets XDC Node Setup apart:
+**Goal:** Production-ready for large operators  
+**Target:** 1000+ monitored nodes  
+**Estimated Cost:** $2000/month
 
-| Feature | XDC Node Setup | Others |
-|---------|----------------|--------|
-| **Masternode wizard** | ✅ Full automation | ❌ Manual |
-| **Epoch/reward tracking** | ✅ Built-in | ❌ None |
-| **Fork detection** | ✅ Multi-RPC comparison | ❌ None |
-| **Bootnode optimization** | ✅ Latency-based | ❌ Static |
-| **Snapshot management** | ✅ Download + create | ❌ Basic |
-| **RPC security profiles** | ✅ 4 profiles | ❌ None |
-| **Network intelligence** | ✅ Peer/client analysis | ❌ None |
-| **Security scorecard** | ✅ 100-point scale | ❌ None |
-| **Multi-channel alerts** | ✅ Platform + TG + Email | ❌ Basic |
-| **Compliance docs** | ✅ 108-item matrix | ❌ None |
+### Deliverables
+
+#### Infrastructure
+- [ ] Kubernetes deployment (EKS/GKE/self-hosted)
+- [ ] Auto-scaling API pods (HPA)
+- [ ] ClickHouse for high-cardinality analytics
+- [ ] Global CDN for dashboard (CloudFlare)
+- [ ] Disaster recovery with multi-region failover
+
+#### Enterprise Features
+- [ ] White-label dashboard support
+- [ ] SSO/SAML integration (Okta, Azure AD)
+- [ ] Audit logging and compliance reporting
+- [ ] SLA monitoring with contractual guarantees
+- [ ] Advanced RBAC with custom roles
+
+#### Mobile
+- [ ] React Native mobile app (iOS + Android)
+- [ ] Push notifications for critical alerts
+- [ ] Mobile-optimized dashboards
+
+#### Security
+- [ ] mTLS for all agent communication
+- [ ] Hardware security module (HSM) support
+- [ ] SOC 2 Type II compliance
+- [ ] Penetration testing and security audit
+
+---
+
+## Phase 5: Network Intelligence (Q4 2026)
+
+**Goal:** Predictive monitoring, network-wide analytics  
+**Target:** 3000+ monitored nodes
+
+### Deliverables
+
+#### Network Crawler
+- [ ] P2P network crawler for topology discovery
+- [ ] Passive peer quality scoring
+- [ ] Geographic distribution analysis
+- [ ] Network partition detection
+
+#### Analytics
+- [ ] Consensus participation analytics
+- [ ] Nakamoto coefficient tracking
+- [ ] Delegation flow visualization
+- [ ] Network health score (composite metric)
+
+#### Machine Learning
+- [ ] Predictive alerting (forecast failures before they happen)
+- [ ] Anomaly detection at scale
+- [ ] Capacity planning recommendations
+- [ ] Auto-remediation for common issues
+
+#### Cross-Chain
+- [ ] Support for XDC subnets
+- [ ] Cross-chain monitoring framework
+- [ ] Bridge monitoring (if applicable)
+
+---
+
+## Migration Timeline
+
+```
+2025 Q4    2026 Q1        2026 Q2         2026 Q3         2026 Q4
+   │          │              │               │               │
+   ▼          ▼              ▼               ▼               ▼
+┌─────┐   ┌────────┐    ┌─────────┐     ┌─────────┐     ┌──────────┐
+│Phase│   │ Phase  │    │ Phase   │     │ Phase   │     │ Phase    │
+│  1  │   │   2    │    │   3     │     │   4     │     │   5      │
+│     │   │        │    │         │     │         │     │          │
+│ 3   │ → │  50    │ →  │  200    │ →   │  1000   │ →   │  3000+   │
+│nodes│   │ nodes  │    │ nodes   │     │ nodes   │     │ nodes    │
+└─────┘   └────────┘    └─────────┘     └─────────┘     └──────────┘
+             │               │                │               │
+             ▼               ▼                ▼               ▼
+         Go agent       Regional        Kubernetes       ML/AI
+         NATS queue     collectors      White-label      Cross-chain
+         TimescaleDB    Thanos          SSO/SAML         P2P crawler
+```
+
+---
+
+## Success Metrics
+
+| Metric | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Phase 5 |
+|--------|---------|---------|---------|---------|---------|
+| Nodes monitored | 3 | 50 | 200 | 1000 | 3000 |
+| API uptime | 99% | 99.5% | 99.9% | 99.95% | 99.99% |
+| P95 query latency | 500ms | 300ms | 200ms | 150ms | 100ms |
+| Alert latency | 5 min | 2 min | 1 min | 30s | Real-time |
+| Cost per node/mo | - | $2 | $2.50 | $2 | $1 |
+| Self-serve onboarding | Manual | Semi-auto | Auto | Auto | Auto |
+
+---
+
+## Technical Debt & Maintenance
+
+### Continuous Improvements
+- [ ] Monthly dependency updates
+- [ ] Quarterly security audits
+- [ ] Annual architecture review
+- [ ] Performance regression testing
+
+### Deprecation Schedule
+| Component | Current | Replacement | EOL Date |
+|-----------|---------|-------------|----------|
+| Bash agent | v1.x | Go agent v2 | Q2 2026 |
+| Direct HTTP push | v1 API | NATS queue | Q2 2026 |
+| Polling dashboard | v1 UI | SSE dashboard | Q1 2026 |
 
 ---
 
 ## Contributing
 
-Want to help? Here's how:
-
-1. Pick an item from any phase
-2. Open an issue to discuss approach
-3. Submit a PR with your implementation
-4. Reference this roadmap in your PR
-
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
+This roadmap is a living document. To propose changes:
+1. Open an issue with the `roadmap` label
+2. Discuss in Discord #dev channel
+3. Submit PR to update this document
 
 ---
 
-## Changelog
-
-### v2.2.0 (February 11, 2026)
-**Advanced Masternode + XDPoS v2 Integration Release**
-
-**New Scripts:**
-- `masternode-rewards.sh` — Reward tracking with SQLite database
-- `masternode-cluster.sh` — Multi-node HA clustering
-- `stake-manager.sh` — Stake management and auto-compound
-- `consensus-monitor.sh` — XDPoS v2 consensus monitoring
-- `network-stats.sh` — Network-wide statistics and rankings
-- `governance.sh` — Governance participation tools
-- `lib/xdc-contracts.sh` — XDC contract interaction helpers
-- `lib/rewards-db.sh` — SQLite database library
-
-**New Dashboard Pages:**
-- `/masternode` — Masternode analytics dashboard
-- `/consensus` — XDPoS consensus visualization
-
-**New API Routes:**
-- `/api/masternode/rewards` — Reward data endpoint
-- `/api/masternode/cluster` — Cluster management endpoint
-- `/api/consensus` — Consensus data endpoint
-- `/api/network-stats` — Network statistics endpoint
-
-**New Documentation:**
-- `docs/MN-ADVANCED.md` — Advanced masternode guide
-- `docs/XDPOS-V2.md` — XDPoS v2 deep dive
-
-**CLI Commands Added:**
-- `xdc rewards` — Rewards analytics
-- `xdc cluster` — Cluster management
-- `xdc stake` — Stake management
-- `xdc consensus` — Consensus monitoring
-- `xdc network-stats` — Network statistics
-- `xdc governance` — Governance participation
-
-**Monitoring Updates:**
-- Added XDPoS-specific alerts (epoch change, penalties, etc.)
-- Masternode performance tracking
-- Cluster failover detection
-
-**Total: 200+ files, 15,000+ lines of code**
-
-### v2.1.0 (February 11, 2026)
-**XDC-Specific Features Release**
-
-**New Scripts:**
-- `masternode-setup.sh` — Complete masternode wizard (stake check, keystore, registration)
-- `bootnode-optimize.sh` — Latency-ranked peer discovery, NAT detection
-- `snapshot-manager.sh` — Download/create/verify chain snapshots
-- `xdc-monitor.sh` — Epoch tracking, rewards monitoring, fork detection, txpool stats
-- `sync-optimizer.sh` — Smart sync mode recommendation, ETA calculator, pruning
-- `rpc-security.sh` — RPC method whitelisting (4 profiles), rate limiting
-- `network-intel.sh` — Peer geographic map, fork readiness, client diversity
-
-**New Documentation:**
-- `docs/MASTERNODE-GUIDE.md` — Complete masternode setup and operations guide
-- `docs/SYNC-GUIDE.md` — Sync optimization and troubleshooting guide
-
-**New Configs:**
-- `configs/snapshots.json` — Verified snapshot sources
-- `configs/bootnodes-mainnet.json` + `configs/bootnodes-testnet.json`
-- `configs/rpc-profiles/` — public.json, validator.json, archive.json, development.json
-
-**CLI Updates:**
-- 7 new XDC-specific commands: `masternode`, `peers`, `snapshot`, `monitor`, `sync`, `rpc-secure`, `network`
-- Updated bash completions
-
-**Enterprise Additions:**
-- `ansible/` — 5 roles, rolling update playbooks
-- `terraform/` — AWS, Hetzner, DigitalOcean templates
-- `k8s/` — Helm chart + plain manifests
-- `scripts/cis-benchmark.sh` — 60+ security checks
-- `scripts/chaos-test.sh` — Resilience testing
-- `docs/CTO-PLAYBOOK.md` — Enterprise decision framework
-- `docs/RUNBOOK.md` — Operations runbook
-
-**Total: 183 files, 10,000+ lines of code**
-
-### v2.0.0 (February 2026)
-- Initial public release with core infrastructure
-- Security hardening, monitoring, CLI, dashboard
-- Notification system (Platform API, Telegram, Email)
-
----
-
-*Last updated: February 11, 2026 (v2.2.0 - Phase 3 & 4 Complete)*
-*Maintained by: [AnilChinchawale](https://github.com/AnilChinchawale)*
+*Last updated: February 2026*  
+*Next review: May 2026*
