@@ -1,9 +1,10 @@
 /**
  * Notification system for XDC NetOwn
- * Supports: Telegram, Webhook, Email (placeholder)
+ * Supports: Telegram, Webhook, Email (via nodemailer)
  */
 
 import { Incident } from '@/lib/db';
+import nodemailer from 'nodemailer';
 
 export interface AlertChannel {
   type: 'telegram' | 'webhook' | 'email';
@@ -17,17 +18,24 @@ export interface AlertChannel {
  * Send a notification via Telegram Bot API
  */
 export async function sendTelegramAlert(
-  botToken: string, 
-  chatId: string, 
+  botToken: string,
+  chatId: string,
   message: string
 ): Promise<void> {
-  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-  
+  const token = botToken || process.env.TELEGRAM_BOT_TOKEN;
+  const chat = chatId || process.env.TELEGRAM_CHAT_ID;
+
+  if (!token || !chat) {
+    throw new Error('Missing Telegram configuration (botToken/chatId)');
+  }
+
+  const url = `https://api.telegram.org/bot${token}/sendMessage`;
+
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      chat_id: chatId,
+      chat_id: chat,
       text: message,
       parse_mode: 'HTML',
       disable_web_page_preview: true,
@@ -44,14 +52,14 @@ export async function sendTelegramAlert(
  * Send a notification via Webhook
  */
 export async function sendWebhookAlert(
-  url: string, 
+  url: string,
   payload: object
 ): Promise<void> {
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 
+    headers: {
       'Content-Type': 'application/json',
-      'User-Agent': 'XDC-NetOwn-Alert/1.0'
+      'User-Agent': 'XDC-NetOwn-Alert/1.0',
     },
     body: JSON.stringify(payload),
   });
@@ -63,17 +71,38 @@ export async function sendWebhookAlert(
 }
 
 /**
- * Send a notification via Email (placeholder)
- * In production, integrate with SendGrid, AWS SES, etc.
+ * Send a notification via Email using nodemailer
  */
 export async function sendEmailAlert(
   email: string,
   subject: string,
   message: string
 ): Promise<void> {
-  // Placeholder - would integrate with email service
-  console.log(`Email notification would be sent to ${email}: ${subject}`);
-  // throw new Error('Email notifications not yet implemented');
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT || '587');
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const from = process.env.SMTP_FROM || 'XDC NetOwn <alerts@xdc.network>';
+
+  if (!host || !user || !pass) {
+    console.warn(`Email alert skipped (SMTP not configured): ${subject} → ${email}`);
+    return;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+
+  await transporter.sendMail({
+    from,
+    to: email,
+    subject,
+    text: message.replace(/<[^>]+>/g, ''), // strip HTML for plain text
+    html: message.replace(/\n/g, '<br>'),
+  });
 }
 
 /**
@@ -89,13 +118,16 @@ export async function sendAlert(
   for (const channel of channels) {
     try {
       switch (channel.type) {
-        case 'telegram':
-          if (!channel.botToken || !channel.chatId) {
+        case 'telegram': {
+          const token = channel.botToken || process.env.TELEGRAM_BOT_TOKEN || '';
+          const chat = channel.chatId || process.env.TELEGRAM_CHAT_ID || '';
+          if (!token || !chat) {
             throw new Error('Missing Telegram configuration');
           }
-          await sendTelegramAlert(channel.botToken, channel.chatId, message);
+          await sendTelegramAlert(token, chat, message);
           results.push({ channel: 'telegram', success: true });
           break;
+        }
 
         case 'webhook':
           if (!channel.url) {
@@ -109,17 +141,19 @@ export async function sendAlert(
           results.push({ channel: 'webhook', success: true });
           break;
 
-        case 'email':
-          if (!channel.email) {
+        case 'email': {
+          const emailAddr = channel.email || process.env.ALERT_EMAIL;
+          if (!emailAddr) {
             throw new Error('Missing email address');
           }
           await sendEmailAlert(
-            channel.email,
+            emailAddr,
             `XDC NetOwn Alert: ${incident.title}`,
             message
           );
           results.push({ channel: 'email', success: true });
           break;
+        }
 
         default:
           throw new Error(`Unknown channel type: ${channel.type}`);
@@ -164,9 +198,9 @@ export function shouldTriggerAlert(
   cooldownMinutes: number
 ): boolean {
   if (!lastTriggeredAt) return true;
-  
+
   const cooldownMs = cooldownMinutes * 60 * 1000;
   const timeSinceLastTrigger = Date.now() - new Date(lastTriggeredAt).getTime();
-  
+
   return timeSinceLastTrigger >= cooldownMs;
 }

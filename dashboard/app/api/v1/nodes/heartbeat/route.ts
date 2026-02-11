@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '@/lib/db';
 import { authenticateRequest, unauthorizedResponse, badRequestResponse, hasPermission } from '@/lib/auth';
+import { evaluateAndNotify, checkFleetNodeDown } from '@/lib/alert-engine';
 
 /**
  * POST /api/v1/nodes/heartbeat
@@ -315,24 +316,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create detected incidents
+    // Create detected incidents and fire alert notifications
     for (const incident of detectedIncidents) {
-      await query(
+      const incidentResult = await query(
         `INSERT INTO netown.incidents 
          (node_id, type, severity, title, description, auto_detected)
-         VALUES ($1, $2, $3, $4, $5, true)`,
+         VALUES ($1, $2, $3, $4, $5, true)
+         RETURNING id`,
         [nodeId, incident.type, incident.severity, incident.title, incident.description]
       );
-      
-      // TODO: Trigger alert notifications here
-      // const alertRules = await query(
-      //   `SELECT * FROM netown.alert_rules 
-      //    WHERE type = $1 AND is_active = true 
-      //    AND (node_id IS NULL OR node_id = $2)`,
-      //   [incident.type, nodeId]
-      // );
-      // ... send notifications
+
+      const incidentId = incidentResult.rows[0].id;
+
+      // Fire alert notifications (non-blocking)
+      evaluateAndNotify(
+        incidentId,
+        nodeId,
+        incident.type,
+        incident.severity,
+        incident.title,
+        incident.description
+      ).catch(err => console.error('Alert notification failed:', err));
     }
+
+    // Fleet-wide node_down check (non-blocking, runs opportunistically)
+    checkFleetNodeDown().catch(err => console.error('Fleet node_down check failed:', err));
 
     // Check for pending commands
     const commandsResult = await query(
