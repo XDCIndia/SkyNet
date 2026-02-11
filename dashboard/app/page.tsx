@@ -34,7 +34,12 @@ import {
   Square,
   CheckSquare,
   AlertCircle,
-  Shield
+  Shield,
+  BarChart3,
+  Zap,
+  Hash,
+  TrendingUp,
+  Flame,
 } from 'lucide-react';
 
 const REFRESH_INTERVAL = 10; // 10 seconds
@@ -101,6 +106,22 @@ type FilterType = 'all' | 'healthy' | 'syncing' | 'behind' | 'offline';
 type ViewMode = 'grid' | 'table';
 type SortField = keyof Node | 'security_score';
 type SortDirection = 'asc' | 'desc';
+
+interface NetworkStats {
+  bestBlock: number;
+  avgBlockTime: number;
+  gasPrice: string;
+  gasLimit: number;
+  difficulty: string;
+  activeNodes: number;
+  tps: number;
+  pendingTxs: number;
+  epoch: {
+    number: number;
+    progress: number;
+    blocksRemaining: number;
+  };
+}
 
 function StatusDot({ status }: { status: string }) {
   const colors = {
@@ -348,6 +369,139 @@ function NetworkHealthBanner({
             icon=<Pickaxe className="w-3 h-3 text-[#F59E0B]" />
           />
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Network Stats Bar Component - ethstats-style
+function NetworkStatsBar({ 
+  stats,
+  lastUpdated
+}: { 
+  stats: NetworkStats | null;
+  lastUpdated: number;
+}) {
+  if (!stats) return null;
+
+  return (
+    <div className="bg-gradient-to-r from-[#111827] to-[#0f1729] rounded-xl p-4 border border-white/5 mb-6">
+      {/* Top Row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+        {/* Best Block */}
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-[#1E90FF]/10">
+            <Hash className="w-4 h-4 text-[#1E90FF]" />
+          </div>
+          <div>
+            <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Best Block</p>
+            <p className="text-lg font-bold text-[#F9FAFB] font-mono-nums">
+              {stats.bestBlock.toLocaleString()}
+            </p>
+          </div>
+          <span className="relative flex h-2 w-2 ml-auto">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10B981]"></span>
+          </span>
+        </div>
+
+        {/* Avg Block Time */}
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-[#10B981]/10">
+            <Clock className="w-4 h-4 text-[#10B981]" />
+          </div>
+          <div>
+            <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Avg Block Time</p>
+            <p className="text-lg font-bold text-[#F9FAFB] font-mono-nums">
+              {stats.avgBlockTime.toFixed(1)}s
+            </p>
+          </div>
+        </div>
+
+        {/* Gas Price */}
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-[#F59E0B]/10">
+            <Zap className="w-4 h-4 text-[#F59E0B]" />
+          </div>
+          <div>
+            <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Gas Price</p>
+            <p className="text-lg font-bold text-[#F9FAFB] font-mono-nums">
+              {stats.gasPrice}
+            </p>
+          </div>
+        </div>
+
+        {/* Active Nodes */}
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-[#8B5CF6]/10">
+            <Server className="w-4 h-4 text-[#8B5CF6]" />
+          </div>
+          <div>
+            <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Active Nodes</p>
+            <p className="text-lg font-bold text-[#F9FAFB] font-mono-nums">
+              {stats.activeNodes}
+            </p>
+          </div>
+        </div>
+
+        {/* TPS */}
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-[#EC4899]/10">
+            <TrendingUp className="w-4 h-4 text-[#EC4899]" />
+          </div>
+          <div>
+            <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">TPS</p>
+            <p className="text-lg font-bold text-[#F9FAFB] font-mono-nums">
+              {stats.tps.toFixed(1)}
+            </p>
+          </div>
+        </div>
+
+        {/* Pending Txs */}
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-white/5">
+            <Flame className="w-4 h-4 text-[#6B7280]" />
+          </div>
+          <div>
+            <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Pending</p>
+            <p className="text-lg font-bold text-[#F9FAFB] font-mono-nums">
+              {stats.pendingTxs}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Row - Epoch Info */}
+      <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-white/5">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-[#6B7280]">Epoch</span>
+          <span className="text-sm font-bold text-[#1E90FF] font-mono-nums">{stats.epoch.number.toLocaleString()}</span>
+        </div>
+        
+        <div className="flex items-center gap-2 flex-1 max-w-[200px]">
+          <span className="text-xs text-[#6B7280]">Progress</span>
+          <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-[#1E90FF] rounded-full transition-all duration-500"
+              style={{ width: `${stats.epoch.progress}%` }}
+            />
+          </div>
+          <span className="text-xs text-[#F9FAFB] font-mono-nums">{stats.epoch.progress}%</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-[#6B7280]">Remaining</span>
+          <span className="text-sm font-bold text-[#F9FAFB] font-mono-nums">{stats.epoch.blocksRemaining} blocks</span>
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <span className="text-xs text-[#6B7280]">Difficulty</span>
+          <span className="text-sm font-bold text-[#F9FAFB] font-mono-nums">{stats.difficulty}</span>
+        </div>
+
+        {lastUpdated < 3 && (
+          <span className="text-xs text-[#10B981]">● Live</span>
+        )}
       </div>
     </div>
   );
@@ -991,6 +1145,7 @@ export default function Home() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [peers, setPeers] = useState<HealthyPeersSummary | null>(null);
+  const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -1034,6 +1189,13 @@ export default function Home() {
           totalPeers: peersData.totalPeers,
           healthyPeers: peersData.healthyPeers,
         });
+      }
+
+      // Fetch network stats
+      const networkRes = await fetch('/api/v1/network/stats', { cache: 'no-store' });
+      if (networkRes.ok) {
+        const networkData = await networkRes.json();
+        setNetworkStats(networkData);
       }
       
       setLastUpdated(0);
@@ -1190,6 +1352,13 @@ export default function Home() {
                 <span>{error}</span>
               </div>
             </div>
+          )}
+
+          {networkStats && (
+            <NetworkStatsBar 
+              stats={networkStats}
+              lastUpdated={lastUpdated}
+            />
           )}
 
           {fleet && (
