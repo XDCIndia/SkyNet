@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse location if provided
-    let location_city, location_country, location_lat, location_lng;
+    let location_city: string | undefined, location_country: string | undefined, location_lat: number | undefined, location_lng: number | undefined;
     if (location) {
       location_city = location.city;
       location_country = location.country;
