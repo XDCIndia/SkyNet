@@ -1,14 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { fetchFleetMetrics, FleetStats } from '@/lib/aggregator';
-import { registeredNodes, NodeRole } from '@/lib/node-registry';
-import { useEffect } from 'react';
+import { useWebSocket } from '@/lib/hooks/useWebSocket';
 import { 
   Server, 
   AlertTriangle, 
-  AlertCircle, 
   CheckCircle2, 
   ChevronDown, 
   ChevronRight,
@@ -22,89 +19,46 @@ import {
   HardDrive,
   MemoryStick,
   Activity,
-  X
+  X,
+  Wifi
 } from 'lucide-react';
 
 type NodeStatus = 'online' | 'degraded' | 'offline';
-type Severity = 'critical' | 'warning' | 'info';
-type IncidentStatus = 'active' | 'resolved';
+type NodeRole = 'masternode' | 'fullnode' | 'archive' | 'rpc';
 
-interface Incident {
+interface FleetNode {
   id: string;
-  nodeId: string;
-  nodeName: string;
-  type: string;
-  severity: Severity;
-  status: IncidentStatus;
-  timestamp: string;
-  duration?: string;
-  description: string;
+  name: string;
+  host: string;
+  role: NodeRole;
+  location_city: string;
+  location_country: string;
+  is_active: boolean;
+  block_height: number;
+  sync_percent: number;
+  peer_count: number;
+  cpu_percent: number;
+  memory_percent: number;
+  disk_percent: number;
+  rpc_latency_ms: number;
+  is_syncing: boolean;
+  client_version: string;
+  last_seen: string;
+  status: NodeStatus;
 }
 
-// Mock incidents
-const mockIncidents: Incident[] = [
-  {
-    id: 'INC-001',
-    nodeId: 'xdc-dev-local',
-    nodeName: 'xdc-dev-local',
-    type: 'Sync Stall',
-    severity: 'warning',
-    status: 'active',
-    timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    description: 'Node stuck at block #84999823 for >5 minutes',
-  },
-  {
-    id: 'INC-002',
-    nodeId: 'xdc-dev-local',
-    nodeName: 'xdc-dev-local',
-    type: 'Peer Drop',
-    severity: 'critical',
-    status: 'active',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    description: 'Peer count dropped to 2 (threshold: 3)',
-  },
-  {
-    id: 'INC-003',
-    nodeId: 'xdc-prod-ap1',
-    nodeName: 'xdc-prod-ap1',
-    type: 'Memory Pressure',
-    severity: 'warning',
-    status: 'resolved',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    duration: '45m',
-    description: 'Memory usage exceeded 90% threshold',
-  },
-  {
-    id: 'INC-004',
-    nodeId: 'xdc-archive-us1',
-    nodeName: 'xdc-archive-us1',
-    type: 'Disk Pressure',
-    severity: 'warning',
-    status: 'active',
-    timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    description: 'Disk usage at 87% (threshold: 85%)',
-  },
-  {
-    id: 'INC-005',
-    nodeId: 'xdc-prod-eu1',
-    nodeName: 'xdc-prod-eu1',
-    type: 'Block Height Drift',
-    severity: 'info',
-    status: 'resolved',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-    duration: '12m',
-    description: 'Node lagged >100 blocks behind fleet leader',
-  },
-];
-
-// Recent resolved incidents for timeline
-const mockTimeline = [
-  { id: 'INC-006', node: 'xdc-prod-us1', type: 'Restart Required', status: 'resolved', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), duration: '5m' },
-  { id: 'INC-007', node: 'xdc-rpc-eu1', type: 'High CPU', status: 'resolved', timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(), duration: '18m' },
-  { id: 'INC-008', node: 'xdc-prod-ap1', type: 'Network Latency', status: 'resolved', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), duration: '32m' },
-  { id: 'INC-009', node: 'xdc-archive-us1', type: 'Compaction Slow', status: 'resolved', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), duration: '1h 15m' },
-  { id: 'INC-010', node: 'xdc-dev-local', type: 'Sync Issue', status: 'resolved', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), duration: '22m' },
-];
+interface Incident {
+  id: number;
+  node_id: string;
+  node_name: string;
+  type: string;
+  severity: 'critical' | 'warning' | 'info';
+  title: string;
+  description: string;
+  status: string;
+  detected_at: string;
+  resolved_at: string | null;
+}
 
 function StatusDot({ status }: { status: NodeStatus }) {
   const colors = {
@@ -118,7 +72,7 @@ function StatusDot({ status }: { status: NodeStatus }) {
   );
 }
 
-function SeverityBadge({ severity }: { severity: Severity }) {
+function SeverityBadge({ severity }: { severity: 'critical' | 'warning' | 'info' }) {
   const styles = {
     critical: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20',
     warning: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20',
@@ -142,7 +96,6 @@ function formatTimeAgo(timestamp: string): string {
   return 'just now';
 }
 
-// Toast notification component
 function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   useEffect(() => {
     const timer = setTimeout(onClose, 3000);
@@ -160,46 +113,68 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   );
 }
 
-// Expanded row diagnostics
 function DiagnosticsRow({ nodeId, onAction }: { nodeId: string; onAction: (action: string, node: string) => void }) {
+  const [running, setRunning] = useState<string | null>(null);
+  const [result, setResult] = useState<any>(null);
+
+  const runDiagnostic = async (command: string) => {
+    setRunning(command);
+    try {
+      const res = await fetch('/api/diagnostics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nodeId, command }),
+      });
+      const data = await res.json();
+      setResult(data);
+      onAction(`Diagnostic: ${command}`, nodeId);
+    } catch (err) {
+      console.error('Diagnostic failed:', err);
+    } finally {
+      setRunning(null);
+    }
+  };
+
   return (
     <div className="col-span-full bg-[#0A0E1A]/50 p-4 rounded-lg mt-2">
-      <div className="flex flex-wrap gap-3">
-        <button 
-          onClick={() => onAction('Check Logs', nodeId)}
-          className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors"
-        >
-          <FileText className="w-4 h-4 text-[#1E90FF]" />
-          Check Logs
-        </button>
-        <button 
-          onClick={() => onAction('Restart Node', nodeId)}
-          className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors"
-        >
-          <RefreshCw className="w-4 h-4 text-[#F59E0B]" />
-          Restart Node
-        </button>
-        <button 
-          onClick={() => onAction('Force Sync', nodeId)}
-          className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors"
-        >
-          <Play className="w-4 h-4 text-[#10B981]" />
-          Force Sync
-        </button>
-        <button 
-          onClick={() => onAction('Add Peers', nodeId)}
-          className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors"
-        >
-          <Plus className="w-4 h-4 text-[#8B5CF6]" />
-          Add Peers
-        </button>
+      <div className="flex flex-wrap gap-3 mb-4">
+        {['health_check', 'sync_status', 'peer_discovery', 'disk_usage', 'memory_profile', 'rpc_test'].map((cmd) => (
+          <button
+            key={cmd}
+            onClick={() => runDiagnostic(cmd)}
+            disabled={running === cmd}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors disabled:opacity-50"
+          >
+            {running === cmd ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Activity className="w-4 h-4 text-[#1E90FF]" />
+            )}
+            {cmd.replace('_', ' ')}
+          </button>
+        ))}
       </div>
+      
+      {result && (
+        <div className="bg-white/5 rounded-lg p-3 text-sm font-mono overflow-x-auto">
+          <pre className="text-xs">{JSON.stringify(result.result, null, 2)}</pre>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function FleetPage() {
-  const [fleetStats, setFleetStats] = useState<FleetStats | null>(null);
+  const [nodes, setNodes] = useState<FleetNode[]>([]);
+  const [stats, setStats] = useState({
+    totalNodes: 0,
+    healthyNodes: 0,
+    degradedNodes: 0,
+    offlineNodes: 0,
+    healthScore: 0,
+    maxBlockHeight: 0,
+  });
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortField, setSortField] = useState<string>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -208,50 +183,78 @@ export default function FleetPage() {
   const [statusFilter, setStatusFilter] = useState<NodeStatus | 'all'>('all');
   const [toast, setToast] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchFleetMetrics().then(stats => {
-      setFleetStats(stats);
+  // WebSocket for live updates
+  const { incidents: wsIncidents, connected: wsConnected } = useWebSocket();
+
+  const fetchFleet = async () => {
+    try {
+      const [fleetRes, incidentsRes] = await Promise.all([
+        fetch('/api/fleet', { cache: 'no-store' }),
+        fetch('/api/incidents?status=active', { cache: 'no-store' }),
+      ]);
+
+      if (fleetRes.ok) {
+        const fleetData = await fleetRes.json();
+        setNodes(fleetData.nodes);
+        setStats(fleetData.stats);
+      }
+
+      if (incidentsRes.ok) {
+        const incidentsData = await incidentsRes.json();
+        setIncidents(incidentsData.incidents);
+      }
+    } catch (err) {
+      console.error('Failed to fetch fleet:', err);
+    } finally {
       setLoading(false);
-    });
+    }
+  };
+
+  useEffect(() => {
+    fetchFleet();
+    const interval = setInterval(fetchFleet, 30000); // Refresh every 30s
+    return () => clearInterval(interval);
   }, []);
 
+  // Update incidents from WebSocket
+  useEffect(() => {
+    if (wsIncidents) {
+      setIncidents((wsIncidents as any).data || []);
+    }
+  }, [wsIncidents]);
+
   const handleAction = (action: string, node: string) => {
-    setToast(`Command "${action}" sent to ${node}`);
+    setToast(`Command "${action}" executed on ${node}`);
   };
 
   const filteredAndSortedNodes = useMemo(() => {
-    if (!fleetStats) return [];
+    let filtered = [...nodes];
     
-    let nodes = [...fleetStats.nodes];
-    
-    // Apply filters
     if (roleFilter !== 'all') {
-      const nodeIds = registeredNodes.filter(n => n.role === roleFilter).map(n => n.id);
-      nodes = nodes.filter(n => nodeIds.includes(n.nodeId));
+      filtered = filtered.filter(n => n.role === roleFilter);
     }
     
     if (statusFilter !== 'all') {
-      nodes = nodes.filter(n => n.status === statusFilter);
+      filtered = filtered.filter(n => n.status === statusFilter);
     }
     
-    // Apply sorting
-    nodes.sort((a, b) => {
+    filtered.sort((a, b) => {
       let comparison = 0;
       switch (sortField) {
         case 'name':
-          comparison = a.nodeId.localeCompare(b.nodeId);
+          comparison = a.name.localeCompare(b.name);
           break;
         case 'status':
           comparison = a.status.localeCompare(b.status);
           break;
         case 'blockHeight':
-          comparison = a.blockHeight - b.blockHeight;
+          comparison = (a.block_height || 0) - (b.block_height || 0);
           break;
         case 'syncPercent':
-          comparison = a.syncPercent - b.syncPercent;
+          comparison = (a.sync_percent || 0) - (b.sync_percent || 0);
           break;
         case 'peers':
-          comparison = a.peers - b.peers;
+          comparison = (a.peer_count || 0) - (b.peer_count || 0);
           break;
         default:
           comparison = 0;
@@ -259,10 +262,10 @@ export default function FleetPage() {
       return sortDirection === 'asc' ? comparison : -comparison;
     });
     
-    return nodes;
-  }, [fleetStats, roleFilter, statusFilter, sortField, sortDirection]);
+    return filtered;
+  }, [nodes, roleFilter, statusFilter, sortField, sortDirection]);
 
-  const activeIncidents = mockIncidents.filter(i => i.status === 'active');
+  const activeIncidents = incidents.filter(i => i.status === 'active');
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -273,39 +276,42 @@ export default function FleetPage() {
     }
   };
 
-  const getNodeInfo = (nodeId: string) => registeredNodes.find(n => n.id === nodeId);
-
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        {/* Page Header */}
-        <div>
-          <h1 className="text-2xl font-semibold text-[#F9FAFB]">Fleet Management</h1>
-          <p className="text-[#6B7280] mt-1">Monitor and manage all nodes in your fleet</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-[#F9FAFB]">Fleet Management</h1>
+            <p className="text-[#6B7280] mt-1">Monitor and manage all nodes in your fleet</p>
+          </div>
+          {wsConnected && (
+            <div className="flex items-center gap-2">
+              <Wifi className="w-4 h-4 text-[#10B981]" />
+              <span className="text-sm text-[#10B981]">Live</span>
+            </div>
+          )}
         </div>
 
-        {/* Fleet Overview Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="card-xdc">
             <div className="section-header mb-1">Total Nodes</div>
-            <div className="text-2xl font-bold font-mono-nums">{fleetStats?.totalNodes || 0}</div>
+            <div className="text-2xl font-bold font-mono-nums">{stats.totalNodes}</div>
           </div>
           <div className="card-xdc">
             <div className="section-header mb-1 text-[#10B981]">Healthy</div>
-            <div className="text-2xl font-bold font-mono-nums text-[#10B981]">{fleetStats?.healthyCount || 0}</div>
+            <div className="text-2xl font-bold font-mono-nums text-[#10B981]">{stats.healthyNodes}</div>
           </div>
           <div className="card-xdc">
             <div className="section-header mb-1 text-[#F59E0B]">Degraded</div>
-            <div className="text-2xl font-bold font-mono-nums text-[#F59E0B]">{fleetStats?.degradedCount || 0}</div>
+            <div className="text-2xl font-bold font-mono-nums text-[#F59E0B]">{stats.degradedNodes}</div>
           </div>
           <div className="card-xdc">
             <div className="section-header mb-1 text-[#EF4444]">Offline</div>
-            <div className="text-2xl font-bold font-mono-nums text-[#EF4444]">{fleetStats?.offlineCount || 0}</div>
+            <div className="text-2xl font-bold font-mono-nums text-[#EF4444]">{stats.offlineNodes}</div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Fleet Status Matrix */}
           <div className="card-xdc lg:col-span-2">
             <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
               <div className="flex items-center gap-3">
@@ -318,10 +324,9 @@ export default function FleetPage() {
                 </div>
               </div>
               
-              {/* Filters */}
               <div className="flex gap-2">
-                <select 
-                  value={roleFilter} 
+                <select
+                  value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value as NodeRole | 'all')}
                   className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#1E90FF]"
                 >
@@ -332,8 +337,8 @@ export default function FleetPage() {
                   <option value="rpc">RPC</option>
                 </select>
                 
-                <select 
-                  value={statusFilter} 
+                <select
+                  value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as NodeStatus | 'all')}
                   className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#1E90FF]"
                 >
@@ -372,74 +377,70 @@ export default function FleetPage() {
                       <td colSpan={12} className="py-8 text-center text-[#6B7280]">No nodes match filters</td>
                     </tr>
                   ) : (
-                    filteredAndSortedNodes.map((node) => {
-                      const info = getNodeInfo(node.nodeId);
-                      return (
-                        <>
-                          <tr 
-                            key={node.nodeId} 
-                            className="hover:bg-white/[0.02] cursor-pointer"
-                            onClick={() => setExpandedNode(expandedNode === node.nodeId ? null : node.nodeId)}
-                          >
-                            <td className="py-3 px-3">
-                              {expandedNode === node.nodeId ? (
-                                <ChevronDown className="w-4 h-4 text-[#6B7280]" />
-                              ) : (
-                                <ChevronRight className="w-4 h-4 text-[#6B7280]" />
-                              )}
-                            </td>
-                            <td className="py-3 px-3">
-                              <StatusDot status={node.status} />
-                            </td>
-                            <td className="py-3 px-3 font-medium">{node.nodeId}</td>
-                            <td className="py-3 px-3">
-                              <span className="px-2 py-0.5 bg-white/5 rounded text-xs">{info?.role || 'unknown'}</span>
-                            </td>
-                            <td className="py-3 px-3">
-                              <div className="flex items-center gap-1 text-xs text-[#6B7280]">
-                                <MapPin className="w-3 h-3" />
-                                {info?.location.city}
-                              </div>
-                            </td>
-                            <td className="py-3 px-3 font-mono-nums">{node.blockHeight.toLocaleString()}</td>
-                            <td className="py-3 px-3">
-                              <span className={node.syncPercent >= 99 ? 'text-[#10B981]' : 'text-[#F59E0B]'} >
-                                {node.syncPercent.toFixed(1)}%
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 font-mono-nums">{node.peers}</td>
-                            <td className="py-3 px-3">
-                              <div className="flex items-center gap-2">
-                                <Cpu className="w-3 h-3 text-[#6B7280]" />
-                                <span className={node.cpu > 80 ? 'text-[#EF4444]' : ''}>{node.cpu}%</span>
-                              </div>
-                            </td>
-                            <td className="py-3 px-3">
-                              <div className="flex items-center gap-2">
-                                <MemoryStick className="w-3 h-3 text-[#6B7280]" />
-                                <span className={node.memory > 90 ? 'text-[#EF4444]' : ''}>{node.memory}%</span>
-                              </div>
-                            </td>
-                            <td className="py-3 px-3">
-                              <div className="flex items-center gap-2">
-                                <HardDrive className="w-3 h-3 text-[#6B7280]" />
-                                <span className={node.disk > 85 ? 'text-[#F59E0B]' : ''}>{node.disk}%</span>
-                              </div>
-                            </td>
-                          </tr>
-                          {expandedNode === node.nodeId && (
-                            <DiagnosticsRow nodeId={node.nodeId} onAction={handleAction} />
-                          )}
-                        </>
-                      );
-                    })
+                    filteredAndSortedNodes.map((node) => (
+                      <>
+                        <tr
+                          key={node.id}
+                          className="hover:bg-white/[0.02] cursor-pointer"
+                          onClick={() => setExpandedNode(expandedNode === node.id ? null : node.id)}
+                        >
+                          <td className="py-3 px-3">
+                            {expandedNode === node.id ? (
+                              <ChevronDown className="w-4 h-4 text-[#6B7280]" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-[#6B7280]" />
+                            )}
+                          </td>
+                          <td className="py-3 px-3">
+                            <StatusDot status={node.status} />
+                          </td>
+                          <td className="py-3 px-3 font-medium">{node.name}</td>
+                          <td className="py-3 px-3">
+                            <span className="px-2 py-0.5 bg-white/5 rounded text-xs">{node.role}</span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-1 text-xs text-[#6B7280]">
+                              <MapPin className="w-3 h-3" />
+                              {node.location_city}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 font-mono-nums">{(node.block_height || 0).toLocaleString()}</td>
+                          <td className="py-3 px-3">
+                            <span className={node.sync_percent >= 99 ? 'text-[#10B981]' : 'text-[#F59E0B]'} >
+                              {(node.sync_percent || 0).toFixed(1)}%
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 font-mono-nums">{node.peer_count || 0}</td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-2">
+                              <Cpu className="w-3 h-3 text-[#6B7280]" />
+                              <span className={(node.cpu_percent || 0) > 80 ? 'text-[#EF4444]' : ''}>{Math.round(node.cpu_percent || 0)}%</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-2">
+                              <MemoryStick className="w-3 h-3 text-[#6B7280]" />
+                              <span className={(node.memory_percent || 0) > 90 ? 'text-[#EF4444]' : ''}>{Math.round(node.memory_percent || 0)}%</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-2">
+                              <HardDrive className="w-3 h-3 text-[#6B7280]" />
+                              <span className={(node.disk_percent || 0) > 85 ? 'text-[#F59E0B]' : ''}>{Math.round(node.disk_percent || 0)}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                        {expandedNode === node.id && (
+                          <DiagnosticsRow nodeId={node.id} onAction={handleAction} />
+                        )}
+                      </>
+                    ))
                   )}
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* Active Incidents */}
           <div className="space-y-4">
             <div className="card-xdc">
               <div className="flex items-center gap-3 mb-4">
@@ -466,12 +467,12 @@ export default function FleetPage() {
                           <SeverityBadge severity={incident.severity} />
                           <span className="text-sm font-medium">{incident.type}</span>
                         </div>
-                        <span className="text-xs text-[#6B7280]">{formatTimeAgo(incident.timestamp)}</span>
+                        <span className="text-xs text-[#6B7280]">{formatTimeAgo(incident.detected_at)}</span>
                       </div>
                       <p className="text-xs text-[#6B7280] mb-2">{incident.description}</p>
                       <div className="flex items-center gap-2 text-xs">
                         <Server className="w-3 h-3 text-[#6B7280]" />
-                        <span>{incident.nodeName}</span>
+                        <span>{incident.node_name}</span>
                       </div>
                     </div>
                   ))
@@ -479,45 +480,33 @@ export default function FleetPage() {
               </div>
             </div>
 
-            {/* Incident Timeline */}
             <div className="card-xdc">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-[rgba(245,158,11,0.1)] flex items-center justify-center text-[#F59E0B]">
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-[#F9FAFB]">Incident Timeline</h2>
-                  <p className="text-xs text-[#6B7280]">Recent events</p>
+                  <h2 className="text-lg font-semibold text-[#F9FAFB]">Health Score</h2>
+                  <p className="text-xs text-[#6B7280]">Fleet-wide health</p>
                 </div>
               </div>
               
-              <div className="space-y-3 max-h-[300px] overflow-y-auto scrollbar-thin">
-                {[...mockIncidents, ...mockTimeline].map((incident) => (
-                  <div key={incident.id} className="flex gap-3 text-sm">
-                    <div className="flex flex-col items-center">
-                      <div className={`w-2 h-2 rounded-full ${
-                        incident.status === 'active' ? 'bg-[#EF4444]' : 'bg-[#10B981]'
-                      }`} />
-                      <div className="w-0.5 flex-1 bg-white/10 mt-1" />
-                    </div>
-                    <div className="flex-1 pb-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{incident.type}</span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${
-                          incident.status === 'active' 
-                            ? 'bg-[#EF4444]/10 text-[#EF4444]' 
-                            : 'bg-[#10B981]/10 text-[#10B981]'
-                        }`}>
-                          {incident.status}
-                        </span>
-                      </div>
-                      <div className="text-xs text-[#6B7280] mt-1">
-                        {'nodeName' in incident ? incident.nodeName : incident.node} · {formatTimeAgo(incident.timestamp)}
-                        {'duration' in incident && incident.duration && ` · ${incident.duration}`}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="text-center">
+                <div className={`text-4xl font-bold font-mono-nums ${
+                  stats.healthScore >= 90 ? 'text-[#10B981]' :
+                  stats.healthScore >= 70 ? 'text-[#F59E0B]' : 'text-[#EF4444]'
+                }`}>
+                  {stats.healthScore}%
+                </div>
+                <div className="mt-2 h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${
+                      stats.healthScore >= 90 ? 'bg-[#10B981]' :
+                      stats.healthScore >= 70 ? 'bg-[#F59E0B]' : 'bg-[#EF4444]'
+                    }`}
+                    style={{ width: `${stats.healthScore}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>

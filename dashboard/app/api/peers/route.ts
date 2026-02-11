@@ -1,164 +1,67 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { query } from '@/lib/db';
 
-const RPC_URL = process.env.RPC_URL || 'http://127.0.0.1:38545';
-const GEO_CACHE_TTL = parseInt(process.env.GEO_CACHE_TTL || '300000'); // 5 minutes
-
-interface PeerNetwork {
-  localAddress: string;
-  remoteAddress: string;
-  inbound: boolean;
-  trusted: boolean;
-  static: boolean;
-}
-
-interface PeerInfo {
-  enode: string;
-  id: string;
-  name: string;
-  network: PeerNetwork;
-  protocols: Record<string, unknown>;
-}
-
-interface GeoLocation {
-  status: string;
-  country: string;
-  countryCode: string;
-  region: string;
-  regionName: string;
-  city: string;
-  lat: number;
-  lon: number;
-  isp: string;
-  query: string;
-}
-
-// In-memory cache for geo-location data
-const geoCache = new Map<string, GeoLocation>();
-const cacheTimestamps = new Map<string, number>();
+// Geo cache for IPs
+const GEO_CACHE_TTL = 300000; // 5 minutes
+const geoCache = new Map<string, { country: string; city: string; lat: number; lon: number; asn: string }>();
 
 function extractIP(remoteAddress: string): string | null {
-  // Handle formats like "54.219.236.246:30303" or "[::]:30303"
-  if (remoteAddress.startsWith('[')) {
-    // IPv6 - skip for now
-    return null;
-  }
+  if (remoteAddress.startsWith('[')) return null; // IPv6 skip
   const parts = remoteAddress.split(':');
-  if (parts.length >= 2) {
-    return parts[0];
-  }
-  return remoteAddress;
+  return parts.length >= 2 ? parts[0] : remoteAddress;
 }
 
 function isPrivateIP(ip: string): boolean {
   const privateRanges = [
-    /^10\./,
-    /^172\.(1[6-9]|2[0-9]|3[01])\./,
-    /^192\.168\./,
-    /^127\./,
-    /^::1$/,
-    /^fc00:/i,
-    /^fe80:/i,
+    /^10\./, /^172\.(1[6-9]|2[0-9]|3[01])\./, /^192\.168\./, /^127\./,
+    /^::1$/, /^fc00:/i, /^fe80:/i,
   ];
   return privateRanges.some(range => range.test(ip));
 }
 
-async function getGeoLocation(ip: string): Promise<GeoLocation | null> {
-  // Check cache first
-  const now = Date.now();
-  const cachedTime = cacheTimestamps.get(ip);
-  if (cachedTime && (now - cachedTime) < GEO_CACHE_TTL) {
-    const cached = geoCache.get(ip);
-    if (cached) return cached;
-  }
-
-  try {
-    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,region,regionName,city,lat,lon,isp,query`, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data: GeoLocation = await response.json();
-    
-    if (data.status === 'success') {
-      geoCache.set(ip, data);
-      cacheTimestamps.set(ip, now);
-      return data;
-    }
-    return null;
-  } catch (error) {
-    console.error(`Geo-location error for ${ip}:`, error);
-    return null;
-  }
-}
-
-async function batchGeoLocate(ips: string[]): Promise<Map<string, GeoLocation>> {
-  const results = new Map<string, GeoLocation>();
-  const now = Date.now();
+async function getGeoLocation(ip: string): Promise<{ country: string; city: string; lat: number; lon: number; asn: string } | null> {
+  if (isPrivateIP(ip)) return null;
   
-  // Filter out cached and private IPs
-  const ipsToQuery = ips.filter(ip => {
-    if (isPrivateIP(ip)) return false;
-    const cachedTime = cacheTimestamps.get(ip);
-    if (cachedTime && (now - cachedTime) < GEO_CACHE_TTL) {
-      const cached = geoCache.get(ip);
-      if (cached) results.set(ip, cached);
-      return false;
-    }
-    return true;
-  });
-
-  if (ipsToQuery.length === 0) return results;
+  const cached = geoCache.get(ip);
+  if (cached) return cached;
 
   try {
-    // Batch request to ip-api (max 100 IPs per request)
-    const batch = ipsToQuery.slice(0, 100).map(ip => ({ query: ip }));
+    const response = await fetch(
+      `http://ip-api.com/json/${ip}?fields=status,country,countryCode,city,lat,lon,isp`,
+      { headers: { 'Accept': 'application/json' } }
+    );
     
-    const response = await fetch('http://ip-api.com/batch?fields=status,country,countryCode,region,regionName,city,lat,lon,isp,query', {
-      method: 'POST',
-      headers: { 
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(batch),
-    });
-
-    if (!response.ok) {
-      console.error('Batch geo-location failed:', response.statusText);
-      return results;
-    }
-
-    const data: GeoLocation[] = await response.json();
+    if (!response.ok) return null;
     
-    for (const loc of data) {
-      if (loc.status === 'success') {
-        geoCache.set(loc.query, loc);
-        cacheTimestamps.set(loc.query, now);
-        results.set(loc.query, loc);
-      }
-    }
-  } catch (error) {
-    console.error('Batch geo-location error:', error);
+    const data = await response.json();
+    if (data.status !== 'success') return null;
+    
+    const result = {
+      country: data.countryCode || 'Unknown',
+      city: data.city || 'Unknown',
+      lat: data.lat || 0,
+      lon: data.lon || 0,
+      asn: data.isp || 'Unknown',
+    };
+    
+    geoCache.set(ip, result);
+    setTimeout(() => geoCache.delete(ip), GEO_CACHE_TTL);
+    
+    return result;
+  } catch {
+    return null;
   }
-
-  return results;
 }
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
+// GET /api/peers - Get combined real-time + historical peer data
 export async function GET() {
   try {
-    // Fetch peers from XDC RPC
-    const response = await fetch(RPC_URL, {
+    const RPC_URL = process.env.RPC_URL || 'http://127.0.0.1:8989';
+    
+    // Fetch real-time peers from RPC
+    const rpcResponse = await fetch(RPC_URL, {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         jsonrpc: '2.0',
         method: 'admin_peers',
@@ -167,88 +70,93 @@ export async function GET() {
       }),
     });
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: 'Failed to fetch peers from RPC', totalPeers: 0, peers: [], countries: {} },
-        { status: 503 }
-      );
+    let livePeers: any[] = [];
+    if (rpcResponse.ok) {
+      const rpcData = await rpcResponse.json();
+      livePeers = rpcData.result || [];
     }
 
-    const rpcData = await response.json();
-    
-    if (rpcData.error) {
-      console.error('RPC error:', rpcData.error);
-      return NextResponse.json(
-        { error: rpcData.error.message || 'RPC error', totalPeers: 0, peers: [], countries: {} },
-        { status: 503 }
-      );
-    }
-
-    const peers: PeerInfo[] = rpcData.result || [];
-    
-    // Extract unique IPs
-    const ipMap = new Map<string, { peer: PeerInfo; ip: string; port: number }>();
-    const uniqueIPs: string[] = [];
-
-    for (const peer of peers) {
-      const remoteAddr = peer.network?.remoteAddress;
-      if (!remoteAddr) continue;
-      
-      const ip = extractIP(remoteAddr);
-      if (!ip) continue;
-      
-      const port = parseInt(remoteAddr.split(':').pop() || '30303');
-      
-      if (!ipMap.has(ip)) {
-        ipMap.set(ip, { peer, ip, port });
-        if (!isPrivateIP(ip)) {
-          uniqueIPs.push(ip);
-        }
-      }
-    }
-
-    // Geo-locate IPs
-    const geoData = await batchGeoLocate(uniqueIPs);
-
-    // Build peer list with geo data
+    // Enrich with geo data and store in DB
     const enrichedPeers = [];
     const countries: Record<string, { name: string; count: number }> = {};
+    const protocols: Record<string, number> = {};
 
-    for (const [ip, { peer, port }] of Array.from(ipMap.entries())) {
-      const geo = geoData.get(ip);
+    for (const peer of livePeers) {
+      const remoteAddr = peer.network?.remoteAddress || '';
+      const ip = extractIP(remoteAddr);
+      const port = parseInt(remoteAddr.split(':').pop() || '30303');
       
-      if (geo) {
-        const countryCode = geo.countryCode.toLowerCase();
-        if (!countries[countryCode]) {
-          countries[countryCode] = { name: geo.country, count: 0 };
+      let geo = null;
+      if (ip) {
+        geo = await getGeoLocation(ip);
+        if (geo) {
+          if (!countries[geo.country]) {
+            countries[geo.country] = { name: geo.country, count: 0 };
+          }
+          countries[geo.country].count++;
         }
-        countries[countryCode].count++;
       }
+
+      // Extract protocol version
+      const protocolVersion = peer.protocols?.eth?.version?.toString() || 'unknown';
+      protocols[`eth/${protocolVersion}`] = (protocols[`eth/${protocolVersion}`] || 0) + 1;
 
       enrichedPeers.push({
         id: peer.id,
+        enode: peer.enode,
         name: peer.name,
         ip,
         port,
         country: geo?.country || 'Unknown',
-        countryCode: geo?.countryCode?.toLowerCase() || 'unknown',
         city: geo?.city || 'Unknown',
         lat: geo?.lat || 0,
         lon: geo?.lon || 0,
-        isp: geo?.isp || 'Unknown',
-        inbound: peer.network?.inbound || false,
+        asn: geo?.asn || 'Unknown',
+        direction: peer.network?.inbound ? 'inbound' : 'outbound',
+        protocols: Object.keys(peer.protocols || {}).map(p => 
+          `${p}/${peer.protocols[p]?.version || '?'}`
+        ),
+        clientVersion: peer.name,
       });
     }
 
+    // Get banned peers from DB
+    const bannedResult = await query(`
+      SELECT * FROM netown.banned_peers
+      ORDER BY banned_at DESC
+    `);
+
+    // Get peer stats from DB (last 24h)
+    const statsResult = await query(`
+      SELECT 
+        COUNT(DISTINCT peer_enode) as unique_peers_24h,
+        COUNT(DISTINCT remote_ip) as unique_ips_24h,
+        COUNT(*) FILTER (WHERE direction = 'inbound') as inbound_24h,
+        COUNT(*) FILTER (WHERE direction = 'outbound') as outbound_24h
+      FROM netown.peer_snapshots
+      WHERE collected_at > NOW() - INTERVAL '24 hours'
+    `);
+
     return NextResponse.json({
-      peers: enrichedPeers,
-      countries,
-      totalPeers: enrichedPeers.length,
+      live: {
+        peers: enrichedPeers,
+        totalPeers: enrichedPeers.length,
+        countries,
+        protocols,
+      },
+      history: {
+        uniquePeers24h: parseInt(statsResult.rows[0]?.unique_peers_24h || '0'),
+        uniqueIps24h: parseInt(statsResult.rows[0]?.unique_ips_24h || '0'),
+        inbound24h: parseInt(statsResult.rows[0]?.inbound_24h || '0'),
+        outbound24h: parseInt(statsResult.rows[0]?.outbound_24h || '0'),
+      },
+      banned: bannedResult.rows,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Error fetching peers:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch peers', totalPeers: 0, peers: [], countries: {} },
+      { error: 'Failed to fetch peers' },
       { status: 500 }
     );
   }
