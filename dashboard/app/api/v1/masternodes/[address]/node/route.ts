@@ -29,7 +29,7 @@ export async function GET(
         n.host,
         n.role,
         n.is_active,
-        n.last_seen,
+        n.updated_at as last_seen,
         m.block_height,
         m.sync_percent,
         m.peer_count,
