@@ -1,0 +1,7 @@
+Failed to compile.
+
+Type error: File '/root/.openclaw/workspace/XDCNetOwn/dashboard/.next/types/app/api/collector/route.ts' not found.
+  The file is in the program because:
+    Root file specified for compilation
+
+Next.js build worker exited with code: 1 and signal: null

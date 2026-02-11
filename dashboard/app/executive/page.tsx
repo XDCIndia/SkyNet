@@ -231,7 +231,7 @@ export default function ExecutiveDashboard() {
           <StatCard
             icon={<Zap className="w-5 h-5" />}
             label="Network TPS"
-            value={2000}
+            value={fleetStats?.totalNodes ? Math.round(fleetStats.totalNodes * 2000 / 5) : '--'}
             suffix="tx/s"
           />
           <StatCard

@@ -14,6 +14,32 @@ import {
   PieChart
 } from 'lucide-react';
 
+interface NodeHealth {
+  id: string;
+  name: string;
+  host: string;
+  role: string;
+  status: 'healthy' | 'degraded' | 'offline';
+  lastSeen: string;
+  metrics: {
+    blockHeight: string;
+    syncPercent: number;
+    peerCount: number;
+    cpuPercent: number;
+    memoryPercent: number;
+    diskPercent: number;
+    diskUsedGb: number;
+    diskTotalGb: number;
+    txPoolPending: number;
+    txPoolQueued: number;
+    gasPrice: string;
+    rpcLatencyMs: number;
+    isSyncing: boolean;
+    clientVersion: string;
+  };
+  incidents: Array<{ type: string; severity: string; title: string; detected_at: string; status: string }>;
+}
+
 interface Voter {
   address: string;
   xdcAddress: string;
@@ -159,6 +185,7 @@ export default function MasternodeDetailPage() {
   const address = params.address as string;
   
   const [detail, setDetail] = useState<MasternodeDetail | null>(null);
+  const [nodeHealth, setNodeHealth] = useState<NodeHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -167,14 +194,21 @@ export default function MasternodeDetailPage() {
       setLoading(true);
       setError(null);
       
-      const res = await fetch(`/api/v1/masternodes/${address}`);
-      const data = await res.json();
+      const [mnRes, nodeRes] = await Promise.all([
+        fetch(`/api/v1/masternodes/${address}`),
+        fetch(`/api/v1/masternodes/${address}/node`),
+      ]);
       
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch masternode details');
+      const mnData = await mnRes.json();
+      if (!mnData.success) {
+        throw new Error(mnData.error || 'Failed to fetch masternode details');
       }
+      setDetail(mnData.data);
       
-      setDetail(data.data);
+      const nodeData = await nodeRes.json();
+      if (nodeData.matched) {
+        setNodeHealth(nodeData.node);
+      }
     } catch (err: any) {
       console.error('Failed to fetch masternode detail:', err);
       setError(err.message);
@@ -185,6 +219,8 @@ export default function MasternodeDetailPage() {
   
   useEffect(() => {
     fetchDetail();
+    const interval = setInterval(fetchDetail, 10000);
+    return () => clearInterval(interval);
   }, [fetchDetail]);
   
   const totalStake = detail?.stake 
@@ -300,6 +336,119 @@ export default function MasternodeDetailPage() {
           </div>
         </div>
         
+        {/* Node Health Section — shows when coinbase matches a registered node */}
+        {nodeHealth && (
+          <div className="card-xdc border border-[#1E90FF]/20 bg-gradient-to-r from-[#1E90FF]/5 to-transparent">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  nodeHealth.status === 'healthy' ? 'bg-[#10B981]/10 text-[#10B981]' :
+                  nodeHealth.status === 'degraded' ? 'bg-[#F59E0B]/10 text-[#F59E0B]' :
+                  'bg-[#EF4444]/10 text-[#EF4444]'
+                }`}>
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-[#F9FAFB]">Monitored Node</h2>
+                  <p className="text-xs text-[#6B7280]">
+                    This masternode is running on <span className="text-[#1E90FF] font-medium">{nodeHealth.name}</span> ({nodeHealth.host})
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+                  nodeHealth.status === 'healthy' ? 'bg-[#10B981]/10 text-[#10B981]' :
+                  nodeHealth.status === 'degraded' ? 'bg-[#F59E0B]/10 text-[#F59E0B]' :
+                  'bg-[#EF4444]/10 text-[#EF4444]'
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${
+                    nodeHealth.status === 'healthy' ? 'bg-[#10B981] animate-pulse' :
+                    nodeHealth.status === 'degraded' ? 'bg-[#F59E0B]' :
+                    'bg-[#EF4444]'
+                  }`} />
+                  {nodeHealth.status.charAt(0).toUpperCase() + nodeHealth.status.slice(1)}
+                </span>
+                <button
+                  onClick={() => router.push(`/nodes/${nodeHealth.id}`)}
+                  className="px-3 py-1.5 text-sm bg-[#1E90FF]/10 text-[#1E90FF] rounded-lg hover:bg-[#1E90FF]/20 transition-colors"
+                >
+                  War Room →
+                </button>
+              </div>
+            </div>
+
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              <div className="bg-white/5 rounded-lg p-3">
+                <div className="text-[10px] uppercase text-[#6B7280] mb-1">Block Height</div>
+                <div className="text-lg font-bold font-mono-nums text-[#F9FAFB]">
+                  {Number(nodeHealth.metrics.blockHeight).toLocaleString()}
+                </div>
+              </div>
+              <div className="bg-white/5 rounded-lg p-3">
+                <div className="text-[10px] uppercase text-[#6B7280] mb-1">Peers</div>
+                <div className="text-lg font-bold font-mono-nums text-[#F9FAFB]">{nodeHealth.metrics.peerCount}</div>
+              </div>
+              <div className="bg-white/5 rounded-lg p-3">
+                <div className="text-[10px] uppercase text-[#6B7280] mb-1">CPU</div>
+                <div className={`text-lg font-bold font-mono-nums ${
+                  nodeHealth.metrics.cpuPercent > 80 ? 'text-[#EF4444]' : 
+                  nodeHealth.metrics.cpuPercent > 60 ? 'text-[#F59E0B]' : 'text-[#10B981]'
+                }`}>{nodeHealth.metrics.cpuPercent?.toFixed(1) ?? '—'}%</div>
+              </div>
+              <div className="bg-white/5 rounded-lg p-3">
+                <div className="text-[10px] uppercase text-[#6B7280] mb-1">Memory</div>
+                <div className={`text-lg font-bold font-mono-nums ${
+                  nodeHealth.metrics.memoryPercent > 85 ? 'text-[#EF4444]' : 
+                  nodeHealth.metrics.memoryPercent > 70 ? 'text-[#F59E0B]' : 'text-[#10B981]'
+                }`}>{nodeHealth.metrics.memoryPercent?.toFixed(1) ?? '—'}%</div>
+              </div>
+              <div className="bg-white/5 rounded-lg p-3">
+                <div className="text-[10px] uppercase text-[#6B7280] mb-1">Disk</div>
+                <div className="text-lg font-bold font-mono-nums text-[#F9FAFB]">
+                  {nodeHealth.metrics.diskPercent?.toFixed(1) ?? '—'}%
+                </div>
+                <div className="text-[10px] text-[#6B7280]">
+                  {nodeHealth.metrics.diskUsedGb?.toFixed(0) ?? '?'}/{nodeHealth.metrics.diskTotalGb?.toFixed(0) ?? '?'} GB
+                </div>
+              </div>
+              <div className="bg-white/5 rounded-lg p-3">
+                <div className="text-[10px] uppercase text-[#6B7280] mb-1">RPC Latency</div>
+                <div className={`text-lg font-bold font-mono-nums ${
+                  nodeHealth.metrics.rpcLatencyMs > 500 ? 'text-[#EF4444]' : 
+                  nodeHealth.metrics.rpcLatencyMs > 100 ? 'text-[#F59E0B]' : 'text-[#10B981]'
+                }`}>{nodeHealth.metrics.rpcLatencyMs ?? '—'}ms</div>
+              </div>
+            </div>
+
+            {/* Client Version + TxPool */}
+            <div className="flex flex-wrap gap-4 mt-3 text-xs text-[#6B7280]">
+              <span>Client: <span className="text-[#9CA3AF]">{nodeHealth.metrics.clientVersion || 'Unknown'}</span></span>
+              <span>TxPool: <span className="text-[#9CA3AF]">{nodeHealth.metrics.txPoolPending ?? 0} pending / {nodeHealth.metrics.txPoolQueued ?? 0} queued</span></span>
+              <span>Syncing: <span className={nodeHealth.metrics.isSyncing ? 'text-[#F59E0B]' : 'text-[#10B981]'}>{nodeHealth.metrics.isSyncing ? 'Yes' : 'No'}</span></span>
+            </div>
+
+            {/* Active Incidents */}
+            {nodeHealth.incidents.filter(i => i.status === 'active').length > 0 && (
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <div className="text-xs font-semibold text-[#EF4444] mb-2">⚠ Active Incidents</div>
+                <div className="space-y-1">
+                  {nodeHealth.incidents.filter(i => i.status === 'active').map((inc, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        inc.severity === 'critical' ? 'bg-[#EF4444]/20 text-[#EF4444]' :
+                        inc.severity === 'warning' ? 'bg-[#F59E0B]/20 text-[#F59E0B]' :
+                        'bg-[#6B7280]/20 text-[#6B7280]'
+                      }`}>{inc.severity}</span>
+                      <span className="text-[#9CA3AF]">{inc.title}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="card-xdc">
