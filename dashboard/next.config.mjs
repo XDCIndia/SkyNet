@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // output: 'standalone', // disabled - causes prerender copy issues
   env: {
     PROMETHEUS_URL: process.env.PROMETHEUS_URL || 'http://127.0.0.1:19090',
     RPC_URL: process.env.RPC_URL || 'http://127.0.0.1:38545',

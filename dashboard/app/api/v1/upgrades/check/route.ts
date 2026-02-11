@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 
 // Cache for Docker Hub version checks

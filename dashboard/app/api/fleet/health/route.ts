@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { query } from '@/lib/db';
 
 // GET /api/fleet/health - Get network health history

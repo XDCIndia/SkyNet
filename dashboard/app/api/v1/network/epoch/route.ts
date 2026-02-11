@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 
 const RPC_URL = process.env.XDC_RPC_URL || 'http://127.0.0.1:8989';
 
