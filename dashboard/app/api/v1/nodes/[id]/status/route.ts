@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { authenticateRequest, unauthorizedResponse, notFoundResponse } from '@/lib/auth';
+import { authenticateRequest, unauthorizedResponse, isDashboardReadRequest, notFoundResponse } from '@/lib/auth';
 
 /**
  * GET /api/v1/nodes/[id]/status
@@ -14,10 +14,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Authenticate request
-    const auth = await authenticateRequest(request);
-    if (!auth.valid) {
-      return unauthorizedResponse(auth.error);
+    // Authenticate request (optional for dashboard GET)
+    let auth: { valid: boolean; nodeId?: string; permissions?: string[]; error?: string } = { valid: true };
+    if (!isDashboardReadRequest(request)) {
+      auth = await authenticateRequest(request);
+      if (!auth.valid) {
+        return unauthorizedResponse(auth.error);
+      }
     }
 
     const { id } = await params;

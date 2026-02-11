@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
+import { authenticateRequest, unauthorizedResponse, isDashboardReadRequest } from '@/lib/auth';
 
 /**
  * GET /api/v1/nodes/[id]/metrics/history
@@ -13,9 +13,11 @@ export async function GET(
 ) {
   try {
     // Authenticate request
-    const auth = await authenticateRequest(request);
-    if (!auth.valid) {
-      return unauthorizedResponse(auth.error);
+    if (!isDashboardReadRequest(request)) {
+      const auth = await authenticateRequest(request);
+      if (!auth.valid) {
+        return unauthorizedResponse(auth.error);
+      }
     }
 
     const { id } = await params;

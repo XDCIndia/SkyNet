@@ -143,3 +143,12 @@ export function generateApiKey(): string {
   }
   return result;
 }
+
+/**
+ * For dashboard-facing GET routes: auth is optional.
+ * Returns true always for GET without auth header (dashboard calls).
+ * POST/PUT/DELETE still require auth.
+ */
+export function isDashboardReadRequest(req: NextRequest): boolean {
+  return req.method === 'GET' && !req.headers.get('authorization');
+}

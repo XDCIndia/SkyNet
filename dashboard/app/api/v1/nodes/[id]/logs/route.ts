@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
+import { authenticateRequest, unauthorizedResponse, isDashboardReadRequest } from '@/lib/auth';
 
 /**
  * POST /api/v1/nodes/[id]/logs
@@ -12,9 +12,11 @@ export async function POST(
 ) {
   try {
     // Authenticate request
-    const auth = await authenticateRequest(request);
-    if (!auth.valid) {
-      return unauthorizedResponse(auth.error);
+    if (!isDashboardReadRequest(request)) {
+      const auth = await authenticateRequest(request);
+      if (!auth.valid) {
+        return unauthorizedResponse(auth.error);
+      }
     }
 
     const { id } = await params;
