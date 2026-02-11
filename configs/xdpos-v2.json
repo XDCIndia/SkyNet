@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 2,
+  "name": "XDPoS v2 Configuration",
+  "description": "XDPoS v2 consensus protocol parameters for XDC Network",
+  "consensus": {
+    "name": "XDPoS",
+    "version": 2,
+    "type": "Delegated Proof of Stake"
+  },
+  "epoch": {
+    "duration": 900,
+    "blockTime": 2,
+    "estimatedDuration": "30 minutes"
+  },
+  "round": {
+    "duration": 2,
+    "perEpoch": 900,
+    "cyclesPerEpoch": 10
+  },
+  "masternode": {
+    "threshold": 10000000,
+    "thresholdFormatted": "10,000,000 XDC",
+    "maxValidators": 108,
+    "minValidators": 21
+  },
+  "penalty": {
+    "threshold": 5,
+    "reasons": {
+      "1": {
+        "code": 1,
+        "name": "MissedBlocks",
+        "description": "Validator missed too many block proposals"
+      },
+      "2": {
+        "code": 2,
+        "name": "ForkDetected",
+        "description": "Validator produced blocks on a fork"
+      },
+      "3": {
+        "code": 3,
+        "name": "DoubleSign",
+        "description": "Validator double-signed a block"
+      },
+      "4": {
+        "code": 4,
+        "name": "Offline",
+        "description": "Validator was offline for extended period"
+      }
+    }
+  },
+  "checkpoint": {
+    "period": 900,
+    "finalityThreshold": 2
+  },
+  "contracts": {
+    "masternodeRegistration": {
+      "address": "0x0000000000000000000000000000000000000088",
+      "name": "MasternodeRegistration",
+      "description": "Handles masternode registration and staking"
+    },
+    "validatorSet": {
+      "address": "0x0000000000000000000000000000000000000089",
+      "name": "ValidatorSet",
+      "description": "Manages validator set and epoch transitions"
+    },
+    "randomize": {
+      "address": "0x0000000000000000000000000000000000000090",
+      "name": "Randomize",
+      "description": "Provides randomization for validator selection"
+    },
+    "governance": {
+      "address": "0x0000000000000000000000000000000000000088",
+      "name": "Governance",
+      "description": "Handles governance proposals and voting"
+    },
+    "slashing": {
+      "address": "0x0000000000000000000000000000000000000091",
+      "name": "Slashing",
+      "description": "Manages penalties and slashing conditions"
+    }
+  },
+  "network": {
+    "mainnet": {
+      "chainId": 50,
+      "networkId": 50,
+      "name": "XDC Network Mainnet"
+    },
+    "testnet": {
+      "chainId": 51,
+      "networkId": 51,
+      "name": "Apothem Testnet"
+    }
+  },
+  "rewards": {
+    "estimatedAPY": 6,
+    "distribution": {
+      "masternodes": 40,
+      "treasury": 40,
+      "burn": 20
+    },
+    "rewardPerEpoch": 250
+  },
+  "governance": {
+    "proposalThreshold": 10000,
+    "votingPeriod": 720,
+    "votingPeriodHours": 72,
+    "executionDelay": 48,
+    "executionDelayHours": 48,
+    "quorum": 51
+  },
+  "monitoring": {
+    "alerts": {
+      "epochChange": {
+        "enabled": true,
+        "severity": "info",
+        "description": "Alert when epoch changes"
+      },
+      "penaltyIssued": {
+        "enabled": true,
+        "severity": "warning",
+        "description": "Alert when penalty is issued to validator"
+      },
+      "proposalNew": {
+        "enabled": true,
+        "severity": "info",
+        "description": "Alert when new governance proposal is created"
+      },
+      "voteCast": {
+        "enabled": false,
+        "severity": "info",
+        "description": "Alert when vote is cast"
+      },
+      "finalityDelayed": {
+        "enabled": true,
+        "severity": "critical",
+        "description": "Alert when block finality is delayed"
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+# UFW Firewall Rules for XDC Node
+# Apply with: ufw --force reset && ufw default deny incoming && ufw default allow outgoing
+
+# SSH (custom port)
+ufw allow 12141/tcp comment "SSH (hardened)"
+
+# XDC P2P
+ufw allow 30303/tcp comment "XDC P2P"
+ufw allow 30303/udp comment "XDC P2P Discovery"
+
+# Prometheus (localhost only)
+ufw allow from 127.0.0.1 to any port 9090 comment "Prometheus (local only)"
+
+# Grafana (localhost only - use SSH tunnel for remote access)
+ufw allow from 127.0.0.1 to any port 3000 comment "Grafana (local only)"
+
+# Node Exporter (localhost only)
+ufw allow from 127.0.0.1 to any port 9100 comment "Node Exporter (local only)"
+
+# Rate limit SSH attempts
+ufw limit 12141/tcp comment "SSH rate limit"
+
+# Enable firewall
+echo "y" | ufw enable

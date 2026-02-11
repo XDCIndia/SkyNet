@@ -1,0 +1,61 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'xdc-node'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+      # Uncomment and configure if using Alertmanager
+      # - targets: ['alertmanager:9093']
+
+rule_files:
+  - 'alerts.yml'
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+
+  # Node Exporter - System metrics + XDC textfile metrics
+  # This includes:
+  #   - xdc_node_* metrics (sync, peers, uptime, chain data, disk)
+  #   - xdc_masternode_* metrics (status, rewards, penalties, ROI)
+  #   - xdc_chain_* metrics (epoch info)
+  # Written by scripts/node-owner-metrics.sh via textfile collector
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+    # Textfile collector metrics from /var/lib/node_exporter/textfile_collector/xdc_owner.prom
+
+  # XDC Node metrics endpoint (native metrics from XDC client)
+  - job_name: 'xdc-node'
+    static_configs:
+      - targets: ['xdc-node:6060']
+    metrics_path: /debug/metrics/prometheus
+    scrape_interval: 15s
+
+  # cAdvisor - Container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 15s
+
+  # Grafana health endpoint
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # XDC Owner Metrics Collector (optional - if running standalone)
+  # This job can scrape metrics directly if not using textfile collector
+  # - job_name: 'xdc-owner-metrics'
+  #   static_configs:
+  #     - targets: ['xdc-metrics-collector:9090']
+  #   scrape_interval: 60s
