@@ -11,7 +11,14 @@ import {
   Coins,
   Activity,
   ExternalLink,
-  PieChart
+  PieChart,
+  Clock,
+  Link2,
+  Terminal,
+  Layers,
+  Globe,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 
 interface NodeHealth {
@@ -21,6 +28,14 @@ interface NodeHealth {
   role: string;
   status: 'healthy' | 'degraded' | 'offline';
   lastSeen: string;
+  node_type?: string;
+  client_type?: string;
+  os_info?: {
+    type?: string;
+    release?: string;
+    arch?: string;
+    kernel?: string;
+  };
   metrics: {
     blockHeight: string;
     syncPercent: number;
@@ -105,6 +120,70 @@ function truncateAddress(addr: string, start = 8, end = 6): string {
   if (!addr) return '';
   if (addr.length <= start + end + 3) return addr;
   return `${addr.slice(0, start)}...${addr.slice(-end)}`;
+}
+
+// Node Type Badge
+function NodeTypeBadge({ nodeType, confirmed = false }: { nodeType?: string; confirmed?: boolean }) {
+  if (!nodeType) {
+    // Show based on masternode status from contract
+    return null;
+  }
+
+  const styles: Record<string, { bg: string; icon: React.ReactNode; label: string }> = {
+    masternode: {
+      bg: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20',
+      icon: <Pickaxe className="w-3 h-3" />,
+      label: confirmed ? '⛏ Masternode (Confirmed)' : '⛏ Masternode'
+    },
+    standby: {
+      bg: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20',
+      icon: <Clock className="w-3 h-3" />,
+      label: '⏳ Standby'
+    },
+    fullnode: {
+      bg: 'bg-[#1E90FF]/10 text-[#1E90FF] border-[#1E90FF]/20',
+      icon: <Link2 className="w-3 h-3" />,
+      label: '🔗 Full Node'
+    },
+  };
+
+  const style = styles[nodeType.toLowerCase()] || styles.fullnode;
+
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border ${style.bg}`}>
+      {style.icon}
+      {style.label}
+    </span>
+  );
+}
+
+// Client Type Badge
+function ClientTypeBadge({ clientType }: { clientType?: string }) {
+  if (!clientType || clientType === 'Unknown') return null;
+
+  const styles: Record<string, { bg: string; icon: React.ReactNode }> = {
+    XDC: {
+      bg: 'bg-[#1E90FF]/10 text-[#1E90FF] border-[#1E90FF]/20',
+      icon: <Terminal className="w-3 h-3" />
+    },
+    Erigon: {
+      bg: 'bg-[#8B5CF6]/10 text-[#8B5CF6] border-[#8B5CF6]/20',
+      icon: <Layers className="w-3 h-3" />
+    },
+    Geth: {
+      bg: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20',
+      icon: <Globe className="w-3 h-3" />
+    },
+  };
+
+  const style = styles[clientType] || { bg: 'bg-white/5 text-[#6B7280] border-white/10', icon: <Terminal className="w-3 h-3" /> };
+
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border ${style.bg}`}>
+      {style.icon}
+      {clientType}
+    </span>
+  );
 }
 
 // Voter Pie Chart Component
@@ -377,6 +456,24 @@ export default function MasternodeDetailPage() {
               </div>
             </div>
 
+            {/* Node Type and Client Type Badges */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <NodeTypeBadge 
+                nodeType={nodeHealth.node_type} 
+                confirmed={nodeHealth.node_type === 'masternode'} 
+              />
+              <ClientTypeBadge clientType={nodeHealth.client_type} />
+            </div>
+
+            {/* OS Info if available */}
+            {nodeHealth.os_info && (
+              <div className="text-xs text-[#6B7280] mb-4 flex items-center gap-2">
+                <span className="font-medium">OS:</span>
+                {nodeHealth.os_info.release} · {nodeHealth.os_info.arch}
+                {nodeHealth.os_info.kernel && <span>· Kernel {nodeHealth.os_info.kernel}</span>}
+              </div>
+            )}
+
             {/* Metrics Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
               <div className="bg-white/5 rounded-lg p-3">
@@ -446,6 +543,48 @@ export default function MasternodeDetailPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* No matching node — show masternode type based on contract status */}
+        {!nodeHealth && detail && (
+          <div className="card-xdc border border-[#F59E0B]/20 bg-gradient-to-r from-[#F59E0B]/5 to-transparent">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-[#F9FAFB]">Unmonitored Node</h2>
+                <p className="text-xs text-[#6B7280]">
+                  This masternode is not registered in XDCNetOwn monitoring
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-4">
+              {detail.status === 'active' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20">
+                  <Pickaxe className="w-3 h-3" />
+                  ⛏ Masternode (Active)
+                </span>
+              ) : detail.status === 'standby' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20">
+                  <Clock className="w-3 h-3" />
+                  ⏳ Standby
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20">
+                  <AlertTriangle className="w-3 h-3" />
+                  Penalized
+                </span>
+              )}
+            </div>
+
+            <div className="text-sm text-[#6B7280]">
+              <p>
+                Install the XDCNetOwn agent on this node to monitor its health and performance.
+              </p>
+            </div>
           </div>
         )}
 

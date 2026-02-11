@@ -20,7 +20,11 @@ import {
   Clock,
   ShieldAlert,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Terminal,
+  MapPin,
+  Layers,
+  Link2
 } from 'lucide-react';
 
 const REFRESH_INTERVAL = 10; // 10 seconds
@@ -51,6 +55,17 @@ interface Node {
   diskPercent: number | null;
   clientVersion: string;
   lastSeen: string;
+  // New fields
+  ipv4?: string;
+  ipv6?: string;
+  os_info?: {
+    type?: string;
+    release?: string;
+    arch?: string;
+    kernel?: string;
+  };
+  client_type?: string;
+  node_type?: string;
 }
 
 interface Incident {
@@ -98,6 +113,64 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
+// Node Type Badge (masternode/standby/fullnode)
+function NodeTypeBadge({ nodeType }: { nodeType?: string }) {
+  if (!nodeType) return null;
+  
+  const styles: Record<string, { bg: string; icon: React.ReactNode }> = {
+    masternode: { 
+      bg: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20', 
+      icon: <Pickaxe className="w-3 h-3" /> 
+    },
+    standby: { 
+      bg: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20', 
+      icon: <Clock className="w-3 h-3" /> 
+    },
+    fullnode: { 
+      bg: 'bg-[#1E90FF]/10 text-[#1E90FF] border-[#1E90FF]/20', 
+      icon: <Link2 className="w-3 h-3" /> 
+    },
+  };
+  
+  const style = styles[nodeType.toLowerCase()] || styles.fullnode;
+  
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border ${style.bg}`}>
+      {style.icon}
+      {nodeType.charAt(0).toUpperCase() + nodeType.slice(1)}
+    </span>
+  );
+}
+
+// Client Type Badge (XDC/Erigon/Geth)
+function ClientTypeBadge({ clientType }: { clientType?: string }) {
+  if (!clientType || clientType === 'Unknown') return null;
+  
+  const styles: Record<string, { bg: string; icon: React.ReactNode }> = {
+    XDC: { 
+      bg: 'bg-[#1E90FF]/10 text-[#1E90FF] border-[#1E90FF]/20', 
+      icon: <Terminal className="w-3 h-3" /> 
+    },
+    Erigon: { 
+      bg: 'bg-[#8B5CF6]/10 text-[#8B5CF6] border-[#8B5CF6]/20', 
+      icon: <Layers className="w-3 h-3" /> 
+    },
+    Geth: { 
+      bg: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20', 
+      icon: <Globe className="w-3 h-3" /> 
+    },
+  };
+  
+  const style = styles[clientType] || { bg: 'bg-white/5 text-[#6B7280] border-white/10', icon: <Terminal className="w-3 h-3" /> };
+  
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border ${style.bg}`}>
+      {style.icon}
+      {clientType}
+    </span>
+  );
+}
+
 function SeverityBadge({ severity }: { severity: 'critical' | 'warning' | 'info' }) {
   const styles = {
     critical: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20',
@@ -133,6 +206,15 @@ function formatTimeAgo(timestamp: string): string {
   if (hours > 0) return `${hours}h ago`;
   if (minutes > 0) return `${minutes}m ago`;
   return `${seconds}s ago`;
+}
+
+// Format OS info for display
+function formatOSInfo(os_info?: Node['os_info']): string {
+  if (!os_info) return '';
+  const parts = [];
+  if (os_info.release) parts.push(os_info.release);
+  if (os_info.arch) parts.push(os_info.arch);
+  return parts.join(' · ');
 }
 
 // Network Health Banner Component
@@ -266,6 +348,30 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
         </div>
         <RoleBadge role={node.role} />
       </div>
+      
+      {/* IPv4/IPv6 Display */}
+      {node.ipv4 && (
+        <div className="mb-2 text-xs">
+          <span className="font-mono text-[#1E90FF]">{node.ipv4}</span>
+          {node.ipv6 && (
+            <span className="text-[#6B7280] ml-2 text-[10px]">IPv6</span>
+          )}
+        </div>
+      )}
+      
+      {/* Node Type and Client Type Badges */}
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        <NodeTypeBadge nodeType={node.node_type} />
+        <ClientTypeBadge clientType={node.client_type} />
+      </div>
+      
+      {/* OS Info */}
+      {node.os_info && (
+        <div className="text-[10px] text-[#6B7280] mb-2 flex items-center gap-1">
+          <MapPin className="w-3 h-3" />
+          {formatOSInfo(node.os_info)}
+        </div>
+      )}
       
       <div className="space-y-3">
         {/* Block Height */}

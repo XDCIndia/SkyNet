@@ -33,9 +33,14 @@ export async function GET(
       );
     }
 
-    // Get node info
+    // Get node info with new fields
     const nodeResult = await query(
-      `SELECT * FROM netown.nodes WHERE id = $1`,
+      `SELECT 
+        id, name, host, role, is_active, created_at, updated_at,
+        location_city, location_country, location_lat, location_lng,
+        tags, ipv4, ipv6, os_info, client_type, node_type
+       FROM netown.nodes 
+       WHERE id = $1`,
       [id]
     );
 
@@ -45,9 +50,16 @@ export async function GET(
 
     const node = nodeResult.rows[0];
 
-    // Get latest metrics
+    // Get latest metrics with new fields
     const metricsResult = await query(
-      `SELECT * FROM netown.node_metrics 
+      `SELECT 
+        block_height, is_syncing, sync_percent, peer_count,
+        tx_pool_pending, tx_pool_queued, gas_price, client_version,
+        coinbase, cpu_percent, memory_percent, disk_percent,
+        disk_used_gb, disk_total_gb, rpc_latency_ms, collected_at,
+        ipv4, ipv6, os_type, os_release, os_arch, kernel_version,
+        client_type, node_type
+       FROM netown.node_metrics 
        WHERE node_id = $1 
        ORDER BY collected_at DESC 
        LIMIT 1`,
@@ -99,6 +111,12 @@ export async function GET(
           lng: node.location_lng,
         } : null,
         tags: node.tags,
+        // New fields
+        ipv4: node.ipv4,
+        ipv6: node.ipv6,
+        os_info: node.os_info,
+        client_type: node.client_type,
+        node_type: node.node_type,
       },
       status: {
         blockHeight: latestMetrics?.block_height,
@@ -110,6 +128,8 @@ export async function GET(
         txPoolQueued: latestMetrics?.tx_pool_queued,
         gasPrice: latestMetrics?.gas_price?.toString(),
         clientVersion: latestMetrics?.client_version,
+        clientType: latestMetrics?.client_type,
+        nodeType: latestMetrics?.node_type,
         coinbase: latestMetrics?.coinbase,
         system: latestMetrics ? {
           cpuPercent: latestMetrics.cpu_percent,
@@ -118,6 +138,14 @@ export async function GET(
           diskUsedGb: latestMetrics.disk_used_gb,
           diskTotalGb: latestMetrics.disk_total_gb,
         } : null,
+        os: latestMetrics ? {
+          type: latestMetrics.os_type,
+          release: latestMetrics.os_release,
+          arch: latestMetrics.os_arch,
+          kernel: latestMetrics.kernel_version,
+        } : null,
+        ipv4: latestMetrics?.ipv4,
+        ipv6: latestMetrics?.ipv6,
         rpcLatencyMs: latestMetrics?.rpc_latency_ms,
         lastSeen: latestMetrics?.collected_at,
       },

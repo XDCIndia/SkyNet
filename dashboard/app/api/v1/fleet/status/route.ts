@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get all nodes with latest metrics
+    // Get all nodes with latest metrics including new fields
     const nodesResult = await query(
       `SELECT 
         n.id,
@@ -30,6 +30,11 @@ export async function GET(request: NextRequest) {
         n.role,
         n.is_active,
         n.tags,
+        n.ipv4,
+        n.ipv6,
+        n.os_info,
+        n.client_type,
+        n.node_type,
         m.block_height,
         m.sync_percent,
         m.peer_count,
@@ -141,6 +146,12 @@ export async function GET(request: NextRequest) {
           diskPercent: n.disk_percent,
           clientVersion: n.client_version,
           lastSeen: n.last_seen,
+          // New fields
+          ipv4: n.ipv4,
+          ipv6: n.ipv6,
+          os_info: n.os_info,
+          client_type: n.client_type,
+          node_type: n.node_type,
         };
       }),
       syncingNodes: nodes.filter(n => {

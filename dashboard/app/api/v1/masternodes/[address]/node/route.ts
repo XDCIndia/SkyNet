@@ -21,7 +21,7 @@ export async function GET(
       addr = '0x' + addr.slice(3);
     }
 
-    // Find node with matching coinbase from latest metrics
+    // Find node with matching coinbase from latest metrics including new fields
     const result = await query(`
       SELECT DISTINCT ON (n.id)
         n.id,
@@ -29,6 +29,11 @@ export async function GET(
         n.host,
         n.role,
         n.is_active,
+        n.ipv4,
+        n.ipv6,
+        n.os_info,
+        n.client_type,
+        n.node_type,
         n.updated_at as last_seen,
         m.block_height,
         m.sync_percent,
@@ -84,6 +89,12 @@ export async function GET(
         role: node.role,
         status,
         lastSeen: node.last_seen,
+        // New fields
+        ipv4: node.ipv4,
+        ipv6: node.ipv6,
+        os_info: node.os_info,
+        client_type: node.client_type,
+        node_type: node.node_type,
         metrics: {
           blockHeight: node.block_height,
           syncPercent: node.sync_percent,

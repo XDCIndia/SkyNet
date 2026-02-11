@@ -43,7 +43,12 @@ export async function POST(request: NextRequest) {
       gasPrice,
       coinbase,
       clientVersion,
+      clientType,
       isMasternode,
+      nodeType,
+      ipv4,
+      ipv6,
+      os,
       masternodeStatus,
       system,
       rpcLatencyMs,
@@ -84,14 +89,15 @@ export async function POST(request: NextRequest) {
 
     // Store metrics and peers in transaction
     await withTransaction(async (client) => {
-      // Insert node metrics
+      // Insert node metrics with new fields
       await client.query(
         `INSERT INTO netown.node_metrics 
          (node_id, block_height, sync_percent, peer_count, 
           cpu_percent, memory_percent, disk_percent, disk_used_gb, disk_total_gb,
           tx_pool_pending, tx_pool_queued, gas_price, rpc_latency_ms,
-          is_syncing, client_version, coinbase, collected_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+          is_syncing, client_version, client_type, node_type, coinbase, 
+          ipv4, ipv6, os_type, os_release, os_arch, kernel_version, collected_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)`,
         [
           nodeId,
           blockHeight ?? null,
@@ -108,7 +114,15 @@ export async function POST(request: NextRequest) {
           rpcLatencyMs ?? null,
           syncing ?? false,
           clientVersion ?? null,
+          clientType ?? null,
+          nodeType ?? null,
           coinbase ?? null,
+          ipv4 ?? null,
+          ipv6 ?? null,
+          os?.type ?? null,
+          os?.release ?? null,
+          os?.arch ?? null,
+          os?.kernel ?? null,
           timestamp ? new Date(timestamp) : new Date(),
         ]
       );
@@ -141,10 +155,26 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Update node last seen
+      // Update nodes table with latest info
       await client.query(
-        `UPDATE netown.nodes SET updated_at = NOW() WHERE id = $1`,
-        [nodeId]
+        `UPDATE netown.nodes 
+         SET updated_at = NOW(),
+             ipv4 = COALESCE($2, ipv4),
+             ipv6 = COALESCE($3, ipv6),
+             os_info = COALESCE($4, os_info),
+             client_type = COALESCE($5, client_type),
+             node_type = COALESCE($6, node_type),
+             role = COALESCE($7, role)
+         WHERE id = $1`,
+        [
+          nodeId,
+          ipv4 ?? null,
+          ipv6 ?? null,
+          os ? JSON.stringify(os) : null,
+          clientType ?? null,
+          nodeType ?? null,
+          nodeType === 'masternode' ? 'masternode' : nodeType === 'standby' ? 'standby' : null,
+        ]
       );
     });
 

@@ -30,7 +30,11 @@ import {
   Download,
   RotateCcw,
   UserPlus,
-  Wifi
+  Wifi,
+  Layers,
+  Link2,
+  Pickaxe,
+  Monitor
 } from 'lucide-react';
 
 // Types
@@ -49,6 +53,17 @@ interface NodeDetail {
     lng: number;
   } | null;
   tags: string[];
+  // New fields
+  ipv4?: string;
+  ipv6?: string;
+  os_info?: {
+    type?: string;
+    release?: string;
+    arch?: string;
+    kernel?: string;
+  };
+  client_type?: string;
+  node_type?: string;
 }
 
 interface NodeStatus {
@@ -61,6 +76,8 @@ interface NodeStatus {
   txPoolQueued: number;
   gasPrice: string;
   clientVersion: string;
+  clientType?: string;
+  nodeType?: string;
   coinbase: string;
   system: {
     cpuPercent: number;
@@ -69,6 +86,14 @@ interface NodeStatus {
     diskUsedGb: number;
     diskTotalGb: number;
   } | null;
+  os?: {
+    type?: string;
+    release?: string;
+    arch?: string;
+    kernel?: string;
+  };
+  ipv4?: string;
+  ipv6?: string;
   rpcLatencyMs: number;
   lastSeen: string;
 }
@@ -131,6 +156,67 @@ function RoleBadge({ role }: { role: string }) {
   return (
     <span className={`px-2 py-0.5 text-xs font-medium rounded border ${colors[role] || colors.fullnode}`}>
       {role.toUpperCase()}
+    </span>
+  );
+}
+
+// Node Type Badge
+function NodeTypeBadge({ nodeType }: { nodeType?: string }) {
+  if (!nodeType) return null;
+  
+  const styles: Record<string, { bg: string; icon: React.ReactNode; label: string }> = {
+    masternode: { 
+      bg: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20', 
+      icon: <Pickaxe className="w-3 h-3" />,
+      label: 'Masternode'
+    },
+    standby: { 
+      bg: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20', 
+      icon: <Clock className="w-3 h-3" />,
+      label: 'Standby'
+    },
+    fullnode: { 
+      bg: 'bg-[#1E90FF]/10 text-[#1E90FF] border-[#1E90FF]/20', 
+      icon: <Link2 className="w-3 h-3" />,
+      label: 'Full Node'
+    },
+  };
+  
+  const style = styles[nodeType.toLowerCase()] || styles.fullnode;
+  
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded border ${style.bg}`}>
+      {style.icon}
+      {style.label}
+    </span>
+  );
+}
+
+// Client Type Badge
+function ClientTypeBadge({ clientType }: { clientType?: string }) {
+  if (!clientType || clientType === 'Unknown') return null;
+  
+  const styles: Record<string, { bg: string; icon: React.ReactNode }> = {
+    XDC: { 
+      bg: 'bg-[#1E90FF]/10 text-[#1E90FF] border-[#1E90FF]/20', 
+      icon: <Terminal className="w-3 h-3" /> 
+    },
+    Erigon: { 
+      bg: 'bg-[#8B5CF6]/10 text-[#8B5CF6] border-[#8B5CF6]/20', 
+      icon: <Layers className="w-3 h-3" /> 
+    },
+    Geth: { 
+      bg: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20', 
+      icon: <Globe className="w-3 h-3" /> 
+    },
+  };
+  
+  const style = styles[clientType] || { bg: 'bg-white/5 text-[#6B7280] border-white/10', icon: <Terminal className="w-3 h-3" /> };
+  
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded border ${style.bg}`}>
+      {style.icon}
+      {clientType}
     </span>
   );
 }
@@ -554,6 +640,17 @@ export default function NodeDetailPage() {
     return current > previous ? 'up' : current < previous ? 'down' : 'same';
   };
 
+  // Format OS info for display
+  const formatOSInfo = () => {
+    const os = status?.os || node?.os_info;
+    if (!os) return null;
+    const parts = [];
+    if (os.release) parts.push(os.release);
+    if (os.arch) parts.push(os.arch);
+    if (os.kernel) parts.push(`Kernel ${os.kernel}`);
+    return parts.join(' · ');
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -595,6 +692,7 @@ export default function NodeDetailPage() {
   const activeIncidents = incidents.filter(i => i.status === 'active');
   const blockHeightTrend = getTrend(status.blockHeight, 'block_height');
   const peerTrend = getTrend(status.peerCount, 'peer_count');
+  const osInfo = formatOSInfo();
 
   return (
     <DashboardLayout>
@@ -606,12 +704,12 @@ export default function NodeDetailPage() {
               <Server className="w-6 h-6 text-[#1E90FF]" />
             </div>
             <div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl font-semibold text-[#F9FAFB]">{node.name}</h1>
                 <RoleBadge role={node.role} />
                 <StatusIndicator status={nodeStatus} />
               </div>
-              <div className="flex items-center gap-4 text-sm text-[#6B7280] mt-1">
+              <div className="flex items-center gap-4 text-sm text-[#6B7280] mt-1 flex-wrap">
                 <span className="flex items-center gap-1">
                   <Globe className="w-3 h-3" />
                   {node.host}
@@ -628,10 +726,16 @@ export default function NodeDetailPage() {
                   </span>
                 )}
               </div>
+              
+              {/* Node Type and Client Type Badges */}
+              <div className="flex items-center gap-2 mt-2">
+                <NodeTypeBadge nodeType={status.nodeType || node.node_type} />
+                <ClientTypeBadge clientType={status.clientType || node.client_type} />
+              </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={() => router.push('/')}
               className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors"
@@ -667,6 +771,54 @@ export default function NodeDetailPage() {
             </button>
           </div>
         </div>
+
+        {/* System Info Card - New */}
+        {(status.ipv4 || status.ipv6 || osInfo) && (
+          <div className="card-xdc">
+            <div className="flex items-center gap-3 mb-4">
+              <Monitor className="w-5 h-5 text-[#1E90FF]" />
+              <h2 className="text-lg font-semibold">System Information</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* IPv4 */}
+              {status.ipv4 && (
+                <div className="bg-white/5 rounded-lg p-3">
+                  <div className="text-[10px] uppercase text-[#6B7280] mb-1">Public IPv4</div>
+                  <div className="text-sm font-mono text-[#1E90FF]">{status.ipv4}</div>
+                </div>
+              )}
+              
+              {/* IPv6 */}
+              {status.ipv6 && (
+                <div className="bg-white/5 rounded-lg p-3">
+                  <div className="text-[10px] uppercase text-[#6B7280] mb-1">Public IPv6</div>
+                  <div className="text-sm font-mono text-[#6B7280] truncate" title={status.ipv6}>
+                    {status.ipv6.length > 30 ? status.ipv6.slice(0, 30) + '...' : status.ipv6}
+                  </div>
+                </div>
+              )}
+              
+              {/* OS Info */}
+              {osInfo && (
+                <div className="bg-white/5 rounded-lg p-3">
+                  <div className="text-[10px] uppercase text-[#6B7280] mb-1">Operating System</div>
+                  <div className="text-sm text-[#F9FAFB]">{osInfo}</div>
+                </div>
+              )}
+              
+              {/* Client Version */}
+              {status.clientVersion && (
+                <div className="bg-white/5 rounded-lg p-3">
+                  <div className="text-[10px] uppercase text-[#6B7280] mb-1">Client Version</div>
+                  <div className="text-sm text-[#F9FAFB] truncate" title={status.clientVersion}>
+                    {status.clientVersion}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Metrics Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
