@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       system,
       rpcLatencyMs,
       timestamp,
+      security,
     } = body;
 
     // Validation
@@ -96,8 +97,9 @@ export async function POST(request: NextRequest) {
           cpu_percent, memory_percent, disk_percent, disk_used_gb, disk_total_gb,
           tx_pool_pending, tx_pool_queued, gas_price, rpc_latency_ms,
           is_syncing, client_version, client_type, node_type, coinbase, 
-          ipv4, ipv6, os_type, os_release, os_arch, kernel_version, collected_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)`,
+          ipv4, ipv6, os_type, os_release, os_arch, kernel_version, 
+          security_score, security_issues, collected_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)`,
         [
           nodeId,
           blockHeight ?? null,
@@ -123,6 +125,8 @@ export async function POST(request: NextRequest) {
           os?.release ?? null,
           os?.arch ?? null,
           os?.kernel ?? null,
+          security?.score ?? null,
+          security?.issues ?? null,
           timestamp ? new Date(timestamp) : new Date(),
         ]
       );
@@ -164,7 +168,9 @@ export async function POST(request: NextRequest) {
              os_info = COALESCE($4, os_info),
              client_type = COALESCE($5, client_type),
              node_type = COALESCE($6, node_type),
-             role = COALESCE($7, role)
+             role = COALESCE($7, role),
+             security_score = COALESCE($8, security_score),
+             security_issues = COALESCE($9, security_issues)
          WHERE id = $1`,
         [
           nodeId,
@@ -174,6 +180,8 @@ export async function POST(request: NextRequest) {
           clientType ?? null,
           nodeType ?? null,
           nodeType === 'masternode' ? 'masternode' : nodeType === 'standby' ? 'standby' : null,
+          security?.score ?? null,
+          security?.issues ?? null,
         ]
       );
     });

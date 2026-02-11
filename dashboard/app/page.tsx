@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import { 
   Server, 
   Activity, 
-  Users, 
   AlertTriangle, 
   CheckCircle2,
   ArrowRight,
@@ -24,10 +23,24 @@ import {
   Terminal,
   MapPin,
   Layers,
-  Link2
+  Link2,
+  Grid3X3,
+  List,
+  Search,
+  ChevronUp,
+  ChevronDown,
+  MoreHorizontal,
+  Settings,
+  Square,
+  CheckSquare,
+  AlertCircle,
+  Shield
 } from 'lucide-react';
 
 const REFRESH_INTERVAL = 10; // 10 seconds
+const ROW_HEIGHT = 48; // Height of each table row
+const BUFFER_ROWS = 10; // Buffer rows above and below viewport
+const TABLE_ROW_HEIGHT = 48;
 
 interface FleetData {
   totalNodes: number;
@@ -55,7 +68,6 @@ interface Node {
   diskPercent: number | null;
   clientVersion: string;
   lastSeen: string;
-  // New fields
   ipv4?: string;
   ipv6?: string;
   os_info?: {
@@ -66,6 +78,8 @@ interface Node {
   };
   client_type?: string;
   node_type?: string;
+  security_score?: number;
+  security_issues?: string;
 }
 
 interface Incident {
@@ -84,6 +98,9 @@ interface HealthyPeersSummary {
 }
 
 type FilterType = 'all' | 'healthy' | 'syncing' | 'behind' | 'offline';
+type ViewMode = 'grid' | 'table';
+type SortField = keyof Node | 'security_score';
+type SortDirection = 'asc' | 'desc';
 
 function StatusDot({ status }: { status: string }) {
   const colors = {
@@ -197,6 +214,38 @@ function ProgressBar({ value, color = '#1E90FF', height = 6 }: { value: number; 
   );
 }
 
+// Compact metric bar for table view
+function CompactMetricBar({ value, label }: { value: number | null; label: string }) {
+  if (value === null) return <span className="text-[#6B7280]">—</span>;
+  
+  const color = value > 80 ? '#EF4444' : value > 60 ? '#F59E0B' : '#10B981';
+  
+  return (
+    <div className="flex items-center gap-2 w-full">
+      <div className="flex-1">
+        <ProgressBar value={value} color={color} height={4} />
+      </div>
+      <span className="text-[10px] font-mono w-7 text-right text-[#6B7280]">{value}%</span>
+    </div>
+  );
+}
+
+// Security score badge
+function SecurityBadge({ score }: { score?: number }) {
+  if (score === undefined || score === null) return <span className="text-[#6B7280]">—</span>;
+  
+  const color = score >= 90 ? '#10B981' : score >= 70 ? '#1E90FF' : score >= 50 ? '#F59E0B' : '#EF4444';
+  
+  return (
+    <span 
+      className="inline-flex items-center justify-center w-8 h-5 rounded text-[10px] font-bold font-mono"
+      style={{ backgroundColor: `${color}20`, color }}
+    >
+      {score}
+    </span>
+  );
+}
+
 function formatTimeAgo(timestamp: string): string {
   const diff = Date.now() - new Date(timestamp).getTime();
   const seconds = Math.floor(diff / 1000);
@@ -211,10 +260,16 @@ function formatTimeAgo(timestamp: string): string {
 // Format OS info for display
 function formatOSInfo(os_info?: Node['os_info']): string {
   if (!os_info) return '';
-  const parts = [];
-  if (os_info.release) parts.push(os_info.release);
-  if (os_info.arch) parts.push(os_info.arch);
-  return parts.join(' · ');
+  return os_info.release || '';
+}
+
+// OS Icon Component
+function OSIcon({ osType }: { osType?: string }) {
+  const type = osType?.toLowerCase() || '';
+  if (type.includes('linux') || type.includes('ubuntu')) return '🐧';
+  if (type.includes('darwin') || type.includes('macos')) return '🍎';
+  if (type.includes('windows')) return '🪟';
+  return '🖥️';
 }
 
 // Network Health Banner Component
@@ -324,7 +379,7 @@ function StatBox({
   );
 }
 
-// Node Card Component
+// Node Card Component (Grid View)
 function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
   const statusLabels = {
     healthy: 'Healthy',
@@ -342,20 +397,17 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
         <div className="flex items-center gap-2">
           <StatusDot status={node.status} />
           <div>
-            <h3 className="font-semibold text-[#F9FAFB] text-sm">{node.name}</h3>
-            <p className="text-xs text-[#6B7280]">{node.host}</p>
+            <h3 className="font-semibold text-[#F9FAFB] text-sm truncate max-w-[140px]">{node.name}</h3>
+            <p className="text-xs text-[#6B7280] truncate max-w-[140px]">{node.host}</p>
           </div>
         </div>
         <RoleBadge role={node.role} />
       </div>
       
-      {/* IPv4/IPv6 Display */}
+      {/* IPv4 Display */}
       {node.ipv4 && (
         <div className="mb-2 text-xs">
           <span className="font-mono text-[#1E90FF]">{node.ipv4}</span>
-          {node.ipv6 && (
-            <span className="text-[#6B7280] ml-2 text-[10px]">IPv6</span>
-          )}
         </div>
       )}
       
@@ -368,8 +420,8 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
       {/* OS Info */}
       {node.os_info && (
         <div className="text-[10px] text-[#6B7280] mb-2 flex items-center gap-1">
-          <MapPin className="w-3 h-3" />
-          {formatOSInfo(node.os_info)}
+          <span>{OSIcon({ osType: node.os_info.type })}</span>
+          <span className="truncate">{formatOSInfo(node.os_info)}</span>
         </div>
       )}
       
@@ -393,6 +445,12 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
         <div className="flex items-center justify-between">
           <span className="text-xs text-[#6B7280]">Peers</span>
           <span className="text-sm font-mono-nums">{node.peerCount || 0}</span>
+        </div>
+        
+        {/* Security Score */}
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-[#6B7280]">Security</span>
+          <SecurityBadge score={node.security_score} />
         </div>
         
         {/* Resources Mini Bars */}
@@ -455,6 +513,318 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
   );
 }
 
+// Table Header Component
+function TableHeader({ 
+  label, 
+  field, 
+  sortField, 
+  sortDirection, 
+  onSort,
+  className = ''
+}: { 
+  label: string;
+  field: SortField;
+  sortField: SortField;
+  sortDirection: SortDirection;
+  onSort: (field: SortField) => void;
+  className?: string;
+}) {
+  const isActive = sortField === field;
+  
+  return (
+    <th 
+      className={`text-left py-3 px-3 text-xs font-medium text-[#6B7280] cursor-pointer select-none hover:text-[#F9FAFB] transition-colors ${className}`}
+      onClick={() => onSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {label}
+        <span className="inline-flex flex-col">
+          <ChevronUp 
+            className={`w-3 h-3 -mb-1 ${isActive && sortDirection === 'asc' ? 'text-[#1E90FF]' : 'text-transparent'}`} 
+          />
+          <ChevronDown 
+            className={`w-3 h-3 ${isActive && sortDirection === 'desc' ? 'text-[#1E90FF]' : 'text-transparent'}`} 
+          />
+        </span>
+      </div>
+    </th>
+  );
+}
+
+// Table Row Component
+function TableRow({ 
+  node, 
+  onClick, 
+  isSelected, 
+  onSelect,
+  style
+}: { 
+  node: Node; 
+  onClick: () => void;
+  isSelected: boolean;
+  onSelect: (e: React.MouseEvent) => void;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <tr 
+      className="hover:bg-white/[0.03] cursor-pointer transition-colors border-b border-white/5"
+      onClick={onClick}
+      style={style}
+    >
+      {/* Checkbox */}
+      <td className="py-2 px-3" onClick={onSelect}>
+        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+          isSelected 
+            ? 'bg-[#1E90FF] border-[#1E90FF]' 
+            : 'border-[#6B7280] hover:border-[#1E90FF]'
+        }`}>
+          {isSelected && <CheckSquare className="w-3 h-3 text-white" />}
+        </div>
+      </td>
+      
+      {/* Status */}
+      <td className="py-2 px-3">
+        <StatusDot status={node.status} />
+      </td>
+      
+      {/* Name */}
+      <td className="py-2 px-3">
+        <div className="flex flex-col">
+          <span className="text-sm font-medium text-[#F9FAFB] truncate max-w-[150px]">{node.name}</span>
+          <span className="text-[10px] text-[#6B7280] truncate max-w-[150px]">{node.host}</span>
+        </div>
+      </td>
+      
+      {/* IPv4 */}
+      <td className="py-2 px-3">
+        <span className="text-xs font-mono text-[#1E90FF]">{node.ipv4 || '—'}</span>
+      </td>
+      
+      {/* Type */}
+      <td className="py-2 px-3">
+        <NodeTypeBadge nodeType={node.node_type} />
+      </td>
+      
+      {/* Client */}
+      <td className="py-2 px-3">
+        <div className="flex items-center gap-1">
+          <ClientTypeBadge clientType={node.client_type} />
+          <span className="text-[10px] text-[#6B7280]">
+            {node.clientVersion?.split('/')[1]?.split('-')[0] || ''}
+          </span>
+        </div>
+      </td>
+      
+      {/* Block */}
+      <td className="py-2 px-3">
+        <div className="flex flex-col">
+          <span className="text-sm font-mono-nums">
+            {node.blockHeight > 0 ? node.blockHeight.toLocaleString() : '—'}
+          </span>
+          {node.blocksBehind > 0 && (
+            <span className="text-[10px] text-[#F59E0B]">-{node.blocksBehind}</span>
+          )}
+        </div>
+      </td>
+      
+      {/* Behind */}
+      <td className="py-2 px-3">
+        <span className={`text-xs font-mono-nums ${node.blocksBehind > 100 ? 'text-[#EF4444]' : node.blocksBehind > 10 ? 'text-[#F59E0B]' : 'text-[#10B981]'}`}>
+          {node.blocksBehind || 0}
+        </span>
+      </td>
+      
+      {/* Peers */}
+      <td className="py-2 px-3">
+        <span className="text-sm font-mono-nums">{node.peerCount || 0}</span>
+      </td>
+      
+      {/* CPU */}
+      <td className="py-2 px-3 w-20">
+        <CompactMetricBar value={node.cpuPercent} label="CPU" />
+      </td>
+      
+      {/* Memory */}
+      <td className="py-2 px-3 w-20">
+        <CompactMetricBar value={node.memoryPercent} label="Mem" />
+      </td>
+      
+      {/* Disk */}
+      <td className="py-2 px-3 w-20">
+        <CompactMetricBar value={node.diskPercent} label="Disk" />
+      </td>
+      
+      {/* OS */}
+      <td className="py-2 px-3">
+        <div className="flex items-center gap-1">
+          <span>{OSIcon({ osType: node.os_info?.type })}</span>
+          <span className="text-xs text-[#6B7280] truncate max-w-[100px]">
+            {formatOSInfo(node.os_info)}
+          </span>
+        </div>
+      </td>
+      
+      {/* Security */}
+      <td className="py-2 px-3">
+        <SecurityBadge score={node.security_score} />
+      </td>
+      
+      {/* Last Seen */}
+      <td className="py-2 px-3">
+        <span className="text-xs text-[#6B7280]">
+          {node.lastSeen ? formatTimeAgo(node.lastSeen) : 'Never'}
+        </span>
+      </td>
+    </tr>
+  );
+}
+
+// Virtual Table Component
+function VirtualTable({ 
+  nodes, 
+  onNodeClick,
+  sortField,
+  sortDirection,
+  onSort,
+  selectedNodes,
+  onSelectNode,
+  onSelectAll
+}: { 
+  nodes: Node[];
+  onNodeClick: (node: Node) => void;
+  sortField: SortField;
+  sortDirection: SortDirection;
+  onSort: (field: SortField) => void;
+  selectedNodes: Set<string>;
+  onSelectNode: (id: string, selected: boolean) => void;
+  onSelectAll: (selected: boolean) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
+  
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    const updateHeight = () => {
+      setContainerHeight(container.clientHeight);
+    };
+    
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, []);
+  
+  const allSelected = nodes.length > 0 && selectedNodes.size === nodes.length;
+  
+  // Calculate visible range
+  const totalHeight = nodes.length * TABLE_ROW_HEIGHT;
+  const startIndex = Math.max(0, Math.floor(scrollTop / TABLE_ROW_HEIGHT) - BUFFER_ROWS);
+  const visibleCount = Math.ceil(containerHeight / TABLE_ROW_HEIGHT) + 2 * BUFFER_ROWS;
+  const endIndex = Math.min(nodes.length, startIndex + visibleCount);
+  
+  const visibleNodes = nodes.slice(startIndex, endIndex);
+  const offsetY = startIndex * TABLE_ROW_HEIGHT;
+  
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  };
+  
+  const handleSelectNode = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    onSelectNode(nodeId, !selectedNodes.has(nodeId));
+  };
+  
+  return (
+    <div className="card-xdc overflow-hidden">
+      <div 
+        ref={containerRef}
+        className="overflow-auto"
+        style={{ maxHeight: 'calc(100vh - 400px)' }}
+        onScroll={handleScroll}
+      >
+        <table className="w-full">
+          <thead className="sticky top-0 bg-[#111827] z-10">
+            <tr className="border-b border-white/10">
+              <th className="py-3 px-3 w-8">
+                <div 
+                  className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${
+                    allSelected 
+                      ? 'bg-[#1E90FF] border-[#1E90FF]' 
+                      : selectedNodes.size > 0 
+                        ? 'bg-[#1E90FF]/50 border-[#1E90FF]' 
+                        : 'border-[#6B7280] hover:border-[#1E90FF]'
+                  }`}
+                  onClick={() => onSelectAll(!allSelected)}
+                >
+                  {(allSelected || selectedNodes.size > 0) && <CheckSquare className="w-3 h-3 text-white" />}
+                </div>
+              </th>
+              <TableHeader label="" field="status" sortField={sortField} sortDirection={sortDirection} onSort={onSort} className="w-8" />
+              <TableHeader label="Name" field="name" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="IPv4" field="ipv4" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="Type" field="node_type" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="Client" field="client_type" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="Block" field="blockHeight" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="Behind" field="blocksBehind" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="Peers" field="peerCount" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="CPU" field="cpuPercent" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="Mem" field="memoryPercent" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="Disk" field="diskPercent" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="OS" field="os_info" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="Sec" field="security_score" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="Last Seen" field="lastSeen" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+            </tr>
+          </thead>
+          <tbody className="relative">
+            <tr style={{ height: offsetY }} />
+            {visibleNodes.map((node) => (
+              <TableRow
+                key={node.id}
+                node={node}
+                onClick={() => onNodeClick(node)}
+                isSelected={selectedNodes.has(node.id)}
+                onSelect={(e) => handleSelectNode(e, node.id)}
+              />
+            ))}
+            <tr style={{ height: totalHeight - offsetY - visibleNodes.length * TABLE_ROW_HEIGHT }} />
+          </tbody>
+        </table>
+      </div>
+      
+      {/* Pagination / Status Bar */}
+      <div className="flex items-center justify-between px-4 py-3 border-t border-white/10 bg-[#0A0E1A]">
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-[#6B7280]">
+            Showing {startIndex + 1}-{Math.min(endIndex, nodes.length)} of {nodes.length} nodes
+          </span>
+          {selectedNodes.size > 0 && (
+            <span className="text-sm text-[#1E90FF]">
+              {selectedNodes.size} selected
+            </span>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="px-3 py-1.5 text-xs bg-white/5 hover:bg-white/10 rounded transition-colors"
+          >
+            Jump to Top
+          </button>
+          <button
+            onClick={() => containerRef.current?.scrollTo({ top: totalHeight, behavior: 'smooth' })}
+            className="px-3 py-1.5 text-xs bg-white/5 hover:bg-white/10 rounded transition-colors"
+          >
+            Jump to Bottom
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Active Incidents Strip
 function IncidentsStrip({ incidents }: { incidents: Incident[] }) {
   if (incidents.length === 0) return null;
@@ -488,43 +858,6 @@ function IncidentsStrip({ incidents }: { incidents: Incident[] }) {
   );
 }
 
-// Healthy Peers Summary
-function PeersSummary({ 
-  peers,
-  onViewPeers 
-}: { 
-  peers: HealthyPeersSummary | null;
-  onViewPeers: () => void;
-}) {
-  if (!peers) return null;
-  
-  return (
-    <div className="card-xdc mb-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[rgba(30,144,255,0.1)] flex items-center justify-center">
-            <Globe className="w-5 h-5 text-[#1E90FF]" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-[#F9FAFB]">Healthy Peers</h3>
-            <p className="text-sm text-[#6B7280]">
-              {peers.healthyPeers} healthy peers across {peers.totalPeers} unique connections
-            </p>
-          </div>
-        </div>
-        
-        <button
-          onClick={onViewPeers}
-          className="flex items-center gap-2 px-4 py-2 bg-[#1E90FF]/10 text-[#1E90FF] rounded-lg hover:bg-[#1E90FF]/20 transition-colors text-sm"
-        >
-          View Full Peer List
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // Filter Bar
 function FilterBar({ 
   activeFilter, 
@@ -544,7 +877,7 @@ function FilterBar({
   ];
   
   return (
-    <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2">
+    <div className="flex items-center gap-2 overflow-x-auto pb-2">
       <span className="text-sm text-[#6B7280] mr-2">Filter:</span>
       {filters.map(({ key, label }) => (
         <button
@@ -564,6 +897,60 @@ function FilterBar({
           </span>
         </button>
       ))}
+    </div>
+  );
+}
+
+// Bulk Actions Bar
+function BulkActionsBar({ 
+  selectedCount,
+  onClearSelection
+}: { 
+  selectedCount: number;
+  onClearSelection: () => void;
+}) {
+  if (selectedCount === 0) return null;
+  
+  return (
+    <div className="flex items-center justify-between px-4 py-3 mb-4 bg-[#1E90FF]/10 border border-[#1E90FF]/30 rounded-lg">
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium text-[#1E90FF]">
+          {selectedCount} node{selectedCount !== 1 ? 's' : ''} selected
+        </span>
+        <button
+          onClick={onClearSelection}
+          className="text-xs text-[#6B7280] hover:text-[#F9FAFB] underline"
+        >
+          Clear selection
+        </button>
+      </div>
+      
+      <div className="flex items-center gap-2">
+        <button
+          disabled
+          title="Coming soon"
+          className="px-3 py-1.5 text-xs bg-white/5 text-[#6B7280] rounded cursor-not-allowed flex items-center gap-1"
+        >
+          <RefreshCw className="w-3 h-3" />
+          Restart
+        </button>
+        <button
+          disabled
+          title="Coming soon"
+          className="px-3 py-1.5 text-xs bg-white/5 text-[#6B7280] rounded cursor-not-allowed flex items-center gap-1"
+        >
+          <Settings className="w-3 h-3" />
+          Update
+        </button>
+        <button
+          disabled
+          title="Coming soon"
+          className="px-3 py-1.5 text-xs bg-white/5 text-[#6B7280] rounded cursor-not-allowed flex items-center gap-1"
+        >
+          <MoreHorizontal className="w-3 h-3" />
+          More
+        </button>
+      </div>
     </div>
   );
 }
@@ -605,9 +992,26 @@ export default function Home() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [peers, setPeers] = useState<HealthyPeersSummary | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState(0);
+  
+  // Sorting
+  const [sortField, setSortField] = useState<SortField>('lastSeen');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  
+  // Selection
+  const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
+  
+  // Debounced search
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -655,22 +1059,78 @@ export default function Home() {
     }, 1000);
     return () => clearInterval(countdownId);
   }, []);
-
-  // Filter nodes
-  const filteredNodes = nodes.filter(node => {
-    switch (filter) {
-      case 'healthy':
-        return node.status === 'healthy';
-      case 'syncing':
-        return node.status === 'syncing';
-      case 'behind':
-        return node.blocksBehind > 0;
-      case 'offline':
-        return node.status === 'offline';
-      default:
-        return true;
+  
+  // Auto-switch to table view when nodes > 10
+  useEffect(() => {
+    if (nodes.length > 10 && viewMode === 'grid') {
+      setViewMode('table');
     }
-  });
+  }, [nodes.length]);
+
+  // Filter and sort nodes
+  const filteredNodes = useMemo(() => {
+    let result = nodes.filter(node => {
+      // Status filter
+      switch (filter) {
+        case 'healthy':
+          if (node.status !== 'healthy') return false;
+          break;
+        case 'syncing':
+          if (node.status !== 'syncing') return false;
+          break;
+        case 'behind':
+          if (node.blocksBehind <= 0) return false;
+          break;
+        case 'offline':
+          if (node.status !== 'offline') return false;
+          break;
+      }
+      
+      // Search filter
+      if (debouncedSearch) {
+        const query = debouncedSearch.toLowerCase();
+        const searchable = [
+          node.name,
+          node.host,
+          node.ipv4,
+          node.ipv6,
+          node.clientVersion,
+          node.client_type,
+          node.node_type,
+          formatOSInfo(node.os_info),
+        ].filter(Boolean).join(' ').toLowerCase();
+        
+        if (!searchable.includes(query)) return false;
+      }
+      
+      return true;
+    });
+    
+    // Sort
+    result.sort((a, b) => {
+      let aVal: any = a[sortField];
+      let bVal: any = b[sortField];
+      
+      // Handle nested fields
+      if (sortField === 'security_score') {
+        aVal = a.security_score ?? 0;
+        bVal = b.security_score ?? 0;
+      }
+      
+      if (aVal === null || aVal === undefined) aVal = sortDirection === 'asc' ? Infinity : -Infinity;
+      if (bVal === null || bVal === undefined) bVal = sortDirection === 'asc' ? Infinity : -Infinity;
+      
+      if (typeof aVal === 'string') {
+        const comparison = aVal.localeCompare(bVal);
+        return sortDirection === 'asc' ? comparison : -comparison;
+      }
+      
+      const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+    
+    return result;
+  }, [nodes, filter, debouncedSearch, sortField, sortDirection]);
 
   // Calculate filter counts
   const filterCounts: Record<FilterType, number> = {
@@ -679,6 +1139,37 @@ export default function Home() {
     syncing: nodes.filter(n => n.status === 'syncing').length,
     behind: nodes.filter(n => n.blocksBehind > 0).length,
     offline: nodes.filter(n => n.status === 'offline').length,
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const handleSelectNode = (nodeId: string, selected: boolean) => {
+    const newSet = new Set(selectedNodes);
+    if (selected) {
+      newSet.add(nodeId);
+    } else {
+      newSet.delete(nodeId);
+    }
+    setSelectedNodes(newSet);
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      setSelectedNodes(new Set(filteredNodes.map(n => n.id)));
+    } else {
+      setSelectedNodes(new Set());
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedNodes(new Set());
   };
 
   if (loading) {
@@ -708,17 +1199,13 @@ export default function Home() {
             />
           )}
 
-          <PeersSummary 
-            peers={peers}
-            onViewPeers={() => router.push('/peers/healthy')}
-          />
-
           {incidents.length > 0 && (
             <IncidentsStrip incidents={incidents} />
           )}
 
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
+            {/* Header Row */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
                 <Server className="w-5 h-5 text-[#1E90FF]" />
                 <h2 className="text-lg font-semibold text-[#F9FAFB]">Nodes</h2>
@@ -727,13 +1214,45 @@ export default function Home() {
                 </span>
               </div>
               
-              <button
-                onClick={fetchData}
-                className="p-2 hover:bg-white/5 rounded-lg transition-colors"
-                title="Refresh now"
-              >
-                <RefreshCw className="w-4 h-4 text-[#6B7280]" />
-              </button>
+              <div className="flex items-center gap-3">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
+                  <input
+                    type="text"
+                    placeholder="Search nodes..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-[#F9FAFB] placeholder-[#6B7280] focus:outline-none focus:border-[#1E90FF] w-64"
+                  />
+                </div>
+                
+                {/* View Toggle */}
+                <div className="flex items-center bg-white/5 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 rounded transition-colors ${viewMode === 'grid' ? 'bg-[#1E90FF]/20 text-[#1E90FF]' : 'text-[#6B7280] hover:text-[#F9FAFB]'}`}
+                    title="Grid view"
+                  >
+                    <Grid3X3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('table')}
+                    className={`p-2 rounded transition-colors ${viewMode === 'table' ? 'bg-[#1E90FF]/20 text-[#1E90FF]' : 'text-[#6B7280] hover:text-[#F9FAFB]'}`}
+                    title="Table view"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                <button
+                  onClick={fetchData}
+                  className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                  title="Refresh now"
+                >
+                  <RefreshCw className="w-4 h-4 text-[#6B7280]" />
+                </button>
+              </div>
             </div>
 
             <FilterBar 
@@ -741,13 +1260,18 @@ export default function Home() {
               onFilterChange={setFilter}
               counts={filterCounts}
             />
+            
+            <BulkActionsBar 
+              selectedCount={selectedNodes.size}
+              onClearSelection={handleClearSelection}
+            />
 
             {filteredNodes.length === 0 ? (
               <div className="text-center py-12 text-[#6B7280]">
                 <Server className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>No nodes match the selected filter</p>
               </div>
-            ) : (
+            ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredNodes.map((node) => (
                   <NodeCard 
@@ -757,6 +1281,17 @@ export default function Home() {
                   />
                 ))}
               </div>
+            ) : (
+              <VirtualTable
+                nodes={filteredNodes}
+                onNodeClick={(node) => router.push(`/nodes/${node.id}`)}
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={handleSort}
+                selectedNodes={selectedNodes}
+                onSelectNode={handleSelectNode}
+                onSelectAll={handleSelectAll}
+              />
             )}
           </div>
         </div>

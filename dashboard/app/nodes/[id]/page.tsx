@@ -34,7 +34,13 @@ import {
   Layers,
   Link2,
   Pickaxe,
-  Monitor
+  Monitor,
+  Copy,
+  Check,
+  AlertCircle,
+  ShieldCheck,
+  ShieldAlert,
+  Info
 } from 'lucide-react';
 
 // Types
@@ -53,7 +59,6 @@ interface NodeDetail {
     lng: number;
   } | null;
   tags: string[];
-  // New fields
   ipv4?: string;
   ipv6?: string;
   os_info?: {
@@ -64,6 +69,8 @@ interface NodeDetail {
   };
   client_type?: string;
   node_type?: string;
+  security_score?: number;
+  security_issues?: string;
 }
 
 interface NodeStatus {
@@ -96,6 +103,10 @@ interface NodeStatus {
   ipv6?: string;
   rpcLatencyMs: number;
   lastSeen: string;
+  security?: {
+    score?: number;
+    issues?: string;
+  };
 }
 
 interface Incident {
@@ -158,6 +169,90 @@ function RoleBadge({ role }: { role: string }) {
       {role.toUpperCase()}
     </span>
   );
+}
+
+// Client Logo Component
+function ClientLogo({ clientType, size = 'md' }: { clientType?: string; size?: 'sm' | 'md' | 'lg' }) {
+  const sizeClasses = {
+    sm: 'w-6 h-6 text-xs',
+    md: 'w-8 h-8 text-sm',
+    lg: 'w-12 h-12 text-lg',
+  };
+  
+  const styles: Record<string, { bg: string; color: string; letter: string }> = {
+    XDC: { 
+      bg: 'bg-[#1E90FF]/20', 
+      color: 'text-[#1E90FF]',
+      letter: 'X'
+    },
+    Erigon: { 
+      bg: 'bg-orange-500/20', 
+      color: 'text-orange-400',
+      letter: 'E'
+    },
+    Geth: { 
+      bg: 'bg-gray-500/20', 
+      color: 'text-gray-400',
+      letter: 'G'
+    },
+  };
+  
+  const style = styles[clientType || 'Unknown'] || { bg: 'bg-white/10', color: 'text-[#6B7280]', letter: '?' };
+  
+  return (
+    <div className={`${sizeClasses[size]} ${style.bg} ${style.color} rounded-lg flex items-center justify-center font-bold border border-white/10`}>
+      {style.letter}
+    </div>
+  );
+}
+
+// OS Icon Component
+function OSIcon({ osType, size = 'md' }: { osType?: string; size?: 'sm' | 'md' | 'lg' }) {
+  const sizeClasses = {
+    sm: 'text-base',
+    md: 'text-xl',
+    lg: 'text-2xl',
+  };
+  
+  const getIcon = () => {
+    const type = osType?.toLowerCase() || '';
+    if (type.includes('linux') || type.includes('ubuntu') || type.includes('debian')) return '🐧';
+    if (type.includes('darwin') || type.includes('macos')) return '🍎';
+    if (type.includes('windows')) return '🪟';
+    return '🖥️';
+  };
+  
+  return <span className={sizeClasses[size]}>{getIcon()}</span>;
+}
+
+// Parse client version string
+function parseClientVersion(version: string) {
+  // Format: XDC/v2.6.8-stable/linux-amd64/go1.23.12
+  const parts = version.split('/');
+  return {
+    client: parts[0] || 'Unknown',
+    version: parts[1] || 'Unknown',
+    platform: parts[2] || 'Unknown',
+    goVersion: parts[3] || 'Unknown',
+  };
+}
+
+// Copy to clipboard hook
+function useCopyToClipboard() {
+  const [copied, setCopied] = useState(false);
+  
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  
+  return { copied, copy };
 }
 
 // Node Type Badge
@@ -244,6 +339,134 @@ function formatTimeAgo(timestamp: string): string {
   if (hours > 0) return `${hours}h ago`;
   if (minutes > 0) return `${minutes}m ago`;
   return `${seconds}s ago`;
+}
+
+// Security Score Gauge
+function SecurityGauge({ score = 0 }: { score?: number }) {
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (score / 100) * circumference;
+  
+  const getColor = () => {
+    if (score >= 90) return '#10B981'; // Green
+    if (score >= 70) return '#1E90FF'; // Blue
+    if (score >= 50) return '#F59E0B'; // Yellow
+    return '#EF4444'; // Red
+  };
+  
+  const getLabel = () => {
+    if (score >= 90) return 'Excellent';
+    if (score >= 70) return 'Good';
+    if (score >= 50) return 'Fair';
+    return 'Poor';
+  };
+  
+  const color = getColor();
+  
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative">
+        <svg width="90" height="90" className="transform -rotate-90">
+          <circle
+            cx="45"
+            cy="45"
+            r={radius}
+            fill="none"
+            stroke="rgba(255,255,255,0.1)"
+            strokeWidth="10"
+          />
+          <circle
+            cx="45"
+            cy="45"
+            r={radius}
+            fill="none"
+            stroke={color}
+            strokeWidth="10"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-bold font-mono-nums" style={{ color }}>
+            {score}
+          </span>
+          <span className="text-[10px] text-[#6B7280] uppercase">Score</span>
+        </div>
+      </div>
+      <span className="text-sm font-medium mt-2" style={{ color }}>
+        {getLabel()}
+      </span>
+    </div>
+  );
+}
+
+// Security Suggestions Component
+function SecuritySuggestions({ issues }: { issues?: string }) {
+  if (!issues) {
+    return (
+      <div className="flex items-center gap-2 text-[#10B981]">
+        <ShieldCheck className="w-5 h-5" />
+        <span>All security checks passed</span>
+      </div>
+    );
+  }
+  
+  const issueList = issues.split(',').filter(Boolean);
+  
+  const issueMap: Record<string, { icon: React.ReactNode; text: string; type: 'warning' | 'success' }> = {
+    ssh_default_port: {
+      icon: <AlertCircle className="w-4 h-4 text-[#F59E0B]" />,
+      text: 'SSH running on default port 22 — Change to non-standard port',
+      type: 'warning'
+    },
+    root_login_enabled: {
+      icon: <AlertCircle className="w-4 h-4 text-[#F59E0B]" />,
+      text: 'Root login via SSH is enabled — Disable in /etc/ssh/sshd_config',
+      type: 'warning'
+    },
+    no_firewall: {
+      icon: <ShieldAlert className="w-4 h-4 text-[#EF4444]" />,
+      text: 'No active firewall (UFW) — Install and enable UFW',
+      type: 'warning'
+    },
+    no_fail2ban: {
+      icon: <ShieldAlert className="w-4 h-4 text-[#F59E0B]" />,
+      text: 'Fail2ban is not running — Install fail2ban to protect against brute force',
+      type: 'warning'
+    },
+    no_auto_updates: {
+      icon: <Info className="w-4 h-4 text-[#F59E0B]" />,
+      text: 'Unattended upgrades not installed — Enable automatic security updates',
+      type: 'warning'
+    },
+    rpc_exposed: {
+      icon: <ShieldAlert className="w-4 h-4 text-[#EF4444]" />,
+      text: 'RPC API exposed to all interfaces (0.0.0.0) — Bind to 127.0.0.1 only',
+      type: 'warning'
+    },
+    docker_root: {
+      icon: <Info className="w-4 h-4 text-[#F59E0B]" />,
+      text: 'Docker running as root — Consider rootless Docker mode',
+      type: 'warning'
+    },
+  };
+  
+  return (
+    <div className="space-y-2">
+      {issueList.map((issue) => {
+        const mapped = issueMap[issue];
+        if (!mapped) return null;
+        return (
+          <div key={issue} className="flex items-start gap-2 text-sm">
+            {mapped.icon}
+            <span className="text-[#F9FAFB]">{mapped.text}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 // Circular Gauge Component
@@ -448,6 +671,31 @@ function Toast({ message, type = 'success', onClose }: { message: string; type?:
   );
 }
 
+// Coinbase Display Component
+function CoinbaseDisplay({ coinbase }: { coinbase?: string }) {
+  const { copied, copy } = useCopyToClipboard();
+  
+  if (!coinbase || coinbase === '0x0') return <span className="text-[#6B7280]">Not set</span>;
+  
+  // Convert 0x address to xdc prefix
+  const xdcAddress = coinbase.replace(/^0x/, 'xdc');
+  
+  return (
+    <div className="flex items-center gap-2">
+      <code className="text-sm font-mono text-[#1E90FF] bg-[#1E90FF]/10 px-2 py-1 rounded">
+        {xdcAddress.slice(0, 20)}...{xdcAddress.slice(-8)}
+      </code>
+      <button
+        onClick={() => copy(xdcAddress)}
+        className="p-1.5 hover:bg-white/10 rounded transition-colors"
+        title="Copy full address"
+      >
+        {copied ? <Check className="w-4 h-4 text-[#10B981]" /> : <Copy className="w-4 h-4 text-[#6B7280]" />}
+      </button>
+    </div>
+  );
+}
+
 export default function NodeDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -640,6 +888,12 @@ export default function NodeDetailPage() {
     return current > previous ? 'up' : current < previous ? 'down' : 'same';
   };
 
+  // Parse client version
+  const parsedVersion = useMemo(() => {
+    if (!status?.clientVersion) return null;
+    return parseClientVersion(status.clientVersion);
+  }, [status?.clientVersion]);
+
   // Format OS info for display
   const formatOSInfo = () => {
     const os = status?.os || node?.os_info;
@@ -693,6 +947,8 @@ export default function NodeDetailPage() {
   const blockHeightTrend = getTrend(status.blockHeight, 'block_height');
   const peerTrend = getTrend(status.peerCount, 'peer_count');
   const osInfo = formatOSInfo();
+  const securityScore = status?.security?.score ?? node?.security_score ?? 0;
+  const securityIssues = status?.security?.issues ?? node?.security_issues ?? '';
 
   return (
     <DashboardLayout>
@@ -700,9 +956,7 @@ export default function NodeDetailPage() {
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[rgba(30,144,255,0.1)] flex items-center justify-center">
-              <Server className="w-6 h-6 text-[#1E90FF]" />
-            </div>
+            <ClientLogo clientType={status.clientType || node.client_type} size="lg" />
             <div>
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl font-semibold text-[#F9FAFB]">{node.name}</h1>
@@ -714,11 +968,6 @@ export default function NodeDetailPage() {
                   <Globe className="w-3 h-3" />
                   {node.host}
                 </span>
-                {status.coinbase && (
-                  <span className="font-mono text-xs">
-                    {status.coinbase.slice(0, 20)}...{status.coinbase.slice(-8)}
-                  </span>
-                )}
                 {node.location && (
                   <span className="flex items-center gap-1">
                     <MapPin className="w-3 h-3" />
@@ -772,53 +1021,86 @@ export default function NodeDetailPage() {
           </div>
         </div>
 
-        {/* System Info Card - New */}
-        {(status.ipv4 || status.ipv6 || osInfo) && (
-          <div className="card-xdc">
-            <div className="flex items-center gap-3 mb-4">
-              <Monitor className="w-5 h-5 text-[#1E90FF]" />
-              <h2 className="text-lg font-semibold">System Information</h2>
+        {/* System Information Card - Enhanced */}
+        <div className="card-xdc">
+          <div className="flex items-center gap-3 mb-4">
+            <Monitor className="w-5 h-5 text-[#1E90FF]" />
+            <h2 className="text-lg font-semibold">System Information</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Client Version - Parsed */}
+            {parsedVersion && (
+              <div className="bg-white/5 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <ClientLogo clientType={parsedVersion.client} size="sm" />
+                  <div className="text-[10px] uppercase text-[#6B7280]">Client Version</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-sm font-medium text-[#F9FAFB]">{parsedVersion.client} {parsedVersion.version}</div>
+                  <div className="text-xs text-[#6B7280] font-mono">{parsedVersion.platform}</div>
+                  <div className="text-xs text-[#6B7280] font-mono">{parsedVersion.goVersion}</div>
+                </div>
+              </div>
+            )}
+            
+            {/* Coinbase */}
+            <div className="bg-white/5 rounded-lg p-4">
+              <div className="text-[10px] uppercase text-[#6B7280] mb-2">Coinbase Address</div>
+              <CoinbaseDisplay coinbase={status.coinbase} />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* IPv4 */}
-              {status.ipv4 && (
-                <div className="bg-white/5 rounded-lg p-3">
-                  <div className="text-[10px] uppercase text-[#6B7280] mb-1">Public IPv4</div>
-                  <div className="text-sm font-mono text-[#1E90FF]">{status.ipv4}</div>
+            {/* IPv4 */}
+            {status.ipv4 && (
+              <div className="bg-white/5 rounded-lg p-4">
+                <div className="text-[10px] uppercase text-[#6B7280] mb-1">Public IPv4</div>
+                <div className="text-sm font-mono text-[#1E90FF]">{status.ipv4}</div>
+              </div>
+            )}
+            
+            {/* IPv6 */}
+            {status.ipv6 && (
+              <div className="bg-white/5 rounded-lg p-4">
+                <div className="text-[10px] uppercase text-[#6B7280] mb-1">Public IPv6</div>
+                <div className="text-sm font-mono text-[#6B7280] truncate" title={status.ipv6}>
+                  {status.ipv6.length > 30 ? status.ipv6.slice(0, 30) + '...' : status.ipv6}
                 </div>
-              )}
-              
-              {/* IPv6 */}
-              {status.ipv6 && (
-                <div className="bg-white/5 rounded-lg p-3">
-                  <div className="text-[10px] uppercase text-[#6B7280] mb-1">Public IPv6</div>
-                  <div className="text-sm font-mono text-[#6B7280] truncate" title={status.ipv6}>
-                    {status.ipv6.length > 30 ? status.ipv6.slice(0, 30) + '...' : status.ipv6}
-                  </div>
+              </div>
+            )}
+            
+            {/* OS Info */}
+            {osInfo && (
+              <div className="bg-white/5 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <OSIcon osType={status?.os?.type || node?.os_info?.type} size="md" />
+                  <div className="text-[10px] uppercase text-[#6B7280]">Operating System</div>
                 </div>
-              )}
-              
-              {/* OS Info */}
-              {osInfo && (
-                <div className="bg-white/5 rounded-lg p-3">
-                  <div className="text-[10px] uppercase text-[#6B7280] mb-1">Operating System</div>
-                  <div className="text-sm text-[#F9FAFB]">{osInfo}</div>
-                </div>
-              )}
-              
-              {/* Client Version */}
-              {status.clientVersion && (
-                <div className="bg-white/5 rounded-lg p-3">
-                  <div className="text-[10px] uppercase text-[#6B7280] mb-1">Client Version</div>
-                  <div className="text-sm text-[#F9FAFB] truncate" title={status.clientVersion}>
-                    {status.clientVersion}
-                  </div>
-                </div>
-              )}
+                <div className="text-sm text-[#F9FAFB]">{osInfo}</div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Security Score Card */}
+        <div className="card-xdc">
+          <div className="flex items-center gap-3 mb-4">
+            <Shield className="w-5 h-5 text-[#1E90FF]" />
+            <h2 className="text-lg font-semibold">Security Assessment</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Security Score Gauge */}
+            <div className="flex justify-center lg:justify-start">
+              <SecurityGauge score={securityScore} />
+            </div>
+            
+            {/* Security Suggestions */}
+            <div className="lg:col-span-2">
+              <h3 className="text-sm font-medium text-[#6B7280] mb-3">Recommendations</h3>
+              <SecuritySuggestions issues={securityIssues} />
             </div>
           </div>
-        )}
+        </div>
 
         {/* Metrics Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

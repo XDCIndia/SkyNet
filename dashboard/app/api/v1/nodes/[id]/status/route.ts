@@ -58,7 +58,7 @@ export async function GET(
         coinbase, cpu_percent, memory_percent, disk_percent,
         disk_used_gb, disk_total_gb, rpc_latency_ms, collected_at,
         ipv4, ipv6, os_type, os_release, os_arch, kernel_version,
-        client_type, node_type
+        client_type, node_type, security_score, security_issues
        FROM netown.node_metrics 
        WHERE node_id = $1 
        ORDER BY collected_at DESC 
@@ -146,6 +146,10 @@ export async function GET(
         } : null,
         ipv4: latestMetrics?.ipv4,
         ipv6: latestMetrics?.ipv6,
+        security: {
+          score: latestMetrics?.security_score,
+          issues: latestMetrics?.security_issues,
+        },
         rpcLatencyMs: latestMetrics?.rpc_latency_ms,
         lastSeen: latestMetrics?.collected_at,
       },

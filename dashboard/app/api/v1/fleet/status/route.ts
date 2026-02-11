@@ -35,6 +35,8 @@ export async function GET(request: NextRequest) {
         n.os_info,
         n.client_type,
         n.node_type,
+        n.security_score,
+        n.security_issues,
         m.block_height,
         m.sync_percent,
         m.peer_count,
@@ -152,6 +154,8 @@ export async function GET(request: NextRequest) {
           os_info: n.os_info,
           client_type: n.client_type,
           node_type: n.node_type,
+          security_score: n.security_score,
+          security_issues: n.security_issues,
         };
       }),
       syncingNodes: nodes.filter(n => {
