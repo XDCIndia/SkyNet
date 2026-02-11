@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Header from '@/components/Header';
-import NavigationDock from '@/components/NavigationDock';
+// Header replaced by Sidebar
+import Sidebar from '@/components/Sidebar';
 import HeroSection from '@/components/HeroSection';
 import StatsGrid from '@/components/StatsGrid';
 import ConsensusPanel from '@/components/ConsensusPanel';
@@ -421,21 +421,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0A0E1A]">
-      <Header
-        lastUpdated={metrics.timestamp}
-        connected={wsConnected}
-        nextRefresh={countdown}
-        refreshInterval={REFRESH_INTERVAL}
-        blockHeight={metrics.blockchain.blockHeight}
-        peers={metrics.blockchain.peers}
-        isSyncing={metrics.blockchain.isSyncing}
-        coinbase={metrics.blockchain.coinbase}
-        ethstatsName={metrics.blockchain.ethstatsName}
-      />
+      <Sidebar />
 
-      <NavigationDock />
-
-      <main className="max-w-[1440px] mx-auto px-4 lg:px-6 py-6">
+      <main className="lg:ml-[220px] min-h-screen pb-20 lg:pb-6">
+        <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-4">
         {/* Live indicator */}
         {wsConnected && (
           <div className="mb-4 flex items-center gap-2">
@@ -498,16 +487,8 @@ export default function Home() {
             <PeerMap peers={peers} />
           </section>
         </div>
-      </main>
-
-      <footer className="border-t border-[rgba(255,255,255,0.06)] mt-8 py-6">
-        <div className="max-w-[1440px] mx-auto px-4 text-center text-sm text-[#6B7280]">
-          <p>XDC Node Dashboard &copy; {new Date().getFullYear()}</p>
-          <p className="mt-1">
-            Built with Next.js 14 &middot; {wsConnected ? 'WebSocket Live' : `Auto-refresh every ${REFRESH_INTERVAL}s`}
-          </p>
         </div>
-      </footer>
+      </main>
     </div>
   );
 }
