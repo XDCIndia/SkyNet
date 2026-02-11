@@ -125,7 +125,7 @@ function VoterPieChart({ voters, totalStake }: { voters: Voter[]; totalStake: nu
             />
           </g>
         ))}
-        <!-- Center hole for donut effect -->
+        {/* Center hole for donut effect */}
         <circle cx="100" cy="100" r="40" fill="#0A0E1A" />
         <text x="100" y="95" textAnchor="middle" fill="#F9FAFB" fontSize="12" fontWeight="bold">
           {voters.length}

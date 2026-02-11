@@ -2,12 +2,12 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { 
-  Server, 
-  Users, 
-  Zap, 
-  Coins, 
-  Shield, 
+import {
+  Server,
+  Users,
+  Zap,
+  Coins,
+  Shield,
   Activity,
   ArrowUpRight,
   ArrowDownRight,
@@ -45,7 +45,7 @@ function HealthScoreGauge({ score, rating }: { score: number; rating: string }) 
   const radius = 80;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (score / 100) * circumference;
-  
+
   const getColor = () => {
     if (score >= 80) return '#10B981';
     if (score >= 50) return '#F59E0B';
@@ -91,15 +91,15 @@ function HealthScoreGauge({ score, rating }: { score: number; rating: string }) 
 }
 
 // Stat Card Component
-function StatCard({ 
-  icon, 
-  label, 
-  value, 
+function StatCard({
+  icon,
+  label,
+  value,
   change,
-  suffix = '' 
-}: { 
-  icon: React.ReactNode; 
-  label: string; 
+  suffix = ''
+}: {
+  icon: React.ReactNode;
+  label: string;
   value: string | number;
   change?: number;
   suffix?: string;
@@ -142,21 +142,21 @@ export default function ExecutiveDashboard() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Fetch all data in parallel
       const [mnRes, fleetRes, epochRes] = await Promise.all([
         fetch('/api/v1/masternodes/stats'),
         fetch('/api/v1/fleet/status'),
         fetch('/api/v1/network/epoch'),
       ]);
-      
+
       if (mnRes.ok) {
         const mnData = await mnRes.json();
         if (mnData.success) {
           setMasternodeStats(mnData.data);
         }
       }
-      
+
       if (fleetRes.ok) {
         const fleetData = await fleetRes.json();
         setFleetStats({
@@ -165,7 +165,7 @@ export default function ExecutiveDashboard() {
           healthScore: fleetData.fleet.healthScore,
         });
       }
-      
+
       if (epochRes.ok) {
         const epochData = await epochRes.json();
         if (epochData.success) {
@@ -193,9 +193,9 @@ export default function ExecutiveDashboard() {
     return num.toLocaleString();
   };
 
-  const healthRating = fleetStats?.healthScore >= 90 ? 'excellent' 
-    : fleetStats?.healthScore >= 70 ? 'good' 
-    : fleetStats?.healthScore >= 50 ? 'fair' 
+  const healthRating = (fleetStats?.healthScore ?? 0) >= 90 ? 'excellent'
+    : (fleetStats?.healthScore ?? 0) >= 70 ? 'good' 
+    : (fleetStats?.healthScore ?? 0) >= 50 ? 'fair' 
     : 'poor';
 
   return (
@@ -207,7 +207,7 @@ export default function ExecutiveDashboard() {
             <h1 className="text-2xl font-semibold text-[#F9FAFB]">Executive Dashboard</h1>
             <p className="text-[#6B7280] mt-1">Network-wide metrics and validator overview</p>
           </div>
-          <button 
+          <button
             onClick={() => setShowSocialCard(true)}
             className="py-2 px-4 bg-[#1E90FF]/10 text-[#1E90FF] rounded-lg hover:bg-[#1E90FF]/20 transition-colors text-sm font-medium flex items-center gap-2"
           >
@@ -218,37 +218,37 @@ export default function ExecutiveDashboard() {
 
         {/* Quick Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          <StatCard 
-            icon={<Server className="w-5 h-5" />} 
-            label="Total Nodes" 
-            value={fleetStats?.totalNodes || '--'} 
+          <StatCard
+            icon={<Server className="w-5 h-5" />}
+            label="Total Nodes"
+            value={fleetStats?.totalNodes || '--'}
           />
-          <StatCard 
-            icon={<Pickaxe className="w-5 h-5" />} 
-            label="Validators" 
-            value={masternodeStats ? `${masternodeStats.totalActive}/${masternodeStats.totalStandby}` : '--'} 
+          <StatCard
+            icon={<Pickaxe className="w-5 h-5" />}
+            label="Validators"
+            value={masternodeStats ? `${masternodeStats.totalActive}/${masternodeStats.totalStandby}` : '--'}
           />
-          <StatCard 
-            icon={<Zap className="w-5 h-5" />} 
-            label="Network TPS" 
-            value={2000} 
+          <StatCard
+            icon={<Zap className="w-5 h-5" />}
+            label="Network TPS"
+            value={2000}
             suffix="tx/s"
           />
-          <StatCard 
-            icon={<Coins className="w-5 h-5" />} 
-            label="Total Staked" 
-            value={masternodeStats ? formatStaked(masternodeStats.totalStaked) : '--'} 
+          <StatCard
+            icon={<Coins className="w-5 h-5" />}
+            label="Total Staked"
+            value={masternodeStats ? formatStaked(masternodeStats.totalStaked) : '--'}
             suffix=" XDC"
           />
-          <StatCard 
-            icon={<Shield className="w-5 h-5" />} 
-            label="Nakamoto Coeff" 
-            value={masternodeStats?.nakamotoCoefficient || '--'} 
+          <StatCard
+            icon={<Shield className="w-5 h-5" />}
+            label="Nakamoto Coeff"
+            value={masternodeStats?.nakamotoCoefficient || '--'}
           />
-          <StatCard 
-            icon={<Activity className="w-5 h-5" />} 
-            label="Epoch" 
-            value={epochData?.epoch || masternodeStats?.epoch || '--'} 
+          <StatCard
+            icon={<Activity className="w-5 h-5" />}
+            label="Epoch"
+            value={epochData?.epoch || masternodeStats?.epoch || '--'}
           />
         </div>
 
@@ -264,43 +264,43 @@ export default function ExecutiveDashboard() {
                 <p className="text-xs text-[#6B7280]">Composite score from all metrics</p>
               </div>
             </div>
-            
-            <HealthScoreGauge 
-              score={fleetStats?.healthScore || 0} 
-              rating={healthRating} 
+
+            <HealthScoreGauge
+              score={fleetStats?.healthScore || 0}
+              rating={healthRating}
             />
-            
+
             <div className="mt-6 space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-[#6B7280]">Node Uptime</span>
                 <span className="font-medium">{fleetStats?.healthyNodes || 0}/{fleetStats?.totalNodes || 0}</span>
               </div>
               <div className="w-full bg-white/5 rounded-full h-1.5">
-                <div 
-                  className="bg-[#1E90FF] h-1.5 rounded-full" 
-                  style={{ width: `${fleetStats?.totalNodes ? (fleetStats.healthyNodes / fleetStats.totalNodes) * 100 : 0}%` }} 
+                <div
+                  className="bg-[#1E90FF] h-1.5 rounded-full"
+                  style={{ width: `${fleetStats?.totalNodes ? (fleetStats.healthyNodes / fleetStats.totalNodes) * 100 : 0}%` }}
                 />
               </div>
-              
+
               <div className="flex items-center justify-between text-sm">
                 <span className="text-[#6B7280]">Active Validators</span>
                 <span className="font-medium">{masternodeStats?.totalActive || 0}</span>
               </div>
               <div className="w-full bg-white/5 rounded-full h-1.5">
-                <div 
-                  className="bg-[#10B981] h-1.5 rounded-full" 
-                  style={{ width: `${masternodeStats?.totalActive ? Math.min(100, (masternodeStats.totalActive / 108) * 100) : 0}%` }} 
+                <div
+                  className="bg-[#10B981] h-1.5 rounded-full"
+                  style={{ width: `${masternodeStats?.totalActive ? Math.min(100, (masternodeStats.totalActive / 108) * 100) : 0}%` }}
                 />
               </div>
-              
+
               <div className="flex items-center justify-between text-sm">
                 <span className="text-[#6B7280]">Epoch Progress</span>
                 <span className="font-medium">{epochData?.epochProgress || 0}%</span>
               </div>
               <div className="w-full bg-white/5 rounded-full h-1.5">
-                <div 
-                  className="bg-[#F59E0B] h-1.5 rounded-full" 
-                  style={{ width: `${epochData?.epochProgress || 0}%` }} 
+                <div
+                  className="bg-[#F59E0B] h-1.5 rounded-full"
+                  style={{ width: `${epochData?.epochProgress || 0}%` }}
                 />
               </div>
             </div>
@@ -317,7 +317,7 @@ export default function ExecutiveDashboard() {
                 <p className="text-xs text-[#6B7280]">Top validators by stake</p>
               </div>
             </div>
-            
+
             <div className="overflow-x-auto">
               <table className="w-full min-w-[500px]">
                 <thead>
@@ -363,22 +363,22 @@ export default function ExecutiveDashboard() {
           </div>
         </div>
       </div>
-      
+
       {/* Social Card Modal */}
       {showSocialCard && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-[#111827] rounded-2xl p-6 max-w-lg w-full mx-4 border border-white/10">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Social Card Preview</h3>
-              <button 
+              <button
                 onClick={() => setShowSocialCard(false)}
                 className="text-[#6B7280] hover:text-white transition-colors"
               >
                 ×
               </button>
             </div>
-            
-            <div 
+
+            <div
               className="aspect-[1200/675] bg-gradient-to-br from-[#0A0E1A] to-[#111827] rounded-xl p-6 border border-white/10 relative overflow-hidden"
               style={{ aspectRatio: '1200/675' }}
             >
@@ -388,7 +388,7 @@ export default function ExecutiveDashboard() {
                   backgroundSize: '40px 40px'
                 }}
               />
-              
+
               <div className="relative z-10 h-full flex flex-col">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1E90FF]/20 to-[#10B981]/20 flex items-center justify-center border border-[#1E90FF]/30">
@@ -399,7 +399,7 @@ export default function ExecutiveDashboard() {
                     <div className="text-xs text-[#6B7280]">{new Date().toLocaleDateString()}</div>
                   </div>
                 </div>
-                
+
                 <div className="flex-1 flex items-center">
                   <div className="grid grid-cols-2 gap-4 w-full">
                     <div>
@@ -420,22 +420,22 @@ export default function ExecutiveDashboard() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="text-xs text-[#6B7280] mt-2">
                   xdc.network · #XDC #Blockchain
                 </div>
               </div>
             </div>
-            
+
             <div className="flex gap-3 mt-4">
-              <button 
+              <button
                 onClick={() => setShowSocialCard(false)}
                 className="flex-1 py-2 px-4 bg-[#1E90FF]/10 text-[#1E90FF] rounded-lg hover:bg-[#1E90FF]/20 transition-colors text-sm font-medium flex items-center justify-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 Download PNG
               </button>
-              <button 
+              <button
                 onClick={() => setShowSocialCard(false)}
                 className="flex-1 py-2 px-4 bg-[#1E90FF] text-white rounded-lg hover:bg-[#1E90FF]/90 transition-colors text-sm font-medium flex items-center justify-center gap-2"
               >

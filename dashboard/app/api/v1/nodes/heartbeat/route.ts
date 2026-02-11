@@ -8,6 +8,12 @@ import { authenticateRequest, unauthorizedResponse, badRequestResponse, hasPermi
  * Called every 30-60s by node-health-check.sh
  * Auth: Bearer API key
  * Response: { ok: true, commands?: [...] }
+ * 
+ * Also performs auto-incident detection:
+ * - sync_stall: block height unchanged for 3+ heartbeats
+ * - peer_drop: peers < 3
+ * - disk_pressure: disk > 85%
+ * - block_drift: node > 100 blocks behind fleet leader
  */
 export async function POST(request: NextRequest) {
   try {
@@ -56,6 +62,25 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
+
+    // Get previous metrics for comparison (for incident detection)
+    const prevMetricsResult = await query(
+      `SELECT block_height, peer_count, disk_percent, collected_at
+       FROM netown.node_metrics 
+       WHERE node_id = $1 
+       ORDER BY collected_at DESC 
+       LIMIT 3`,
+      [nodeId]
+    );
+    const prevMetrics = prevMetricsResult.rows;
+
+    // Get fleet max block height for drift detection
+    const fleetMaxResult = await query(
+      `SELECT COALESCE(MAX(block_height), 0) as max_height
+       FROM netown.node_metrics
+       WHERE collected_at > NOW() - INTERVAL '5 minutes'`
+    );
+    const fleetMaxHeight = parseInt(fleetMaxResult.rows[0]?.max_height || '0');
 
     // Store metrics and peers in transaction
     await withTransaction(async (client) => {
@@ -123,6 +148,154 @@ export async function POST(request: NextRequest) {
       );
     });
 
+    // === AUTO-INCIDENT DETECTION ===
+    const detectedIncidents: Array<{ type: string; severity: 'critical' | 'warning' | 'info'; title: string; description: string }> = [];
+
+    // 1. Sync Stall Detection: block height unchanged for 3+ heartbeats
+    if (blockHeight !== undefined && blockHeight !== null && prevMetrics.length >= 2) {
+      const allSameHeight = prevMetrics.every(m => m.block_height === blockHeight);
+      if (allSameHeight && blockHeight > 0) {
+        // Check if we already have an active sync_stall incident
+        const existingIncident = await query(
+          `SELECT id FROM netown.incidents 
+           WHERE node_id = $1 AND type = 'sync_stall' AND status = 'active'`,
+          [nodeId]
+        );
+        if (existingIncident.rowCount === 0) {
+          detectedIncidents.push({
+            type: 'sync_stall',
+            severity: 'warning',
+            title: 'Block sync stalled',
+            description: `Block height (${blockHeight}) unchanged for 3+ heartbeats`,
+          });
+        }
+      }
+    }
+
+    // 2. Peer Drop Detection: peers < 3
+    if (peerCount !== undefined && peerCount < 3) {
+      const existingIncident = await query(
+        `SELECT id FROM netown.incidents 
+         WHERE node_id = $1 AND type = 'peer_drop' AND status = 'active'`,
+        [nodeId]
+      );
+      if (existingIncident.rowCount === 0) {
+        detectedIncidents.push({
+          type: 'peer_drop',
+          severity: peerCount === 0 ? 'critical' : 'warning',
+          title: 'Low peer count',
+          description: `Only ${peerCount} peer${peerCount !== 1 ? 's' : ''} connected (minimum: 3)`,
+        });
+      }
+    }
+
+    // 3. Disk Pressure Detection: disk > 85%
+    if (system?.diskPercent !== undefined && system.diskPercent > 85) {
+      const existingIncident = await query(
+        `SELECT id FROM netown.incidents 
+         WHERE node_id = $1 AND type = 'disk_pressure' AND status = 'active'`,
+        [nodeId]
+      );
+      if (existingIncident.rowCount === 0) {
+        detectedIncidents.push({
+          type: 'disk_pressure',
+          severity: system.diskPercent > 95 ? 'critical' : 'warning',
+          title: 'High disk usage',
+          description: `Disk usage at ${system.diskPercent.toFixed(1)}% (${system.diskUsedGb?.toFixed(1) || '?'}GB / ${system.diskTotalGb?.toFixed(1) || '?'}GB)`,
+        });
+      }
+    }
+
+    // 4. Block Drift Detection: node > 100 blocks behind fleet leader
+    if (blockHeight !== undefined && fleetMaxHeight > 0 && blockHeight > 0) {
+      const drift = fleetMaxHeight - blockHeight;
+      if (drift > 100) {
+        const existingIncident = await query(
+          `SELECT id FROM netown.incidents 
+           WHERE node_id = $1 AND type = 'block_drift' AND status = 'active'`,
+          [nodeId]
+        );
+        if (existingIncident.rowCount === 0) {
+          detectedIncidents.push({
+            type: 'block_drift',
+            severity: drift > 1000 ? 'critical' : 'warning',
+            title: 'Block height drift detected',
+            description: `Node is ${drift} blocks behind fleet leader (${blockHeight} vs ${fleetMaxHeight})`,
+          });
+        }
+      }
+    }
+
+    // 5. Auto-resolve incidents when conditions improve
+    // Resolve sync_stall if block height increased
+    if (blockHeight !== undefined && prevMetrics.length > 0) {
+      const prevHeight = prevMetrics[0]?.block_height;
+      if (prevHeight && blockHeight > prevHeight) {
+        await query(
+          `UPDATE netown.incidents 
+           SET status = 'resolved', resolved_at = NOW(), 
+               description = description || E'\n\nAuto-resolved: block height increased to ' || $2
+           WHERE node_id = $1 AND type = 'sync_stall' AND status = 'active'`,
+          [nodeId, blockHeight]
+        );
+      }
+    }
+
+    // Resolve peer_drop if peers >= 3
+    if (peerCount !== undefined && peerCount >= 3) {
+      await query(
+        `UPDATE netown.incidents 
+         SET status = 'resolved', resolved_at = NOW(),
+             description = description || E'\n\nAuto-resolved: peer count recovered to ' || $2
+         WHERE node_id = $1 AND type = 'peer_drop' AND status = 'active'`,
+        [nodeId, peerCount]
+      );
+    }
+
+    // Resolve disk_pressure if disk < 80%
+    if (system?.diskPercent !== undefined && system.diskPercent < 80) {
+      await query(
+        `UPDATE netown.incidents 
+         SET status = 'resolved', resolved_at = NOW(),
+             description = description || E'\n\nAuto-resolved: disk usage dropped to ' || $2 || '%'
+         WHERE node_id = $1 AND type = 'disk_pressure' AND status = 'active'`,
+        [nodeId, system.diskPercent.toFixed(1)]
+      );
+    }
+
+    // Resolve block_drift if drift < 50
+    if (blockHeight !== undefined && fleetMaxHeight > 0) {
+      const drift = fleetMaxHeight - blockHeight;
+      if (drift < 50) {
+        await query(
+          `UPDATE netown.incidents 
+           SET status = 'resolved', resolved_at = NOW(),
+               description = description || E'\n\nAuto-resolved: block drift reduced to ' || $2
+           WHERE node_id = $1 AND type = 'block_drift' AND status = 'active'`,
+          [nodeId, drift]
+        );
+      }
+    }
+
+    // Create detected incidents
+    for (const incident of detectedIncidents) {
+      await query(
+        `INSERT INTO netown.incidents 
+         (node_id, type, severity, title, description, auto_detected)
+         VALUES ($1, $2, $3, $4, $5, true)`,
+        [nodeId, incident.type, incident.severity, incident.title, incident.description]
+      );
+      
+      // TODO: Trigger alert notifications here
+      // const alertRules = await query(
+      //   `SELECT * FROM netown.alert_rules 
+      //    WHERE type = $1 AND is_active = true 
+      //    AND (node_id IS NULL OR node_id = $2)`,
+      //   [incident.type, nodeId]
+      // );
+      // ... send notifications
+    }
+
     // Check for pending commands
     const commandsResult = await query(
       `SELECT id, command, params, created_at 
@@ -150,6 +323,7 @@ export async function POST(request: NextRequest) {
         command: r.command,
         params: r.params,
       })),
+      incidentsDetected: detectedIncidents.length,
     });
   } catch (error: any) {
     console.error('Error processing heartbeat:', error);

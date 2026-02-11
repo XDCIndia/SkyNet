@@ -17,7 +17,7 @@ import {
   AlertCircle,
   X,
   Wifi,
-  Server
+  RefreshCw
 } from 'lucide-react';
 
 interface Peer {
@@ -34,8 +34,7 @@ interface Peer {
   direction: 'inbound' | 'outbound';
   protocols: string[];
   clientVersion: string;
-  nodeId: string;
-  nodeName: string;
+  latencyMs?: number;
 }
 
 interface BannedPeer {
@@ -59,128 +58,75 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
+function LatencyBadge({ latency }: { latency: number }) {
+  let color = 'text-[#EF4444]';
+  let label = 'Poor';
+  if (latency < 50) { color = 'text-[#10B981]'; label = 'Excellent'; }
+  else if (latency < 100) { color = 'text-[#1E90FF]'; label = 'Good'; }
+  else if (latency < 150) { color = 'text-[#F59E0B]'; label = 'Fair'; }
+  
+  return (
+    <span className={`text-xs ${color}`}>
+      {latency}ms ({label})
+    </span>
+  );
+}
+
 export default function PeersPage() {
   const [livePeers, setLivePeers] = useState<Peer[]>([]);
   const [bannedPeers, setBannedPeers] = useState<BannedPeer[]>([]);
   const [countries, setCountries] = useState<Record<string, { name: string; count: number }>>({});
   const [protocols, setProtocols] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const [sortField, setSortField] = useState<keyof Peer>('name');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [selectedNode, setSelectedNode] = useState<string>('all');
-  const [nodes, setNodes] = useState<Array<{ id: string; name: string }>>([]);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // WebSocket for live updates
   const { peers: wsPeers, connected: wsConnected } = useWebSocket();
 
-  // Fetch nodes list for filter
-  const fetchNodes = useCallback(async () => {
-    try {
-      const res = await fetch('/api/v1/fleet/status', { cache: 'no-store' });
-      if (res.ok) {
-        const data = await res.json();
-        setNodes(data.nodes?.map((n: any) => ({ id: n.id, name: n.name })) || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch nodes:', err);
-    }
-  }, []);
-
   const fetchPeers = useCallback(async () => {
     try {
-      // Fetch all peer snapshots from DB
       const res = await fetch('/api/peers', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        
-        // Transform to our format with node info
-        const transformedPeers: Peer[] = [];
-        const countryMap: Record<string, { name: string; count: number }> = {};
-        const protocolMap: Record<string, number> = {};
-
-        if (data.live?.peers) {
-          data.live.peers.forEach((peer: any) => {
-            transformedPeers.push({
-              id: peer.id,
-              enode: peer.enode,
-              name: peer.name || 'Unknown',
-              ip: peer.ip || 'unknown',
-              port: peer.port || 0,
-              country: peer.country || 'Unknown',
-              city: peer.city || 'Unknown',
-              lat: peer.lat || 0,
-              lon: peer.lon || 0,
-              asn: peer.asn || 'Unknown',
-              direction: peer.direction || 'outbound',
-              protocols: peer.protocols || ['eth/66'],
-              clientVersion: peer.clientVersion || 'Unknown',
-              nodeId: 'unknown', // Will be populated from DB
-              nodeName: 'Unknown',
-            });
-
-            // Count countries
-            if (peer.country && peer.country !== 'Unknown') {
-              if (!countryMap[peer.country]) {
-                countryMap[peer.country] = { name: peer.country, count: 0 };
-              }
-              countryMap[peer.country].count++;
-            }
-
-            // Count protocols
-            if (peer.protocols) {
-              peer.protocols.forEach((p: string) => {
-                protocolMap[p] = (protocolMap[p] || 0) + 1;
-              });
-            }
-          });
-        }
-
-        setLivePeers(transformedPeers);
-        setCountries(countryMap);
-        setProtocols(protocolMap);
+        setLivePeers(data.live?.peers || []);
         setBannedPeers(data.banned || []);
+        setCountries(data.live?.countries || {});
+        setProtocols(data.live?.protocols || {});
       }
     } catch (err) {
       console.error('Failed to fetch peers:', err);
-      setToast({ message: 'Failed to fetch peers', type: 'error' });
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Initial load + 10s auto-refresh
   useEffect(() => {
-    fetchNodes();
     fetchPeers();
+    // Auto-refresh every 10 seconds
     const interval = setInterval(fetchPeers, 10000);
     return () => clearInterval(interval);
-  }, [fetchPeers, fetchNodes]);
+  }, [fetchPeers]);
 
   // Update from WebSocket
   useEffect(() => {
     if (wsPeers) {
+      // WebSocket provides peer stats, trigger refresh for full data
       fetchPeers();
     }
   }, [wsPeers, fetchPeers]);
 
-  // Filter and sort peers
-  const filteredAndSortedPeers = useMemo(() => {
-    let filtered = [...livePeers];
-    
-    if (selectedNode !== 'all') {
-      filtered = filtered.filter(p => p.nodeId === selectedNode);
-    }
-    
-    filtered.sort((a, b) => {
-      const aVal = a[sortField] || '';
-      const bVal = b[sortField] || '';
-      const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+  const sortedPeers = useMemo(() => {
+    const sorted = [...livePeers];
+    sorted.sort((a, b) => {
+      const aVal = String(a[sortField] ?? '');
+      const bVal = String(b[sortField] ?? '');
+      const comparison = aVal.localeCompare(bVal);
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-    
-    return filtered;
-  }, [livePeers, selectedNode, sortField, sortDirection]);
+    return sorted;
+  }, [livePeers, sortField, sortDirection]);
 
   const geoStats = useMemo(() => {
     const countryCount = Object.keys(countries).length;
@@ -190,8 +136,9 @@ export default function PeersPage() {
     const continentMap: Record<string, string> = {
       US: 'North America', CA: 'North America', MX: 'North America',
       DE: 'Europe', GB: 'Europe', FR: 'Europe', NL: 'Europe', IT: 'Europe', ES: 'Europe',
-      SG: 'Asia', JP: 'Asia', KR: 'Asia', IN: 'Asia', CN: 'Asia',
-      AU: 'Oceania',
+      SG: 'Asia', JP: 'Asia', KR: 'Asia', IN: 'Asia', CN: 'Asia', HK: 'Asia',
+      AU: 'Oceania', NZ: 'Oceania',
+      BR: 'South America', AR: 'South America',
     };
 
     for (const [code, info] of Object.entries(countries)) {
@@ -228,12 +175,11 @@ export default function PeersPage() {
       });
 
       if (res.ok) {
-        setToast({ message: `Banned peer ${peer.name.slice(0, 20)}...`, type: 'success' });
+        setToast(`Banned peer ${peer.name.slice(0, 20)}...`);
         fetchPeers();
       }
     } catch (err) {
       console.error('Failed to ban peer:', err);
-      setToast({ message: 'Failed to ban peer', type: 'error' });
     }
   };
 
@@ -244,12 +190,11 @@ export default function PeersPage() {
       });
 
       if (res.ok) {
-        setToast({ message: 'Peer unbanned', type: 'success' });
+        setToast(`Unbanned peer`);
         fetchPeers();
       }
     } catch (err) {
       console.error('Failed to unban peer:', err);
-      setToast({ message: 'Failed to unban peer', type: 'error' });
     }
   };
 
@@ -261,72 +206,91 @@ export default function PeersPage() {
             <h1 className="text-2xl font-semibold text-[#F9FAFB]">Peers & Network</h1>
             <p className="text-[#6B7280] mt-1">Manage peer connections and network topology</p>
           </div>
-          {wsConnected && (
-            <div className="flex items-center gap-2">
-              <Wifi className="w-4 h-4 text-[#10B981]" />
-              <span className="text-sm text-[#10B981]">Live</span>
+          <div className="flex items-center gap-4">
+            {wsConnected && (
+              <div className="flex items-center gap-2">
+                <Wifi className="w-4 h-4 text-[#10B981]" />
+                <span className="text-sm text-[#10B981]">Live</span>
+              </div>
+            )}
+            <button
+              onClick={fetchPeers}
+              className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+              title="Refresh"
+            >
+              <RefreshCw className="w-4 h-4 text-[#6B7280]" />
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="card-xdc">
+            <div className="section-header mb-1">Total Peers</div>
+            <div className="text-2xl font-bold font-mono-nums">{livePeers.length}</div>
+          </div>
+          <div className="card-xdc">
+            <div className="section-header mb-1 text-[#10B981]">Inbound</div>
+            <div className="text-2xl font-bold font-mono-nums text-[#10B981]">
+              {livePeers.filter(p => p.direction === 'inbound').length}
             </div>
-          )}
+          </div>
+          <div className="card-xdc">
+            <div className="section-header mb-1 text-[#1E90FF]">Outbound</div>
+            <div className="text-2xl font-bold font-mono-nums text-[#1E90FF]">
+              {livePeers.filter(p => p.direction === 'outbound').length}
+            </div>
+          </div>
+          <div className="card-xdc">
+            <div className="section-header mb-1">Countries</div>
+            <div className="text-2xl font-bold font-mono-nums">{geoStats.uniqueCountries}</div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="card-xdc lg:col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[rgba(30,144,255,0.1)] flex items-center justify-center text-[#1E90FF]">
-                  <Network className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-[#F9FAFB]">Peer Management</h2>
-                  <p className="text-xs text-[#6B7280]">{filteredAndSortedPeers.length} connected peers</p>
-                </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[rgba(30,144,255,0.1)] flex items-center justify-center text-[#1E90FF]">
+                <Network className="w-5 h-5" />
               </div>
-              
-              <select
-                value={selectedNode}
-                onChange={(e) => setSelectedNode(e.target.value)}
-                className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#1E90FF]"
-              >
-                <option value="all">All Nodes</option>
-                {nodes.map(node => (
-                  <option key={node.id} value={node.id}>{node.name}</option>
-                ))}
-              </select>
+              <div>
+                <h2 className="text-lg font-semibold text-[#F9FAFB]">Peer Management</h2>
+                <p className="text-xs text-[#6B7280]">{livePeers.length} connected peers</p>
+              </div>
             </div>
             
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px]">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280] cursor-pointer hover:text-[#F9FAFB]" onClick={() => handleSort('name')}>Name</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Name</th>
                     <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Client</th>
                     <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Protocol</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280] cursor-pointer hover:text-[#F9FAFB]" onClick={() => handleSort('direction')}>Direction</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280] cursor-pointer hover:text-[#F9FAFB]" onClick={() => handleSort('country')}>Location</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Direction</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Location</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Latency</th>
                     <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-[#6B7280]">Loading...</td>
+                      <td colSpan={7} className="py-8 text-center text-[#6B7280]">Loading...</td>
                     </tr>
-                  ) : filteredAndSortedPeers.length === 0 ? (
+                  ) : sortedPeers.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-[#6B7280]">No peers connected</td>
+                      <td colSpan={7} className="py-8 text-center text-[#6B7280]">No peers connected</td>
                     </tr>
                   ) : (
-                    filteredAndSortedPeers.map((peer) => (
+                    sortedPeers.map((peer) => (
                       <tr key={peer.id} className="hover:bg-white/[0.02]">
                         <td className="py-3 px-3">
                           <div className="text-sm font-medium">{peer.name?.slice(0, 30) || 'Unknown'}</div>
-                          <div className="text-xs text-[#6B7280] font-mono truncate max-w-[150px]">
-                            {peer.enode?.slice(0, 30)}...
-                          </div>
+                          <div className="text-xs text-[#6B7280] font-mono">{peer.id?.slice(0, 16)}...</div>
                         </td>
-                        <td className="py-3 px-3 text-xs">{peer.clientVersion?.slice(0, 30) || 'Unknown'}</td>
+                        <td className="py-3 px-3 text-xs">{peer.clientVersion || 'Unknown'}</td>
                         <td className="py-3 px-3">
-                          <span className="px-2 py-0.5 bg-white/5 rounded text-xs">{peer.protocols?.[0] || 'unknown'}</span>
+                          <span className="px-2 py-0.5 bg-white/5 rounded text-xs">{peer.protocols?.[0] || 'eth/68'}</span>
                         </td>
                         <td className="py-3 px-3">
                           {peer.direction === 'inbound' ? (
@@ -342,8 +306,11 @@ export default function PeersPage() {
                         <td className="py-3 px-3 text-xs">
                           <div className="flex items-center gap-1">
                             <MapPin className="w-3 h-3 text-[#6B7280]" />
-                            {peer.city !== 'Unknown' ? `${peer.city}, ${peer.country}` : peer.country}
+                            {peer.city || 'Unknown'}, {peer.country || 'XX'}
                           </div>
+                        </td>
+                        <td className="py-3 px-3 text-xs">
+                          {peer.latencyMs ? <LatencyBadge latency={peer.latencyMs} /> : '—'}
                         </td>
                         <td className="py-3 px-3">
                           <div className="flex gap-1">
@@ -415,14 +382,15 @@ export default function PeersPage() {
               </div>
               
               <div className="space-y-2">
-                {Object.entries(protocols).map(([protocol, count]) => (
-                  <div key={protocol} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
-                    <span className="text-sm font-mono">{protocol}</span>
-                    <span className="text-sm font-mono-nums text-[#10B981]">{count} peers</span>
-                  </div>
-                ))}
-                {Object.keys(protocols).length === 0 && (
-                  <div className="text-center py-4 text-[#6B7280]">No protocol data</div>
+                {Object.keys(protocols).length === 0 ? (
+                  <div className="text-sm text-[#6B7280]">No protocol data</div>
+                ) : (
+                  Object.entries(protocols).map(([protocol, count]) => (
+                    <div key={protocol} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                      <span className="text-sm font-mono">{protocol}</span>
+                      <span className="text-sm font-mono-nums text-[#10B981]">{count} peers</span>
+                    </div>
+                  ))
                 )}
               </div>
             </div>
@@ -460,11 +428,11 @@ export default function PeersPage() {
                   {bannedPeers.map((peer) => (
                     <tr key={peer.id} className="hover:bg-white/[0.02]">
                       <td className="py-3 px-4 text-sm font-mono truncate max-w-[200px]">
-                        {peer.enode?.slice(0, 40)}...
+                        {peer.enode.slice(0, 40)}...
                       </td>
-                      <td className="py-3 px-4 text-sm">{peer.reason || 'Manual ban'}</td>
+                      <td className="py-3 px-4 text-sm">{peer.reason}</td>
                       <td className="py-3 px-4 text-sm text-[#6B7280]">
-                        {peer.banned_at ? new Date(peer.banned_at).toLocaleDateString() : 'Unknown'}
+                        {new Date(peer.banned_at).toLocaleDateString()}
                       </td>
                       <td className="py-3 px-4">
                         <button
@@ -486,12 +454,8 @@ export default function PeersPage() {
       {/* Toast */}
       {toast && (
         <div className="fixed bottom-24 right-6 bg-[#111827] border border-white/10 rounded-lg px-4 py-3 shadow-lg z-50 flex items-center gap-3 animate-fade-in">
-          {toast.type === 'success' ? (
-            <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
-          ) : (
-            <AlertCircle className="w-5 h-5 text-[#EF4444]" />
-          )}
-          <span className="text-sm">{toast.message}</span>
+          <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
+          <span className="text-sm">{toast}</span>
           <button onClick={() => setToast(null)} className="text-[#6B7280] hover:text-white">
             <X className="w-4 h-4" />
           </button>
