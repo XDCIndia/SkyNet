@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useWebSocket } from '@/lib/hooks/useWebSocket';
 import { 
@@ -96,6 +97,17 @@ function formatTimeAgo(timestamp: string): string {
   return 'just now';
 }
 
+function getNodeStatus(lastSeen: string | null): NodeStatus {
+  if (!lastSeen) return 'offline';
+  
+  const diff = Date.now() - new Date(lastSeen).getTime();
+  const minutes = Math.floor(diff / 60000);
+  
+  if (minutes < 2) return 'online';
+  if (minutes < 5) return 'degraded';
+  return 'offline';
+}
+
 function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   useEffect(() => {
     const timer = setTimeout(onClose, 3000);
@@ -165,6 +177,7 @@ function DiagnosticsRow({ nodeId, onAction }: { nodeId: string; onAction: (actio
 }
 
 export default function FleetPage() {
+  const router = useRouter();
   const [nodes, setNodes] = useState<FleetNode[]>([]);
   const [stats, setStats] = useState({
     totalNodes: 0,
@@ -186,35 +199,66 @@ export default function FleetPage() {
   // WebSocket for live updates
   const { incidents: wsIncidents, connected: wsConnected } = useWebSocket();
 
-  const fetchFleet = async () => {
+  const fetchFleet = useCallback(async () => {
     try {
       const [fleetRes, incidentsRes] = await Promise.all([
-        fetch('/api/fleet', { cache: 'no-store' }),
+        fetch('/api/v1/fleet/status', { cache: 'no-store' }),
         fetch('/api/incidents?status=active', { cache: 'no-store' }),
       ]);
 
       if (fleetRes.ok) {
         const fleetData = await fleetRes.json();
-        setNodes(fleetData.nodes);
-        setStats(fleetData.stats);
+        
+        // Map nodes with calculated status
+        const mappedNodes: FleetNode[] = fleetData.nodes.map((n: any) => ({
+          id: n.id,
+          name: n.name,
+          host: n.host,
+          role: n.role,
+          location_city: n.location_city || 'Unknown',
+          location_country: n.location_country || 'XX',
+          is_active: n.isActive,
+          block_height: n.blockHeight || 0,
+          sync_percent: n.syncPercent || 0,
+          peer_count: n.peerCount || 0,
+          cpu_percent: n.cpuPercent || 0,
+          memory_percent: n.memoryPercent || 0,
+          disk_percent: n.diskPercent || 0,
+          rpc_latency_ms: n.rpcLatencyMs || 0,
+          is_syncing: n.isSyncing || false,
+          client_version: n.clientVersion || 'Unknown',
+          last_seen: n.lastSeen,
+          status: getNodeStatus(n.lastSeen),
+        }));
+        
+        setNodes(mappedNodes);
+        setStats({
+          totalNodes: fleetData.fleet.totalNodes,
+          healthyNodes: fleetData.fleet.healthyNodes,
+          degradedNodes: mappedNodes.filter(n => n.status === 'degraded').length,
+          offlineNodes: fleetData.fleet.offlineNodes,
+          healthScore: fleetData.fleet.healthScore,
+          maxBlockHeight: Math.max(...mappedNodes.map(n => n.block_height), 0),
+        });
       }
 
       if (incidentsRes.ok) {
         const incidentsData = await incidentsRes.json();
-        setIncidents(incidentsData.incidents);
+        setIncidents(incidentsData.incidents || []);
       }
     } catch (err) {
       console.error('Failed to fetch fleet:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchFleet();
-    const interval = setInterval(fetchFleet, 30000); // Refresh every 30s
+    // Auto-refresh every 10 seconds
+    const interval = setInterval(fetchFleet, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchFleet]);
 
   // Update incidents from WebSocket
   useEffect(() => {
@@ -225,6 +269,10 @@ export default function FleetPage() {
 
   const handleAction = (action: string, node: string) => {
     setToast(`Command "${action}" executed on ${node}`);
+  };
+
+  const handleRowClick = (nodeId: string) => {
+    router.push(`/nodes/${nodeId}`);
   };
 
   const filteredAndSortedNodes = useMemo(() => {
@@ -382,14 +430,10 @@ export default function FleetPage() {
                         <tr
                           key={node.id}
                           className="hover:bg-white/[0.02] cursor-pointer"
-                          onClick={() => setExpandedNode(expandedNode === node.id ? null : node.id)}
+                          onClick={() => handleRowClick(node.id)}
                         >
                           <td className="py-3 px-3">
-                            {expandedNode === node.id ? (
-                              <ChevronDown className="w-4 h-4 text-[#6B7280]" />
-                            ) : (
-                              <ChevronRight className="w-4 h-4 text-[#6B7280]" />
-                            )}
+                            <ChevronRight className="w-4 h-4 text-[#6B7280]" />
                           </td>
                           <td className="py-3 px-3">
                             <StatusDot status={node.status} />
@@ -430,9 +474,6 @@ export default function FleetPage() {
                             </div>
                           </td>
                         </tr>
-                        {expandedNode === node.id && (
-                          <DiagnosticsRow nodeId={node.id} onAction={handleAction} />
-                        )}
                       </>
                     ))
                   )}

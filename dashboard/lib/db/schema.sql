@@ -165,3 +165,20 @@ CREATE TABLE IF NOT EXISTS netown.command_queue (
 );
 CREATE INDEX IF NOT EXISTS idx_commands_node_status ON netown.command_queue(node_id, status);
 CREATE INDEX IF NOT EXISTS idx_commands_pending ON netown.command_queue(status, created_at) WHERE status = 'pending';
+
+-- Masternode snapshots for historical tracking
+CREATE TABLE IF NOT EXISTS netown.masternode_snapshots (
+  id BIGSERIAL PRIMARY KEY,
+  address VARCHAR(42) NOT NULL,
+  status VARCHAR(20) NOT NULL CHECK (status IN ('active','standby','penalized')),
+  owner VARCHAR(42),
+  stake_xdc NUMERIC(30,2),
+  voter_count INT DEFAULT 0,
+  ethstats_name VARCHAR(200),
+  epoch INT,
+  round INT,
+  block_number BIGINT,
+  collected_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_mn_addr_time ON netown.masternode_snapshots(address, collected_at DESC);
+CREATE INDEX IF NOT EXISTS idx_mn_epoch ON netown.masternode_snapshots(epoch);

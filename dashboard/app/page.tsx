@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import NavigationDock from '@/components/NavigationDock';
 import HeroSection from '@/components/HeroSection';
@@ -13,8 +14,37 @@ import StoragePanel from '@/components/StoragePanel';
 import PeerMap from '@/components/PeerMap';
 import { useWebSocket } from '@/lib/hooks/useWebSocket';
 import type { MetricsData, PeersData } from '@/lib/types';
+import { 
+  Server, 
+  Activity, 
+  Users, 
+  AlertTriangle, 
+  CheckCircle2,
+  ArrowRight,
+  Wifi
+} from 'lucide-react';
 
-const REFRESH_INTERVAL = parseInt(process.env.NEXT_PUBLIC_REFRESH_INTERVAL || '10');
+const REFRESH_INTERVAL = 10; // 10 seconds
+
+interface FleetSummary {
+  totalNodes: number;
+  healthyNodes: number;
+  offlineNodes: number;
+  healthScore: number;
+  totalPeers: number;
+  maxBlockHeight: number;
+  criticalIncidents: number;
+}
+
+interface NodeSummary {
+  id: string;
+  name: string;
+  role: string;
+  status: string;
+  blockHeight: number;
+  peerCount: number;
+  lastSeen: string;
+}
 
 const defaultMetrics: MetricsData = {
   blockchain: {
@@ -91,6 +121,83 @@ const defaultPeers: PeersData = {
   totalPeers: 0,
 };
 
+// Fleet Health Banner Component
+function FleetHealthBanner({ 
+  fleet, 
+  nodes,
+  onViewFleet
+}: { 
+  fleet: FleetSummary; 
+  nodes: NodeSummary[];
+  onViewFleet: () => void;
+}) {
+  return (
+    <div className="card-xdc mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[rgba(30,144,255,0.1)] flex items-center justify-center text-[#1E90FF]">
+            <Server className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-[#F9FAFB]">Fleet Overview</h2>
+            <p className="text-xs text-[#6B7280]">{fleet.totalNodes} nodes registered</p>
+          </div>
+        </div>
+        <button 
+          onClick={onViewFleet}
+          className="flex items-center gap-2 px-4 py-2 bg-[#1E90FF]/10 text-[#1E90FF] rounded-lg hover:bg-[#1E90FF]/20 transition-colors text-sm"
+        >
+          View Fleet <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+      
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+        <div className="text-center p-3 bg-white/5 rounded-lg">
+          <div className="text-2xl font-bold font-mono-nums">{fleet.totalNodes}</div>
+          <div className="text-xs text-[#6B7280]">Total Nodes</div>
+        </div>
+        <div className="text-center p-3 bg-white/5 rounded-lg">
+          <div className="text-2xl font-bold font-mono-nums text-[#10B981]">{fleet.healthyNodes}</div>
+          <div className="text-xs text-[#6B7280]">Healthy</div>
+        </div>
+        <div className="text-center p-3 bg-white/5 rounded-lg">
+          <div className="text-2xl font-bold font-mono-nums text-[#EF4444]">{fleet.offlineNodes}</div>
+          <div className="text-xs text-[#6B7280]">Offline</div>
+        </div>
+        <div className="text-center p-3 bg-white/5 rounded-lg">
+          <div className="text-2xl font-bold font-mono-nums">{fleet.totalPeers}</div>
+          <div className="text-xs text-[#6B7280]">Total Peers</div>
+        </div>
+        <div className="text-center p-3 bg-white/5 rounded-lg">
+          <div className={`text-2xl font-bold font-mono-nums ${
+            fleet.healthScore >= 90 ? 'text-[#10B981]' :
+            fleet.healthScore >= 70 ? 'text-[#F59E0B]' : 'text-[#EF4444]'
+          }`}>
+            {fleet.healthScore}%
+          </div>
+          <div className="text-xs text-[#6B7280]">Health</div>
+        </div>
+      </div>
+      
+      {fleet.criticalIncidents > 0 && (
+        <div className="flex items-center gap-2 p-3 bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-lg">
+          <AlertTriangle className="w-5 h-5 text-[#EF4444]" />
+          <span className="text-sm text-[#EF4444]">
+            {fleet.criticalIncidents} critical incident{fleet.criticalIncidents > 1 ? 's' : ''} requiring attention
+          </span>
+        </div>
+      )}
+      
+      {fleet.criticalIncidents === 0 && fleet.healthScore >= 90 && (
+        <div className="flex items-center gap-2 p-3 bg-[#10B981]/10 border border-[#10B981]/20 rounded-lg">
+          <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
+          <span className="text-sm text-[#10B981]">All systems operational</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Skeleton loading component
 function Skeleton({ className }: { className?: string }) {
   return <div className={`skeleton ${className || ''}`} />;
@@ -145,27 +252,17 @@ function LoadingState() {
             </div>
           ))}
         </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="card-xdc">
-            <Skeleton className="w-full h-40 rounded-xl" />
-          </div>
-          <div className="card-xdc">
-            <Skeleton className="w-full h-40 rounded-xl" />
-          </div>
-        </div>
-        
-        <div className="card-xdc">
-          <Skeleton className="w-full h-[400px] rounded-xl" />
-        </div>
       </main>
     </div>
   );
 }
 
 export default function Home() {
+  const router = useRouter();
   const [metrics, setMetrics] = useState<MetricsData>(defaultMetrics);
   const [peers, setPeers] = useState<PeersData>(defaultPeers);
+  const [fleetSummary, setFleetSummary] = useState<FleetSummary | null>(null);
+  const [nodes, setNodes] = useState<NodeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(REFRESH_INTERVAL);
@@ -177,26 +274,72 @@ export default function Home() {
     try {
       setError(null);
 
+      // First, check if we have fleet data
+      const fleetRes = await fetch('/api/v1/fleet/status', { cache: 'no-store' });
+      
+      if (fleetRes.ok) {
+        const fleetData = await fleetRes.json();
+        
+        // Check if we have nodes in the fleet
+        if (fleetData.fleet?.totalNodes > 0) {
+          // Calculate total peers from nodes
+          const totalPeers = fleetData.nodes?.reduce((sum: number, n: any) => sum + (n.peerCount || 0), 0) || 0;
+          
+          setFleetSummary({
+            totalNodes: fleetData.fleet.totalNodes,
+            healthyNodes: fleetData.fleet.healthyNodes || 0,
+            offlineNodes: fleetData.fleet.offlineNodes || 0,
+            healthScore: fleetData.fleet.healthScore || 0,
+            totalPeers,
+            maxBlockHeight: fleetData.networkHealth?.max_block_height || 0,
+            criticalIncidents: fleetData.incidents?.critical || 0,
+          });
+          
+          setNodes(fleetData.nodes?.map((n: any) => ({
+            id: n.id,
+            name: n.name,
+            role: n.role,
+            status: n.status,
+            blockHeight: n.blockHeight || 0,
+            peerCount: n.peerCount || 0,
+            lastSeen: n.lastSeen,
+          })) || []);
+          
+          // Update metrics from fleet leader (first healthy node)
+          const leaderNode = fleetData.nodes?.find((n: any) => n.status === 'healthy');
+          if (leaderNode) {
+            setMetrics(prev => ({
+              ...prev,
+              blockchain: {
+                ...prev.blockchain,
+                blockHeight: leaderNode.blockHeight || 0,
+                peers: leaderNode.peerCount || 0,
+                syncPercent: leaderNode.syncPercent || 100,
+                isSyncing: leaderNode.status === 'syncing',
+              },
+              timestamp: new Date().toISOString(),
+            }));
+          }
+        } else {
+          setFleetSummary(null);
+        }
+      }
+
+      // Fetch single-node metrics (for backward compatibility / single node mode)
       const [metricsRes, peersRes] = await Promise.all([
         fetch('/api/metrics', { cache: 'no-store' }),
         fetch('/api/peers', { cache: 'no-store' }),
       ]);
 
-      if (!metricsRes.ok) {
-        throw new Error(`Metrics API error: ${metricsRes.status}`);
+      if (metricsRes.ok) {
+        const metricsData = await metricsRes.json();
+        if (!metricsData.error) {
+          setMetrics(metricsData);
+        }
       }
-
-      const metricsData = await metricsRes.json();
-
-      if (metricsData.error) {
-        throw new Error(metricsData.error);
-      }
-
-      setMetrics(metricsData);
 
       if (peersRes.ok) {
         const peersData = await peersRes.json();
-        // Use live peers data if available
         if (peersData.live) {
           setPeers({
             peers: peersData.live.peers.map((p: any) => ({
@@ -226,7 +369,7 @@ export default function Home() {
     }
   }, []);
 
-  // Initial data fetch
+  // Initial data fetch + 10s auto-refresh
   useEffect(() => {
     fetchData();
     const intervalId = setInterval(fetchData, REFRESH_INTERVAL * 1000);
@@ -244,7 +387,6 @@ export default function Home() {
   // Update metrics from WebSocket when available
   useEffect(() => {
     if (wsMetrics) {
-      // Merge WS data with existing metrics
       setMetrics(prev => ({
         ...prev,
         blockchain: {
@@ -265,13 +407,6 @@ export default function Home() {
       }));
     }
   }, [wsMetrics]);
-
-  // Update peers from WebSocket when available
-  useEffect(() => {
-    if (wsPeers) {
-      // WebSocket provides peer stats, not full peer list
-    }
-  }, [wsPeers]);
 
   // Combine WS and HTTP errors
   useEffect(() => {
@@ -321,6 +456,15 @@ export default function Home() {
               <span>{error}</span>
             </div>
           </div>
+        )}
+
+        {/* Fleet Overview Banner (if nodes exist) */}
+        {fleetSummary && fleetSummary.totalNodes > 0 && (
+          <FleetHealthBanner 
+            fleet={fleetSummary} 
+            nodes={nodes}
+            onViewFleet={() => router.push('/fleet')}
+          />
         )}
 
         <div className="space-y-8">

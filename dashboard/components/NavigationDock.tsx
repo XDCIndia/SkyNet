@@ -12,7 +12,8 @@ import {
   RefreshCw, 
   FileText, 
   Monitor, 
-  HardDrive 
+  HardDrive,
+  Pickaxe
 } from 'lucide-react';
 
 interface NavItem {
@@ -27,6 +28,7 @@ const navItems: NavItem[] = [
   { id: 'executive', label: 'Executive', icon: <Building2 className="w-5 h-5" />, path: '/executive' },
   { id: 'fleet', label: 'Fleet', icon: <Wrench className="w-5 h-5" />, path: '/fleet' },
   { id: 'peers', label: 'Peers', icon: <Globe className="w-5 h-5" />, path: '/peers' },
+  { id: 'masternodes', label: 'Masternodes', icon: <Pickaxe className="w-5 h-5" />, path: '/masternodes' },
 ];
 
 // Original dock items for home page scrolling
