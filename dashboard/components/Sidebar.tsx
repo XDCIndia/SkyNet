@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -31,10 +31,56 @@ const navItems: NavItem[] = [
   { id: 'masternodes', label: 'Masternodes', icon: <Pickaxe className="w-5 h-5" />, path: '/masternodes', section: 'Network' },
 ];
 
+interface NetworkStatus {
+  bestBlock: number;
+  online: boolean;
+}
+
+function formatBlock(num: number): string {
+  if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+  if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+  return num.toString();
+}
+
+function formatTimeAgoShort(ts: number): string {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  return `${Math.floor(diff / 3600)}h ago`;
+}
+
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const [networkStatus, setNetworkStatus] = useState<NetworkStatus | null>(null);
+  const [lastFetched, setLastFetched] = useState<number>(0);
+  const [, setTick] = useState(0);
+
+  const fetchNetworkStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/network/stats', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setNetworkStatus({ bestBlock: data.bestBlock, online: true });
+        setLastFetched(Date.now());
+      }
+    } catch {
+      setNetworkStatus(prev => prev ? { ...prev, online: false } : null);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNetworkStatus();
+    const interval = setInterval(fetchNetworkStatus, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNetworkStatus]);
+
+  // Tick every 10s to update "last updated" display
+  useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const sections = Array.from(new Set(navItems.map(i => i.section)));
 
@@ -56,11 +102,33 @@ export default function Sidebar() {
           </div>
           {!collapsed && (
             <div className="overflow-hidden">
-              <h1 className="text-sm font-bold text-[#F9FAFB] whitespace-nowrap">XDCNetOwn</h1>
-              <p className="text-[10px] text-[#6B7280] whitespace-nowrap">Network Dashboard</p>
+              <h1 className="text-sm font-bold text-[#F1F5F9] whitespace-nowrap">XDCNetOwn</h1>
+              <p className="text-[10px] text-[#64748B] whitespace-nowrap">Network Dashboard</p>
             </div>
           )}
         </div>
+
+        {/* Network Status */}
+        {!collapsed && networkStatus && (
+          <div className="px-4 py-3 border-b border-white/5">
+            <div className="flex items-center gap-2 text-xs">
+              <span className={`w-2 h-2 rounded-full ${networkStatus.online ? 'bg-[#10B981]' : 'bg-[#EF4444]'}`} />
+              <span className="text-[#94A3B8]">XDC Mainnet</span>
+            </div>
+            <div className="text-xs text-[#64748B] mt-1">
+              Block #{formatBlock(networkStatus.bestBlock)}
+              <span className="mx-1">•</span>
+              <span className={networkStatus.online ? 'text-[#10B981]' : 'text-[#EF4444]'}>
+                {networkStatus.online ? 'Online' : 'Offline'}
+              </span>
+            </div>
+          </div>
+        )}
+        {collapsed && networkStatus && (
+          <div className="flex justify-center py-2 border-b border-white/5">
+            <span className={`w-2.5 h-2.5 rounded-full ${networkStatus.online ? 'bg-[#10B981]' : 'bg-[#EF4444]'}`} title={`Block #${networkStatus.bestBlock.toLocaleString()}`} />
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3 px-2">
@@ -83,7 +151,7 @@ export default function Sidebar() {
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 transition-all text-left ${
                         isActive
                           ? 'bg-[#1E90FF]/10 text-[#1E90FF] border border-[#1E90FF]/20'
-                          : 'text-[#9CA3AF] hover:text-[#F9FAFB] hover:bg-white/5 border border-transparent'
+                          : 'text-[#94A3B8] hover:text-[#F1F5F9] hover:bg-white/5 border border-transparent'
                       }`}
                       title={collapsed ? item.label : undefined}
                     >
@@ -103,10 +171,17 @@ export default function Sidebar() {
           ))}
         </nav>
 
+        {/* Last Updated */}
+        {!collapsed && lastFetched > 0 && (
+          <div className="px-4 py-2 border-t border-white/5">
+            <p className="text-[10px] text-[#64748B]">Last updated: {formatTimeAgoShort(lastFetched)}</p>
+          </div>
+        )}
+
         {/* Collapse Toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex items-center justify-center py-3 border-t border-white/5 text-[#6B7280] hover:text-[#F9FAFB] transition-colors"
+          className="flex items-center justify-center py-3 border-t border-white/5 text-[#64748B] hover:text-[#F1F5F9] transition-colors"
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -122,12 +197,12 @@ export default function Sidebar() {
               <button
                 key={item.id}
                 onClick={() => router.push(item.path)}
-                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors ${
-                  isActive ? 'text-[#1E90FF]' : 'text-[#6B7280]'
+                className={`flex flex-col items-center gap-0.5 px-3 py-2.5 min-w-[44px] min-h-[44px] rounded-lg transition-colors ${
+                  isActive ? 'text-[#1E90FF]' : 'text-[#64748B]'
                 }`}
               >
                 {item.icon}
-                <span className="text-[9px] font-medium">{item.label}</span>
+                <span className="text-[10px] font-medium">{item.label}</span>
               </button>
             );
           })}

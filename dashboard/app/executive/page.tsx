@@ -83,7 +83,7 @@ function HealthScoreGauge({ score, rating }: { score: number; rating: string }) 
           <span className="text-5xl font-bold font-mono-nums" style={{ color: getColor() }}>
             {score}
           </span>
-          <span className="text-sm text-[#6B7280] mt-1 capitalize">{rating}</span>
+          <span className="text-sm text-[#64748B] mt-1 capitalize">{rating}</span>
         </div>
       </div>
     </div>
@@ -120,7 +120,7 @@ function StatCard({
       <div className="section-header mb-1">{label}</div>
       <div className="flex items-baseline gap-1">
         <span className="stat-value font-mono-nums">{value}</span>
-        {suffix && <span className="text-sm text-[#6B7280]">{suffix}</span>}
+        {suffix && <span className="text-sm text-[#64748B]">{suffix}</span>}
       </div>
     </div>
   );
@@ -204,8 +204,8 @@ export default function ExecutiveDashboard() {
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[#F9FAFB]">Executive Dashboard</h1>
-            <p className="text-[#6B7280] mt-1">Network-wide metrics and validator overview</p>
+            <h1 className="text-2xl font-semibold text-[#F1F5F9]">Executive Dashboard</h1>
+            <p className="text-[#64748B] mt-1">Network-wide metrics and validator overview</p>
           </div>
           <button
             onClick={() => setShowSocialCard(true)}
@@ -260,8 +260,8 @@ export default function ExecutiveDashboard() {
                 <Activity className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-[#F9FAFB]">Network Health</h2>
-                <p className="text-xs text-[#6B7280]">Composite score from all metrics</p>
+                <h2 className="text-lg font-semibold text-[#F1F5F9]">Network Health</h2>
+                <p className="text-xs text-[#64748B]">Composite score from all metrics</p>
               </div>
             </div>
 
@@ -272,7 +272,7 @@ export default function ExecutiveDashboard() {
 
             <div className="mt-6 space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#6B7280]">Node Uptime</span>
+                <span className="text-[#64748B]">Node Uptime</span>
                 <span className="font-medium">{fleetStats?.healthyNodes || 0}/{fleetStats?.totalNodes || 0}</span>
               </div>
               <div className="w-full bg-white/5 rounded-full h-1.5">
@@ -283,7 +283,7 @@ export default function ExecutiveDashboard() {
               </div>
 
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#6B7280]">Active Validators</span>
+                <span className="text-[#64748B]">Active Validators</span>
                 <span className="font-medium">{masternodeStats?.totalActive || 0}</span>
               </div>
               <div className="w-full bg-white/5 rounded-full h-1.5">
@@ -294,7 +294,7 @@ export default function ExecutiveDashboard() {
               </div>
 
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#6B7280]">Epoch Progress</span>
+                <span className="text-[#64748B]">Epoch Progress</span>
                 <span className="font-medium">{epochData?.epochProgress || 0}%</span>
               </div>
               <div className="w-full bg-white/5 rounded-full h-1.5">
@@ -313,8 +313,8 @@ export default function ExecutiveDashboard() {
                 <Users className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-[#F9FAFB]">Validator Leaderboard</h2>
-                <p className="text-xs text-[#6B7280]">Top validators by stake</p>
+                <h2 className="text-lg font-semibold text-[#F1F5F9]">Validator Leaderboard</h2>
+                <p className="text-xs text-[#64748B]">Top validators by stake</p>
               </div>
             </div>
 
@@ -322,36 +322,36 @@ export default function ExecutiveDashboard() {
               <table className="w-full min-w-[500px]">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Rank</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Validator</th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-[#6B7280]">Stake</th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-[#6B7280]">Share</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B]">Rank</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B]">Validator</th>
+                    <th className="text-right py-3 px-4 text-xs font-medium text-[#64748B]">Stake</th>
+                    <th className="text-right py-3 px-4 text-xs font-medium text-[#64748B]">Share</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {loading ? (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-[#6B7280]">Loading...</td>
+                      <td colSpan={4} className="py-8 text-center text-[#64748B]">Loading...</td>
                     </tr>
                   ) : masternodeStats?.topValidators.slice(0, 10).map((validator, index) => (
                     <tr key={validator.address} className="hover:bg-white/[0.02]">
                       <td className="py-3 px-4">
                         <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                          index < 3 ? 'bg-[#1E90FF]/20 text-[#1E90FF]' : 'bg-white/5 text-[#6B7280]'
+                          index < 3 ? 'bg-[#1E90FF]/20 text-[#1E90FF]' : 'bg-white/5 text-[#64748B]'
                         }`}>
                           {index + 1}
                         </span>
                       </td>
                       <td className="py-3 px-4">
                         <div>
-                          <div className="font-medium text-[#F9FAFB] font-mono">{truncateAddress(validator.address)}</div>
+                          <div className="font-medium text-[#F1F5F9] font-mono">{truncateAddress(validator.address)}</div>
                         </div>
                       </td>
                       <td className="py-3 px-4 text-right font-mono-nums">
                         {parseInt(validator.stake.replace(/,/g, '')).toLocaleString()}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <span className={parseFloat(validator.percentage) > 5 ? 'text-[#1E90FF]' : 'text-[#6B7280]'}>
+                        <span className={parseFloat(validator.percentage) > 5 ? 'text-[#1E90FF]' : 'text-[#64748B]'}>
                           {validator.percentage}%
                         </span>
                       </td>
@@ -372,7 +372,7 @@ export default function ExecutiveDashboard() {
               <h3 className="text-lg font-semibold">Social Card Preview</h3>
               <button
                 onClick={() => setShowSocialCard(false)}
-                className="text-[#6B7280] hover:text-white transition-colors"
+                className="text-[#64748B] hover:text-white transition-colors"
               >
                 ×
               </button>
@@ -396,7 +396,7 @@ export default function ExecutiveDashboard() {
                   </div>
                   <div>
                     <div className="font-semibold">XDC NetOwn</div>
-                    <div className="text-xs text-[#6B7280]">{new Date().toLocaleDateString()}</div>
+                    <div className="text-xs text-[#64748B]">{new Date().toLocaleDateString()}</div>
                   </div>
                 </div>
 
@@ -404,24 +404,24 @@ export default function ExecutiveDashboard() {
                   <div className="grid grid-cols-2 gap-4 w-full">
                     <div>
                       <div className="text-2xl font-bold text-[#1E90FF] font-mono-nums">{fleetStats?.totalNodes || 0}</div>
-                      <div className="text-xs text-[#6B7280]">Active Nodes</div>
+                      <div className="text-xs text-[#64748B]">Active Nodes</div>
                     </div>
                     <div>
                       <div className="text-2xl font-bold text-[#10B981] font-mono-nums">{masternodeStats?.totalActive || 0}</div>
-                      <div className="text-xs text-[#6B7280]">Validators</div>
+                      <div className="text-xs text-[#64748B]">Validators</div>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-[#F9FAFB] font-mono-nums">{formatStaked(masternodeStats?.totalStaked || '0')}M</div>
-                      <div className="text-xs text-[#6B7280]">Total Staked</div>
+                      <div className="text-2xl font-bold text-[#F1F5F9] font-mono-nums">{formatStaked(masternodeStats?.totalStaked || '0')}M</div>
+                      <div className="text-xs text-[#64748B]">Total Staked</div>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-[#F9FAFB] font-mono-nums">{fleetStats?.healthScore || 0}%</div>
-                      <div className="text-xs text-[#6B7280]">Network Health</div>
+                      <div className="text-2xl font-bold text-[#F1F5F9] font-mono-nums">{fleetStats?.healthScore || 0}%</div>
+                      <div className="text-xs text-[#64748B]">Network Health</div>
                     </div>
                   </div>
                 </div>
 
-                <div className="text-xs text-[#6B7280] mt-2">
+                <div className="text-xs text-[#64748B] mt-2">
                   xdc.network · #XDC #Blockchain
                 </div>
               </div>

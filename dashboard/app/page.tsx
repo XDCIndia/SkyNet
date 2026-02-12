@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Sidebar from '@/components/Sidebar';
+import DashboardLayout from '@/components/DashboardLayout';
 import { 
   Server, 
   Activity, 
@@ -199,7 +199,7 @@ function ClientTypeBadge({ clientType }: { clientType?: string }) {
     },
   };
   
-  const style = styles[clientType] || { bg: 'bg-white/5 text-[#6B7280] border-white/10', icon: <Terminal className="w-3 h-3" /> };
+  const style = styles[clientType] || { bg: 'bg-white/5 text-[#64748B] border-white/10', icon: <Terminal className="w-3 h-3" /> };
   
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border ${style.bg}`}>
@@ -217,9 +217,37 @@ function SeverityBadge({ severity }: { severity: 'critical' | 'warning' | 'info'
   };
   
   return (
-    <span className={`px-2 py-0.5 text-[10px] font-medium rounded border ${styles[severity]}`}>
+    <span className={`px-2 py-0.5 text-xs font-medium rounded border ${styles[severity]}`}>
       {severity.toUpperCase()}
     </span>
+  );
+}
+
+// Mini Sparkline for card view
+function MiniSparkline({ value, color = '#1E90FF' }: { value: number; color?: string }) {
+  // Generate a pseudo-sparkline from the block height (decorative, shows "activity")
+  const points = useMemo(() => {
+    const seed = value || 1;
+    const pts = [];
+    for (let i = 0; i < 12; i++) {
+      const v = 20 + Math.sin(seed / 1000 + i * 0.8) * 15 + Math.cos(seed / 500 + i * 1.2) * 10;
+      pts.push(Math.max(5, Math.min(95, v)));
+    }
+    // Last point trends toward current "health"
+    pts.push(value > 0 ? 85 : 15);
+    return pts;
+  }, [value]);
+
+  const pathD = points.map((y, i) => {
+    const x = (i / (points.length - 1)) * 100;
+    const yFlipped = 100 - y;
+    return `${i === 0 ? 'M' : 'L'}${x},${yFlipped}`;
+  }).join(' ');
+
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-[24px]" preserveAspectRatio="none">
+      <path d={pathD} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" opacity="0.6" />
+    </svg>
   );
 }
 
@@ -237,7 +265,7 @@ function ProgressBar({ value, color = '#1E90FF', height = 6 }: { value: number; 
 
 // Compact metric bar for table view
 function CompactMetricBar({ value, label }: { value: number | null; label: string }) {
-  if (value === null) return <span className="text-[#6B7280]">—</span>;
+  if (value === null) return <span className="text-[#64748B]">—</span>;
   
   const color = value > 80 ? '#EF4444' : value > 60 ? '#F59E0B' : '#10B981';
   
@@ -246,14 +274,14 @@ function CompactMetricBar({ value, label }: { value: number | null; label: strin
       <div className="flex-1">
         <ProgressBar value={value} color={color} height={4} />
       </div>
-      <span className="text-[10px] font-mono w-7 text-right text-[#6B7280]">{value}%</span>
+      <span className="text-[10px] font-mono w-7 text-right text-[#64748B]">{value}%</span>
     </div>
   );
 }
 
 // Security score badge
 function SecurityBadge({ score }: { score?: number }) {
-  if (score === undefined || score === null) return <span className="text-[#6B7280]">—</span>;
+  if (score === undefined || score === null) return <span className="text-[#64748B]">—</span>;
   
   const color = score >= 90 ? '#10B981' : score >= 70 ? '#1E90FF' : score >= 50 ? '#F59E0B' : '#EF4444';
   
@@ -330,13 +358,13 @@ function NetworkHealthBanner({
               <span className="text-2xl font-bold font-mono-nums" style={{ color: healthColor }}>
                 {fleet.healthScore}
               </span>
-              <span className="text-[10px] text-[#6B7280]">HEALTH</span>
+              <span className="text-[10px] text-[#64748B]">HEALTH</span>
             </div>
           </div>
           
           <div>
-            <h1 className="text-xl font-semibold text-[#F9FAFB]">Network Health</h1>
-            <p className="text-sm text-[#6B7280]">
+            <h1 className="text-xl font-semibold text-[#F1F5F9]">Network Health</h1>
+            <p className="text-sm text-[#64748B]">
               Last updated {lastUpdated}s ago
               {lastUpdated < 3 && (
                 <span className="inline-flex items-center gap-1 ml-2">
@@ -394,8 +422,8 @@ function NetworkStatsBar({
             <Hash className="w-4 h-4 text-[#1E90FF]" />
           </div>
           <div>
-            <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Best Block</p>
-            <p className="text-lg font-bold text-[#F9FAFB] font-mono-nums">
+            <p className="text-[10px] text-[#64748B] uppercase tracking-wider">Best Block</p>
+            <p className="text-lg font-bold text-[#F1F5F9] font-mono-nums">
               {stats.bestBlock.toLocaleString()}
             </p>
           </div>
@@ -411,8 +439,8 @@ function NetworkStatsBar({
             <Clock className="w-4 h-4 text-[#10B981]" />
           </div>
           <div>
-            <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Avg Block Time</p>
-            <p className="text-lg font-bold text-[#F9FAFB] font-mono-nums">
+            <p className="text-[10px] text-[#64748B] uppercase tracking-wider">Avg Block Time</p>
+            <p className="text-lg font-bold text-[#F1F5F9] font-mono-nums">
               {stats.avgBlockTime.toFixed(1)}s
             </p>
           </div>
@@ -424,8 +452,8 @@ function NetworkStatsBar({
             <Zap className="w-4 h-4 text-[#F59E0B]" />
           </div>
           <div>
-            <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Gas Price</p>
-            <p className="text-lg font-bold text-[#F9FAFB] font-mono-nums">
+            <p className="text-[10px] text-[#64748B] uppercase tracking-wider">Gas Price</p>
+            <p className="text-lg font-bold text-[#F1F5F9] font-mono-nums">
               {stats.gasPrice}
             </p>
           </div>
@@ -437,8 +465,8 @@ function NetworkStatsBar({
             <Server className="w-4 h-4 text-[#8B5CF6]" />
           </div>
           <div>
-            <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Active Nodes</p>
-            <p className="text-lg font-bold text-[#F9FAFB] font-mono-nums">
+            <p className="text-[10px] text-[#64748B] uppercase tracking-wider">Active Nodes</p>
+            <p className="text-lg font-bold text-[#F1F5F9] font-mono-nums">
               {stats.activeNodes}
             </p>
           </div>
@@ -450,8 +478,8 @@ function NetworkStatsBar({
             <TrendingUp className="w-4 h-4 text-[#EC4899]" />
           </div>
           <div>
-            <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">TPS</p>
-            <p className="text-lg font-bold text-[#F9FAFB] font-mono-nums">
+            <p className="text-[10px] text-[#64748B] uppercase tracking-wider">TPS</p>
+            <p className="text-lg font-bold text-[#F1F5F9] font-mono-nums">
               {stats.tps.toFixed(1)}
             </p>
           </div>
@@ -460,11 +488,11 @@ function NetworkStatsBar({
         {/* Pending Txs */}
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-white/5">
-            <Flame className="w-4 h-4 text-[#6B7280]" />
+            <Flame className="w-4 h-4 text-[#64748B]" />
           </div>
           <div>
-            <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Pending</p>
-            <p className="text-lg font-bold text-[#F9FAFB] font-mono-nums">
+            <p className="text-[10px] text-[#64748B] uppercase tracking-wider">Pending</p>
+            <p className="text-lg font-bold text-[#F1F5F9] font-mono-nums">
               {stats.pendingTxs}
             </p>
           </div>
@@ -474,29 +502,29 @@ function NetworkStatsBar({
       {/* Bottom Row - Epoch Info */}
       <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-white/5">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[#6B7280]">Epoch</span>
+          <span className="text-xs text-[#64748B]">Epoch</span>
           <span className="text-sm font-bold text-[#1E90FF] font-mono-nums">{stats.epoch.number.toLocaleString()}</span>
         </div>
         
         <div className="flex items-center gap-2 flex-1 max-w-[200px]">
-          <span className="text-xs text-[#6B7280]">Progress</span>
+          <span className="text-xs text-[#64748B]">Progress</span>
           <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
             <div 
               className="h-full bg-[#1E90FF] rounded-full transition-all duration-500"
               style={{ width: `${stats.epoch.progress}%` }}
             />
           </div>
-          <span className="text-xs text-[#F9FAFB] font-mono-nums">{stats.epoch.progress}%</span>
+          <span className="text-xs text-[#F1F5F9] font-mono-nums">{stats.epoch.progress}%</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[#6B7280]">Remaining</span>
-          <span className="text-sm font-bold text-[#F9FAFB] font-mono-nums">{stats.epoch.blocksRemaining} blocks</span>
+          <span className="text-xs text-[#64748B]">Remaining</span>
+          <span className="text-sm font-bold text-[#F1F5F9] font-mono-nums">{stats.epoch.blocksRemaining} blocks</span>
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-          <span className="text-xs text-[#6B7280]">Difficulty</span>
-          <span className="text-sm font-bold text-[#F9FAFB] font-mono-nums">{stats.difficulty}</span>
+          <span className="text-xs text-[#64748B]">Difficulty</span>
+          <span className="text-sm font-bold text-[#F1F5F9] font-mono-nums">{stats.difficulty}</span>
         </div>
 
         {lastUpdated < 3 && (
@@ -522,10 +550,10 @@ function StatBox({
 }) {
   return (
     <div className="bg-white/5 rounded-lg p-3 text-center">
-      <div className={`text-lg font-bold font-mono-nums ${color ? '' : 'text-[#F9FAFB]'}`} style={{ color }}>
+      <div className={`text-lg font-bold font-mono-nums ${color ? '' : 'text-[#F1F5F9]'}`} style={{ color }}>
         {value}
       </div>
-      <div className="text-[10px] text-[#6B7280] uppercase tracking-wider flex items-center justify-center gap-1">
+      <div className="text-[10px] text-[#64748B] uppercase tracking-wider flex items-center justify-center gap-1">
         {icon}
         {label}
       </div>
@@ -551,8 +579,8 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
         <div className="flex items-center gap-2">
           <StatusDot status={node.status} />
           <div>
-            <h3 className="font-semibold text-[#F9FAFB] text-sm truncate max-w-[140px]">{node.name}</h3>
-            <p className="text-xs text-[#6B7280] truncate max-w-[140px]">{node.host}</p>
+            <h3 className="font-semibold text-[#F1F5F9] text-sm truncate max-w-[140px]">{node.name}</h3>
+            <p className="text-xs text-[#64748B] truncate max-w-[140px]">{node.host}</p>
           </div>
         </div>
         <RoleBadge role={node.role} />
@@ -573,7 +601,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
       
       {/* OS Info */}
       {node.os_info && (
-        <div className="text-[10px] text-[#6B7280] mb-2 flex items-center gap-1">
+        <div className="text-[10px] text-[#64748B] mb-2 flex items-center gap-1">
           <span>{OSIcon({ osType: node.os_info.type })}</span>
           <span className="truncate">{formatOSInfo(node.os_info)}</span>
         </div>
@@ -582,7 +610,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
       <div className="space-y-3">
         {/* Block Height */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[#6B7280]">Block</span>
+          <span className="text-xs text-[#64748B]">Block</span>
           <div className="text-right">
             <span className="text-sm font-mono-nums font-medium">
               {node.blockHeight > 0 ? node.blockHeight.toLocaleString() : '—'}
@@ -595,15 +623,23 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
           </div>
         </div>
         
+        {/* Block Sparkline */}
+        {node.blockHeight > 0 && (
+          <MiniSparkline 
+            value={node.blockHeight} 
+            color={node.status === 'healthy' ? '#10B981' : node.status === 'syncing' ? '#F59E0B' : '#EF4444'} 
+          />
+        )}
+        
         {/* Peers */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[#6B7280]">Peers</span>
+          <span className="text-xs text-[#64748B]">Peers</span>
           <span className="text-sm font-mono-nums">{node.peerCount || 0}</span>
         </div>
         
         {/* Security Score */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[#6B7280]">Security</span>
+          <span className="text-xs text-[#64748B]">Security</span>
           <SecurityBadge score={node.security_score} />
         </div>
         
@@ -612,7 +648,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
           <div className="space-y-1.5 pt-2 border-t border-white/5">
             {node.cpuPercent !== null && (
               <div className="flex items-center gap-2">
-                <Cpu className="w-3 h-3 text-[#6B7280]" />
+                <Cpu className="w-3 h-3 text-[#64748B]" />
                 <div className="flex-1">
                   <ProgressBar 
                     value={node.cpuPercent} 
@@ -625,7 +661,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
             )}
             {node.memoryPercent !== null && (
               <div className="flex items-center gap-2">
-                <Wifi className="w-3 h-3 text-[#6B7280]" />
+                <Wifi className="w-3 h-3 text-[#64748B]" />
                 <div className="flex-1">
                   <ProgressBar 
                     value={node.memoryPercent}
@@ -638,7 +674,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
             )}
             {node.diskPercent !== null && (
               <div className="flex items-center gap-2">
-                <HardDrive className="w-3 h-3 text-[#6B7280]" />
+                <HardDrive className="w-3 h-3 text-[#64748B]" />
                 <div className="flex-1">
                   <ProgressBar 
                     value={node.diskPercent}
@@ -653,15 +689,15 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
         )}
         
         {/* Last Seen */}
-        <div className="flex items-center gap-1 text-[10px] text-[#6B7280] pt-2 border-t border-white/5">
+        <div className="flex items-center gap-1 text-[10px] text-[#64748B] pt-2 border-t border-white/5">
           <Clock className="w-3 h-3" />
           {node.lastSeen ? formatTimeAgo(node.lastSeen) : 'Never'}
         </div>
       </div>
       
       <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
-        <span className="text-xs text-[#6B7280]">{statusLabels[node.status]}</span>
-        <ArrowRight className="w-4 h-4 text-[#6B7280] group-hover:text-[#1E90FF] transition-colors" />
+        <span className="text-xs text-[#64748B]">{statusLabels[node.status]}</span>
+        <ArrowRight className="w-4 h-4 text-[#64748B] group-hover:text-[#1E90FF] transition-colors" />
       </div>
     </div>
   );
@@ -687,7 +723,7 @@ function TableHeader({
   
   return (
     <th 
-      className={`text-left py-3 px-3 text-xs font-medium text-[#6B7280] cursor-pointer select-none hover:text-[#F9FAFB] transition-colors ${className}`}
+      className={`text-left py-3 px-3 text-xs font-medium text-[#64748B] cursor-pointer select-none hover:text-[#F1F5F9] transition-colors ${className}`}
       onClick={() => onSort(field)}
     >
       <div className="flex items-center gap-1">
@@ -730,7 +766,7 @@ function TableRow({
         <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
           isSelected 
             ? 'bg-[#1E90FF] border-[#1E90FF]' 
-            : 'border-[#6B7280] hover:border-[#1E90FF]'
+            : 'border-[#64748B] hover:border-[#1E90FF]'
         }`}>
           {isSelected && <CheckSquare className="w-3 h-3 text-white" />}
         </div>
@@ -744,8 +780,8 @@ function TableRow({
       {/* Name */}
       <td className="py-2 px-3">
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-[#F9FAFB] truncate max-w-[150px]">{node.name}</span>
-          <span className="text-[10px] text-[#6B7280] truncate max-w-[150px]">{node.host}</span>
+          <span className="text-sm font-medium text-[#F1F5F9] truncate max-w-[150px]">{node.name}</span>
+          <span className="text-[10px] text-[#64748B] truncate max-w-[150px]">{node.host}</span>
         </div>
       </td>
       
@@ -763,7 +799,7 @@ function TableRow({
       <td className="py-2 px-3">
         <div className="flex items-center gap-1">
           <ClientTypeBadge clientType={node.client_type} />
-          <span className="text-[10px] text-[#6B7280]">
+          <span className="text-[10px] text-[#64748B]">
             {node.clientVersion?.split('/')[1]?.split('-')[0] || ''}
           </span>
         </div>
@@ -812,7 +848,7 @@ function TableRow({
       <td className="py-2 px-3">
         <div className="flex items-center gap-1">
           <span>{OSIcon({ osType: node.os_info?.type })}</span>
-          <span className="text-xs text-[#6B7280] truncate max-w-[100px]">
+          <span className="text-xs text-[#64748B] truncate max-w-[100px]">
             {formatOSInfo(node.os_info)}
           </span>
         </div>
@@ -825,7 +861,7 @@ function TableRow({
       
       {/* Last Seen */}
       <td className="py-2 px-3">
-        <span className="text-xs text-[#6B7280]">
+        <span className="text-xs text-[#64748B]">
           {node.lastSeen ? formatTimeAgo(node.lastSeen) : 'Never'}
         </span>
       </td>
@@ -908,7 +944,7 @@ function VirtualTable({
                       ? 'bg-[#1E90FF] border-[#1E90FF]' 
                       : selectedNodes.size > 0 
                         ? 'bg-[#1E90FF]/50 border-[#1E90FF]' 
-                        : 'border-[#6B7280] hover:border-[#1E90FF]'
+                        : 'border-[#64748B] hover:border-[#1E90FF]'
                   }`}
                   onClick={() => onSelectAll(!allSelected)}
                 >
@@ -950,7 +986,7 @@ function VirtualTable({
       {/* Pagination / Status Bar */}
       <div className="flex items-center justify-between px-4 py-3 border-t border-white/10 bg-[#0A0E1A]">
         <div className="flex items-center gap-4">
-          <span className="text-sm text-[#6B7280]">
+          <span className="text-sm text-[#64748B]">
             Showing {startIndex + 1}-{Math.min(endIndex, nodes.length)} of {nodes.length} nodes
           </span>
           {selectedNodes.size > 0 && (
@@ -979,32 +1015,44 @@ function VirtualTable({
   );
 }
 
-// Active Incidents Strip
+// Active Incidents Timeline
 function IncidentsStrip({ incidents }: { incidents: Incident[] }) {
   if (incidents.length === 0) return null;
   
   return (
-    <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3">
+    <div className="card-xdc mb-6">
+      <div className="flex items-center gap-2 mb-4">
         <ShieldAlert className="w-5 h-5 text-[#EF4444]" />
-        <h2 className="text-lg font-semibold text-[#F9FAFB]">Active Incidents</h2>
+        <h2 className="text-lg font-semibold text-[#F1F5F9]">Active Incidents</h2>
         <span className="px-2 py-0.5 bg-[#EF4444]/10 text-[#EF4444] rounded text-xs font-medium">
           {incidents.length}
         </span>
       </div>
       
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        {incidents.map((incident) => (
-          <div 
-            key={incident.id}
-            className="flex-shrink-0 w-72 p-4 bg-[#111827] border border-[#EF4444]/20 rounded-xl"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <SeverityBadge severity={incident.severity} />
-              <span className="text-xs text-[#6B7280]">{formatTimeAgo(incident.detected_at)}</span>
+      <div className="space-y-0 max-h-[300px] overflow-y-auto">
+        {incidents.map((incident, idx) => (
+          <div key={incident.id} className="flex gap-3 relative">
+            {/* Timeline line */}
+            {idx < incidents.length - 1 && (
+              <div className="absolute left-[11px] top-6 bottom-0 w-px bg-white/10" />
+            )}
+            {/* Dot */}
+            <div className="flex-shrink-0 mt-1.5">
+              <div className={`w-[10px] h-[10px] rounded-full border-2 ${
+                incident.severity === 'critical' ? 'border-[#EF4444] bg-[#EF4444]/30' :
+                incident.severity === 'warning' ? 'border-[#F59E0B] bg-[#F59E0B]/30' :
+                'border-[#1E90FF] bg-[#1E90FF]/30'
+              }`} />
             </div>
-            <p className="text-sm font-medium text-[#F9FAFB] mb-1">{incident.title}</p>
-            <p className="text-xs text-[#6B7280]">{incident.node_name}</p>
+            {/* Content */}
+            <div className="flex-1 pb-4">
+              <div className="flex items-center gap-2 mb-0.5">
+                <SeverityBadge severity={incident.severity} />
+                <span className="text-xs text-[#64748B]">{formatTimeAgo(incident.detected_at)}</span>
+              </div>
+              <p className="text-sm font-medium text-[#F1F5F9]">{incident.title}</p>
+              <p className="text-xs text-[#64748B]">{incident.node_name}</p>
+            </div>
           </div>
         ))}
       </div>
@@ -1032,7 +1080,7 @@ function FilterBar({
   
   return (
     <div className="flex items-center gap-2 overflow-x-auto pb-2">
-      <span className="text-sm text-[#6B7280] mr-2">Filter:</span>
+      <span className="text-sm text-[#64748B] mr-2">Filter:</span>
       {filters.map(({ key, label }) => (
         <button
           key={key}
@@ -1040,7 +1088,7 @@ function FilterBar({
           className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
             activeFilter === key
               ? 'bg-[#1E90FF]/20 text-[#1E90FF] border border-[#1E90FF]/30'
-              : 'bg-white/5 text-[#9CA3AF] hover:bg-white/10 border border-transparent'
+              : 'bg-white/5 text-[#94A3B8] hover:bg-white/10 border border-transparent'
           }`}
         >
           {label}
@@ -1073,7 +1121,7 @@ function BulkActionsBar({
         </span>
         <button
           onClick={onClearSelection}
-          className="text-xs text-[#6B7280] hover:text-[#F9FAFB] underline"
+          className="text-xs text-[#64748B] hover:text-[#F1F5F9] underline"
         >
           Clear selection
         </button>
@@ -1083,7 +1131,7 @@ function BulkActionsBar({
         <button
           disabled
           title="Coming soon"
-          className="px-3 py-1.5 text-xs bg-white/5 text-[#6B7280] rounded cursor-not-allowed flex items-center gap-1"
+          className="px-3 py-1.5 text-xs bg-white/5 text-[#64748B] rounded cursor-not-allowed flex items-center gap-1"
         >
           <RefreshCw className="w-3 h-3" />
           Restart
@@ -1091,7 +1139,7 @@ function BulkActionsBar({
         <button
           disabled
           title="Coming soon"
-          className="px-3 py-1.5 text-xs bg-white/5 text-[#6B7280] rounded cursor-not-allowed flex items-center gap-1"
+          className="px-3 py-1.5 text-xs bg-white/5 text-[#64748B] rounded cursor-not-allowed flex items-center gap-1"
         >
           <Settings className="w-3 h-3" />
           Update
@@ -1099,7 +1147,7 @@ function BulkActionsBar({
         <button
           disabled
           title="Coming soon"
-          className="px-3 py-1.5 text-xs bg-white/5 text-[#6B7280] rounded cursor-not-allowed flex items-center gap-1"
+          className="px-3 py-1.5 text-xs bg-white/5 text-[#64748B] rounded cursor-not-allowed flex items-center gap-1"
         >
           <MoreHorizontal className="w-3 h-3" />
           More
@@ -1112,30 +1160,25 @@ function BulkActionsBar({
 // Loading State
 function LoadingState() {
   return (
-    <div className="min-h-screen bg-[#0A0E1A]">
-      <Sidebar />
-      <main className="lg:ml-[220px] min-h-screen pb-20 lg:pb-6">
-        <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-6">
-          <div className="card-xdc mb-6 h-32 animate-pulse">
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-white/5"></div>
-              <div className="space-y-2">
-                <div className="w-32 h-6 bg-white/5 rounded"></div>
-                <div className="w-48 h-4 bg-white/5 rounded"></div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="card-xdc h-48 animate-pulse">
-                <div className="w-full h-full bg-white/5 rounded"></div>
-              </div>
-            ))}
+    <DashboardLayout>
+      <div className="card-xdc mb-6 h-32 animate-pulse">
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-20 rounded-full bg-white/5"></div>
+          <div className="space-y-2">
+            <div className="w-32 h-6 bg-white/5 rounded"></div>
+            <div className="w-48 h-4 bg-white/5 rounded"></div>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="card-xdc h-48 animate-pulse">
+            <div className="w-full h-full bg-white/5 rounded"></div>
+          </div>
+        ))}
+      </div>
+    </DashboardLayout>
   );
 }
 
@@ -1339,12 +1382,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A]">
-      <Sidebar />
-
-      <main className="lg:ml-[220px] min-h-screen pb-20 lg:pb-6">
-        <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-4">
-          
+    <DashboardLayout>
           {error && (
             <div className="mb-6 p-4 rounded-xl bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] text-[#EF4444]">
               <div className="flex items-center gap-2">
@@ -1377,8 +1415,8 @@ export default function Home() {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
                 <Server className="w-5 h-5 text-[#1E90FF]" />
-                <h2 className="text-lg font-semibold text-[#F9FAFB]">Nodes</h2>
-                <span className="px-2 py-0.5 bg-white/10 text-[#6B7280] rounded text-xs">
+                <h2 className="text-lg font-semibold text-[#F1F5F9]">Nodes</h2>
+                <span className="px-2 py-0.5 bg-white/10 text-[#64748B] rounded text-xs">
                   {filteredNodes.length} of {nodes.length}
                 </span>
               </div>
@@ -1386,13 +1424,13 @@ export default function Home() {
               <div className="flex items-center gap-3">
                 {/* Search */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
                   <input
                     type="text"
                     placeholder="Search nodes..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-[#F9FAFB] placeholder-[#6B7280] focus:outline-none focus:border-[#1E90FF] w-64"
+                    className="pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-[#F1F5F9] placeholder-[#64748B] focus:outline-none focus:border-[#1E90FF] w-64"
                   />
                 </div>
                 
@@ -1400,14 +1438,14 @@ export default function Home() {
                 <div className="flex items-center bg-white/5 rounded-lg p-1">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded transition-colors ${viewMode === 'grid' ? 'bg-[#1E90FF]/20 text-[#1E90FF]' : 'text-[#6B7280] hover:text-[#F9FAFB]'}`}
+                    className={`p-2 rounded transition-colors ${viewMode === 'grid' ? 'bg-[#1E90FF]/20 text-[#1E90FF]' : 'text-[#64748B] hover:text-[#F1F5F9]'}`}
                     title="Grid view"
                   >
                     <Grid3X3 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setViewMode('table')}
-                    className={`p-2 rounded transition-colors ${viewMode === 'table' ? 'bg-[#1E90FF]/20 text-[#1E90FF]' : 'text-[#6B7280] hover:text-[#F9FAFB]'}`}
+                    className={`p-2 rounded transition-colors ${viewMode === 'table' ? 'bg-[#1E90FF]/20 text-[#1E90FF]' : 'text-[#64748B] hover:text-[#F1F5F9]'}`}
                     title="Table view"
                   >
                     <List className="w-4 h-4" />
@@ -1419,7 +1457,7 @@ export default function Home() {
                   className="p-2 hover:bg-white/5 rounded-lg transition-colors"
                   title="Refresh now"
                 >
-                  <RefreshCw className="w-4 h-4 text-[#6B7280]" />
+                  <RefreshCw className="w-4 h-4 text-[#64748B]" />
                 </button>
               </div>
             </div>
@@ -1436,7 +1474,7 @@ export default function Home() {
             />
 
             {filteredNodes.length === 0 ? (
-              <div className="text-center py-12 text-[#6B7280]">
+              <div className="text-center py-12 text-[#64748B]">
                 <Server className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>No nodes match the selected filter</p>
               </div>
@@ -1463,8 +1501,6 @@ export default function Home() {
               />
             )}
           </div>
-        </div>
-      </main>
-    </div>
+    </DashboardLayout>
   );
 }

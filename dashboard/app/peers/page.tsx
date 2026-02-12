@@ -205,8 +205,8 @@ export default function PeersPage() {
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[#F9FAFB]">Peers & Network</h1>
-            <p className="text-[#6B7280] mt-1">Manage peer connections and network topology</p>
+            <h1 className="text-2xl font-semibold text-[#F1F5F9]">Peers & Network</h1>
+            <p className="text-[#64748B] mt-1">Manage peer connections and network topology</p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -227,7 +227,7 @@ export default function PeersPage() {
               className="p-2 hover:bg-white/5 rounded-lg transition-colors"
               title="Refresh"
             >
-              <RefreshCw className="w-4 h-4 text-[#6B7280]" />
+              <RefreshCw className="w-4 h-4 text-[#64748B]" />
             </button>
           </div>
         </div>
@@ -263,8 +263,8 @@ export default function PeersPage() {
                 <Network className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-[#F9FAFB]">Peer Management</h2>
-                <p className="text-xs text-[#6B7280]">{livePeers.length} connected peers</p>
+                <h2 className="text-lg font-semibold text-[#F1F5F9]">Peer Management</h2>
+                <p className="text-xs text-[#64748B]">{livePeers.length} connected peers</p>
               </div>
             </div>
             
@@ -272,30 +272,30 @@ export default function PeersPage() {
               <table className="w-full min-w-[900px]">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Name</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Client</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Protocol</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Direction</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Location</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Latency</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Actions</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Name</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Client</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Protocol</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Direction</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Location</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Latency</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-[#6B7280]">Loading...</td>
+                      <td colSpan={7} className="py-8 text-center text-[#64748B]">Loading...</td>
                     </tr>
                   ) : sortedPeers.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-[#6B7280]">No peers connected</td>
+                      <td colSpan={7} className="py-8 text-center text-[#64748B]">No peers connected</td>
                     </tr>
                   ) : (
                     sortedPeers.map((peer) => (
                       <tr key={peer.id} className="hover:bg-white/[0.02]">
                         <td className="py-3 px-3">
                           <div className="text-sm font-medium">{peer.name?.slice(0, 30) || 'Unknown'}</div>
-                          <div className="text-xs text-[#6B7280] font-mono">{peer.id?.slice(0, 16)}...</div>
+                          <div className="text-xs text-[#64748B] font-mono">{peer.id?.slice(0, 16)}...</div>
                         </td>
                         <td className="py-3 px-3 text-xs">{peer.clientVersion || 'Unknown'}</td>
                         <td className="py-3 px-3">
@@ -314,7 +314,7 @@ export default function PeersPage() {
                         </td>
                         <td className="py-3 px-3 text-xs">
                           <div className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-[#6B7280]" />
+                            <MapPin className="w-3 h-3 text-[#64748B]" />
                             {peer.city || 'Unknown'}, {peer.country || 'XX'}
                           </div>
                         </td>
@@ -347,8 +347,8 @@ export default function PeersPage() {
                   <MapPin className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-[#F9FAFB]">Geo Diversity</h2>
-                  <p className="text-xs text-[#6B7280]">Network decentralization</p>
+                  <h2 className="text-lg font-semibold text-[#F1F5F9]">Geo Diversity</h2>
+                  <p className="text-xs text-[#64748B]">Network decentralization</p>
                 </div>
               </div>
               
@@ -358,12 +358,12 @@ export default function PeersPage() {
                 }}>
                   {geoStats.score}
                 </div>
-                <div className="text-xs text-[#6B7280]">Diversity Score</div>
+                <div className="text-xs text-[#64748B]">Diversity Score</div>
               </div>
               
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#6B7280]">Countries</span>
+                  <span className="text-[#64748B]">Countries</span>
                   <span>{geoStats.uniqueCountries}</span>
                 </div>
               </div>
@@ -372,7 +372,7 @@ export default function PeersPage() {
                 <div className="text-xs font-medium mb-2">Distribution</div>
                 {Object.entries(geoStats.byContinent).map(([continent, count]) => (
                   <div key={continent} className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-[#6B7280]">{continent}</span>
+                    <span className="text-[#64748B]">{continent}</span>
                     <span>{count}</span>
                   </div>
                 ))}
@@ -385,14 +385,14 @@ export default function PeersPage() {
                   <Activity className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-[#F9FAFB]">Protocol Matrix</h2>
-                  <p className="text-xs text-[#6B7280]">Active protocol versions</p>
+                  <h2 className="text-lg font-semibold text-[#F1F5F9]">Protocol Matrix</h2>
+                  <p className="text-xs text-[#64748B]">Active protocol versions</p>
                 </div>
               </div>
               
               <div className="space-y-2">
                 {Object.keys(protocols).length === 0 ? (
-                  <div className="text-sm text-[#6B7280]">No protocol data</div>
+                  <div className="text-sm text-[#64748B]">No protocol data</div>
                 ) : (
                   Object.entries(protocols).map(([protocol, count]) => (
                     <div key={protocol} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
@@ -412,13 +412,13 @@ export default function PeersPage() {
               <ShieldAlert className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-[#F9FAFB]">Banned Peers</h2>
-              <p className="text-xs text-[#6B7280]">{bannedPeers.length} banned addresses</p>
+              <h2 className="text-lg font-semibold text-[#F1F5F9]">Banned Peers</h2>
+              <p className="text-xs text-[#64748B]">{bannedPeers.length} banned addresses</p>
             </div>
           </div>
           
           {bannedPeers.length === 0 ? (
-            <div className="text-center py-6 text-[#6B7280]">
+            <div className="text-center py-6 text-[#64748B]">
               <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-[#10B981]" />
               <p>No banned peers</p>
             </div>
@@ -427,10 +427,10 @@ export default function PeersPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Enode</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Reason</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Banned Date</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Action</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B]">Enode</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B]">Reason</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B]">Banned Date</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B]">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -440,7 +440,7 @@ export default function PeersPage() {
                         {peer.enode.slice(0, 40)}...
                       </td>
                       <td className="py-3 px-4 text-sm">{peer.reason}</td>
-                      <td className="py-3 px-4 text-sm text-[#6B7280]">
+                      <td className="py-3 px-4 text-sm text-[#64748B]">
                         {new Date(peer.banned_at).toLocaleDateString()}
                       </td>
                       <td className="py-3 px-4">
@@ -465,7 +465,7 @@ export default function PeersPage() {
         <div className="fixed bottom-24 right-6 bg-[#111827] border border-white/10 rounded-lg px-4 py-3 shadow-lg z-50 flex items-center gap-3 animate-fade-in">
           <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
           <span className="text-sm">{toast}</span>
-          <button onClick={() => setToast(null)} className="text-[#6B7280] hover:text-white">
+          <button onClick={() => setToast(null)} className="text-[#64748B] hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>

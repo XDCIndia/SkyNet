@@ -197,7 +197,7 @@ function ClientLogo({ clientType, size = 'md' }: { clientType?: string; size?: '
     },
   };
   
-  const style = styles[clientType || 'Unknown'] || { bg: 'bg-white/10', color: 'text-[#6B7280]', letter: '?' };
+  const style = styles[clientType || 'Unknown'] || { bg: 'bg-white/10', color: 'text-[#64748B]', letter: '?' };
   
   return (
     <div className={`${sizeClasses[size]} ${style.bg} ${style.color} rounded-lg flex items-center justify-center font-bold border border-white/10`}>
@@ -306,7 +306,7 @@ function ClientTypeBadge({ clientType }: { clientType?: string }) {
     },
   };
   
-  const style = styles[clientType] || { bg: 'bg-white/5 text-[#6B7280] border-white/10', icon: <Terminal className="w-3 h-3" /> };
+  const style = styles[clientType] || { bg: 'bg-white/5 text-[#64748B] border-white/10', icon: <Terminal className="w-3 h-3" /> };
   
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded border ${style.bg}`}>
@@ -392,7 +392,7 @@ function SecurityGauge({ score = 0 }: { score?: number }) {
           <span className="text-2xl font-bold font-mono-nums" style={{ color }}>
             {score}
           </span>
-          <span className="text-[10px] text-[#6B7280] uppercase">Score</span>
+          <span className="text-[10px] text-[#64748B] uppercase">Score</span>
         </div>
       </div>
       <span className="text-sm font-medium mt-2" style={{ color }}>
@@ -461,7 +461,7 @@ function SecuritySuggestions({ issues }: { issues?: string }) {
         return (
           <div key={issue} className="flex items-start gap-2 text-sm">
             {mapped.icon}
-            <span className="text-[#F9FAFB]">{mapped.text}</span>
+            <span className="text-[#F1F5F9]">{mapped.text}</span>
           </div>
         );
       })}
@@ -524,8 +524,8 @@ function CircularGauge({
           </span>
         </div>
       </div>
-      <span className="text-xs text-[#6B7280] mt-2">{label}</span>
-      {sublabel && <span className="text-xs text-[#6B7280]">{sublabel}</span>}
+      <span className="text-xs text-[#64748B] mt-2">{label}</span>
+      {sublabel && <span className="text-xs text-[#64748B]">{sublabel}</span>}
     </div>
   );
 }
@@ -628,7 +628,7 @@ function MetricsChart({ data, series }: { data: MetricHistory[]; series: string[
             x={getX(i * 6)}
             y={height - 10}
             textAnchor="middle"
-            fill="#6B7280"
+            fill="#64748B"
             fontSize="10"
           >
             {new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -641,7 +641,7 @@ function MetricsChart({ data, series }: { data: MetricHistory[]; series: string[
         {series.map(s => (
           <div key={s} className="flex items-center gap-2">
             <div className="w-4 h-1 rounded" style={{ backgroundColor: colors[s] }} />
-            <span className="text-xs text-[#6B7280]">{s.replace('_', ' ').toUpperCase()}</span>
+            <span className="text-xs text-[#64748B]">{s.replace('_', ' ').toUpperCase()}</span>
           </div>
         ))}
       </div>
@@ -664,7 +664,7 @@ function Toast({ message, type = 'success', onClose }: { message: string; type?:
         <AlertTriangle className="w-5 h-5 text-[#EF4444]" />
       )}
       <span className="text-sm">{message}</span>
-      <button onClick={onClose} className="text-[#6B7280] hover:text-white">
+      <button onClick={onClose} className="text-[#64748B] hover:text-white">
         <X className="w-4 h-4" />
       </button>
     </div>
@@ -675,7 +675,7 @@ function Toast({ message, type = 'success', onClose }: { message: string; type?:
 function CoinbaseDisplay({ coinbase }: { coinbase?: string }) {
   const { copied, copy } = useCopyToClipboard();
   
-  if (!coinbase || coinbase === '0x0') return <span className="text-[#6B7280]">Not set</span>;
+  if (!coinbase || coinbase === '0x0') return <span className="text-[#64748B]">Not set</span>;
   
   // Convert 0x address to xdc prefix
   const xdcAddress = coinbase.replace(/^0x/, 'xdc');
@@ -690,7 +690,7 @@ function CoinbaseDisplay({ coinbase }: { coinbase?: string }) {
         className="p-1.5 hover:bg-white/10 rounded transition-colors"
         title="Copy full address"
       >
-        {copied ? <Check className="w-4 h-4 text-[#10B981]" /> : <Copy className="w-4 h-4 text-[#6B7280]" />}
+        {copied ? <Check className="w-4 h-4 text-[#10B981]" /> : <Copy className="w-4 h-4 text-[#64748B]" />}
       </button>
     </div>
   );
@@ -936,7 +936,7 @@ export default function NodeDetailPage() {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center h-[60vh]">
-          <Server className="w-12 h-12 text-[#6B7280] mb-4" />
+          <Server className="w-12 h-12 text-[#64748B] mb-4" />
           <h2 className="text-xl font-semibold">Node not found</h2>
         </div>
       </DashboardLayout>
@@ -959,11 +959,11 @@ export default function NodeDetailPage() {
             <ClientLogo clientType={status.clientType || node.client_type} size="lg" />
             <div>
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl font-semibold text-[#F9FAFB]">{node.name}</h1>
+                <h1 className="text-2xl font-semibold text-[#F1F5F9]">{node.name}</h1>
                 <RoleBadge role={node.role} />
                 <StatusIndicator status={nodeStatus} />
               </div>
-              <div className="flex items-center gap-4 text-sm text-[#6B7280] mt-1 flex-wrap">
+              <div className="flex items-center gap-4 text-sm text-[#64748B] mt-1 flex-wrap">
                 <span className="flex items-center gap-1">
                   <Globe className="w-3 h-3" />
                   {node.host}
@@ -994,7 +994,7 @@ export default function NodeDetailPage() {
             </button>
             
             <div className="text-right mr-4">
-              <div className="text-xs text-[#6B7280]">Last seen</div>
+              <div className="text-xs text-[#64748B]">Last seen</div>
               <div className="text-sm font-medium">{formatTimeAgo(status.lastSeen)}</div>
             </div>
             <button
@@ -1034,26 +1034,26 @@ export default function NodeDetailPage() {
               <div className="bg-white/5 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <ClientLogo clientType={parsedVersion.client} size="sm" />
-                  <div className="text-[10px] uppercase text-[#6B7280]">Client Version</div>
+                  <div className="text-[10px] uppercase text-[#64748B]">Client Version</div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-sm font-medium text-[#F9FAFB]">{parsedVersion.client} {parsedVersion.version}</div>
-                  <div className="text-xs text-[#6B7280] font-mono">{parsedVersion.platform}</div>
-                  <div className="text-xs text-[#6B7280] font-mono">{parsedVersion.goVersion}</div>
+                  <div className="text-sm font-medium text-[#F1F5F9]">{parsedVersion.client} {parsedVersion.version}</div>
+                  <div className="text-xs text-[#64748B] font-mono">{parsedVersion.platform}</div>
+                  <div className="text-xs text-[#64748B] font-mono">{parsedVersion.goVersion}</div>
                 </div>
               </div>
             )}
             
             {/* Coinbase */}
             <div className="bg-white/5 rounded-lg p-4">
-              <div className="text-[10px] uppercase text-[#6B7280] mb-2">Coinbase Address</div>
+              <div className="text-[10px] uppercase text-[#64748B] mb-2">Coinbase Address</div>
               <CoinbaseDisplay coinbase={status.coinbase} />
             </div>
             
             {/* IPv4 */}
             {status.ipv4 && (
               <div className="bg-white/5 rounded-lg p-4">
-                <div className="text-[10px] uppercase text-[#6B7280] mb-1">Public IPv4</div>
+                <div className="text-[10px] uppercase text-[#64748B] mb-1">Public IPv4</div>
                 <div className="text-sm font-mono text-[#1E90FF]">{status.ipv4}</div>
               </div>
             )}
@@ -1061,8 +1061,8 @@ export default function NodeDetailPage() {
             {/* IPv6 */}
             {status.ipv6 && (
               <div className="bg-white/5 rounded-lg p-4">
-                <div className="text-[10px] uppercase text-[#6B7280] mb-1">Public IPv6</div>
-                <div className="text-sm font-mono text-[#6B7280] truncate" title={status.ipv6}>
+                <div className="text-[10px] uppercase text-[#64748B] mb-1">Public IPv6</div>
+                <div className="text-sm font-mono text-[#64748B] truncate" title={status.ipv6}>
                   {status.ipv6.length > 30 ? status.ipv6.slice(0, 30) + '...' : status.ipv6}
                 </div>
               </div>
@@ -1073,9 +1073,9 @@ export default function NodeDetailPage() {
               <div className="bg-white/5 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <OSIcon osType={status?.os?.type || node?.os_info?.type} size="md" />
-                  <div className="text-[10px] uppercase text-[#6B7280]">Operating System</div>
+                  <div className="text-[10px] uppercase text-[#64748B]">Operating System</div>
                 </div>
-                <div className="text-sm text-[#F9FAFB]">{osInfo}</div>
+                <div className="text-sm text-[#F1F5F9]">{osInfo}</div>
               </div>
             )}
           </div>
@@ -1096,7 +1096,7 @@ export default function NodeDetailPage() {
             
             {/* Security Suggestions */}
             <div className="lg:col-span-2">
-              <h3 className="text-sm font-medium text-[#6B7280] mb-3">Recommendations</h3>
+              <h3 className="text-sm font-medium text-[#64748B] mb-3">Recommendations</h3>
               <SecuritySuggestions issues={securityIssues} />
             </div>
           </div>
@@ -1106,7 +1106,7 @@ export default function NodeDetailPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {/* Block Height */}
           <div className="card-xdc">
-            <div className="text-xs text-[#6B7280] mb-1">Block Height</div>
+            <div className="text-xs text-[#64748B] mb-1">Block Height</div>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold font-mono-nums">{status.blockHeight?.toLocaleString() || '—'}</span>
               {blockHeightTrend && (
@@ -1125,7 +1125,7 @@ export default function NodeDetailPage() {
 
           {/* Sync Progress */}
           <div className="card-xdc">
-            <div className="text-xs text-[#6B7280] mb-1">Sync Status</div>
+            <div className="text-xs text-[#64748B] mb-1">Sync Status</div>
             {status.isSyncing ? (
               <div className="flex flex-col items-center">
                 <CircularGauge 
@@ -1144,7 +1144,7 @@ export default function NodeDetailPage() {
 
           {/* Peer Count */}
           <div className="card-xdc">
-            <div className="text-xs text-[#6B7280] mb-1">Peers</div>
+            <div className="text-xs text-[#64748B] mb-1">Peers</div>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold font-mono-nums">{status.peerCount || 0}</span>
               {peerTrend && (
@@ -1152,40 +1152,40 @@ export default function NodeDetailPage() {
                 peerTrend === 'down' ? <ArrowDown className="w-4 h-4 text-[#EF4444]" /> : null
               )}
             </div>
-            <div className="text-xs text-[#6B7280] mt-1">
+            <div className="text-xs text-[#64748B] mt-1">
               {status.activePeers} active connections
             </div>
           </div>
 
           {/* TX Pool */}
           <div className="card-xdc">
-            <div className="text-xs text-[#6B7280] mb-1">TX Pool</div>
+            <div className="text-xs text-[#64748B] mb-1">TX Pool</div>
             <div className="text-2xl font-bold font-mono-nums">
               {(status.txPoolPending || 0) + (status.txPoolQueued || 0)}
             </div>
             <div className="flex gap-2 mt-1 text-xs">
               <span className="text-[#F59E0B]">{status.txPoolPending || 0} pending</span>
-              <span className="text-[#6B7280]">|</span>
-              <span className="text-[#6B7280]">{status.txPoolQueued || 0} queued</span>
+              <span className="text-[#64748B]">|</span>
+              <span className="text-[#64748B]">{status.txPoolQueued || 0} queued</span>
             </div>
           </div>
 
           {/* Gas Price */}
           <div className="card-xdc">
-            <div className="text-xs text-[#6B7280] mb-1">Gas Price</div>
+            <div className="text-xs text-[#64748B] mb-1">Gas Price</div>
             <div className="text-2xl font-bold font-mono-nums">
               {status.gasPrice ? (BigInt(status.gasPrice) / BigInt(1e9)).toString() : '—'}
             </div>
-            <div className="text-xs text-[#6B7280] mt-1">Gwei</div>
+            <div className="text-xs text-[#64748B] mt-1">Gwei</div>
           </div>
 
           {/* RPC Latency */}
           <div className="card-xdc">
-            <div className="text-xs text-[#6B7280] mb-1">RPC Latency</div>
+            <div className="text-xs text-[#64748B] mb-1">RPC Latency</div>
             <div className="text-2xl font-bold font-mono-nums">
               {status.rpcLatencyMs || '—'}
             </div>
-            <div className="text-xs text-[#6B7280] mt-1">ms</div>
+            <div className="text-xs text-[#64748B] mt-1">ms</div>
           </div>
         </div>
 
@@ -1223,7 +1223,7 @@ export default function NodeDetailPage() {
               </div>
               <button
                 onClick={() => setExpandedPeers(!expandedPeers)}
-                className="text-[#6B7280] hover:text-white"
+                className="text-[#64748B] hover:text-white"
               >
                 {expandedPeers ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
               </button>
@@ -1233,10 +1233,10 @@ export default function NodeDetailPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="text-left py-2 px-2 text-xs font-medium text-[#6B7280] cursor-pointer" onClick={() => handleSort('name')}>Name</th>
-                    <th className="text-left py-2 px-2 text-xs font-medium text-[#6B7280] cursor-pointer" onClick={() => handleSort('ip')}>IP</th>
-                    <th className="text-left py-2 px-2 text-xs font-medium text-[#6B7280] cursor-pointer" onClick={() => handleSort('direction')}>Dir</th>
-                    <th className="text-left py-2 px-2 text-xs font-medium text-[#6B7280] cursor-pointer" onClick={() => handleSort('country')}>Location</th>
+                    <th className="text-left py-2 px-2 text-xs font-medium text-[#64748B] cursor-pointer" onClick={() => handleSort('name')}>Name</th>
+                    <th className="text-left py-2 px-2 text-xs font-medium text-[#64748B] cursor-pointer" onClick={() => handleSort('ip')}>IP</th>
+                    <th className="text-left py-2 px-2 text-xs font-medium text-[#64748B] cursor-pointer" onClick={() => handleSort('direction')}>Dir</th>
+                    <th className="text-left py-2 px-2 text-xs font-medium text-[#64748B] cursor-pointer" onClick={() => handleSort('country')}>Location</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -1246,7 +1246,7 @@ export default function NodeDetailPage() {
                         <div className="truncate max-w-[150px]" title={peer.name}>
                           {peer.name?.slice(0, 30) || 'Unknown'}
                         </div>
-                        <div className="text-xs text-[#6B7280] font-mono truncate max-w-[150px]">
+                        <div className="text-xs text-[#64748B] font-mono truncate max-w-[150px]">
                           {peer.enode?.slice(0, 30)}...
                         </div>
                       </td>
@@ -1263,7 +1263,7 @@ export default function NodeDetailPage() {
                   ))}
                   {sortedPeers.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-4 text-center text-[#6B7280]">No peers connected</td>
+                      <td colSpan={4} className="py-4 text-center text-[#64748B]">No peers connected</td>
                     </tr>
                   )}
                 </tbody>
@@ -1287,7 +1287,7 @@ export default function NodeDetailPage() {
             
             <div className="space-y-3 max-h-[300px] overflow-y-auto">
               {incidents.length === 0 ? (
-                <div className="text-center py-6 text-[#6B7280]">
+                <div className="text-center py-6 text-[#64748B]">
                   <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-[#10B981]" />
                   <p>No incidents recorded</p>
                 </div>
@@ -1307,7 +1307,7 @@ export default function NodeDetailPage() {
                         <span className="text-sm font-medium">{incident.type}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-[#6B7280]">{formatTimeAgo(incident.detected_at)}</span>
+                        <span className="text-xs text-[#64748B]">{formatTimeAgo(incident.detected_at)}</span>
                         {incident.status === 'active' && (
                           <button
                             onClick={() => handleResolveIncident(incident.id)}
@@ -1318,9 +1318,9 @@ export default function NodeDetailPage() {
                         )}
                       </div>
                     </div>
-                    <p className="text-sm text-[#F9FAFB] mt-1">{incident.title}</p>
+                    <p className="text-sm text-[#F1F5F9] mt-1">{incident.title}</p>
                     {incident.description && (
-                      <p className="text-xs text-[#6B7280] mt-1">{incident.description}</p>
+                      <p className="text-xs text-[#64748B] mt-1">{incident.description}</p>
                     )}
                   </div>
                 ))
@@ -1333,7 +1333,7 @@ export default function NodeDetailPage() {
         <div className="card-xdc">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <Terminal className="w-5 h-5 text-[#6B7280]" />
+              <Terminal className="w-5 h-5 text-[#64748B]" />
               <h2 className="text-lg font-semibold">Node Logs</h2>
             </div>
             <div className="flex items-center gap-2">
@@ -1347,7 +1347,7 @@ export default function NodeDetailPage() {
               </button>
               <button
                 onClick={() => setExpandedLogs(!expandedLogs)}
-                className="text-[#6B7280] hover:text-white"
+                className="text-[#64748B] hover:text-white"
               >
                 {expandedLogs ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
               </button>
@@ -1358,7 +1358,7 @@ export default function NodeDetailPage() {
             <>
               <div className="flex gap-2 mb-3">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
                   <input
                     type="text"
                     placeholder="Filter logs..."
@@ -1377,7 +1377,7 @@ export default function NodeDetailPage() {
               
               <div className="bg-[#0A0E1A] rounded-lg p-3 font-mono text-xs h-[300px] overflow-y-auto">
                 {logs.length === 0 ? (
-                  <div className="text-center text-[#6B7280] py-8">
+                  <div className="text-center text-[#64748B] py-8">
                     Click "Fetch Latest 100" to load logs
                   </div>
                 ) : (
@@ -1387,7 +1387,7 @@ export default function NodeDetailPage() {
                       className={`py-0.5 ${
                         log.toLowerCase().includes('error') ? 'text-[#EF4444]' :
                         log.toLowerCase().includes('warn') ? 'text-[#F59E0B]' :
-                        'text-[#6B7280]'
+                        'text-[#64748B]'
                       }`}
                     >
                       {log}
@@ -1420,7 +1420,7 @@ export default function NodeDetailPage() {
                   className={`px-3 py-1 rounded text-xs transition-colors ${
                     selectedSeries.includes(series)
                       ? 'bg-[#1E90FF]/20 text-[#1E90FF]'
-                      : 'bg-white/5 text-[#6B7280]'
+                      : 'bg-white/5 text-[#64748B]'
                   }`}
                 >
                   {series.replace('_', ' ')}
@@ -1432,7 +1432,7 @@ export default function NodeDetailPage() {
           {metrics.length > 0 ? (
             <MetricsChart data={metrics} series={selectedSeries} />
           ) : (
-            <div className="text-center py-8 text-[#6B7280]">
+            <div className="text-center py-8 text-[#64748B]">
               No metrics history available
             </div>
           )}

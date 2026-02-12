@@ -118,7 +118,7 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
     <div className="fixed bottom-24 right-6 bg-[#111827] border border-white/10 rounded-lg px-4 py-3 shadow-lg z-50 flex items-center gap-3 animate-fade-in">
       <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
       <span className="text-sm">{message}</span>
-      <button onClick={onClose} className="text-[#6B7280] hover:text-white">
+      <button onClick={onClose} className="text-[#64748B] hover:text-white">
         <X className="w-4 h-4" />
       </button>
     </div>
@@ -329,8 +329,8 @@ export default function FleetPage() {
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[#F9FAFB]">Fleet Management</h1>
-            <p className="text-[#6B7280] mt-1">Monitor and manage all nodes in your fleet</p>
+            <h1 className="text-2xl font-semibold text-[#F1F5F9]">Fleet Management</h1>
+            <p className="text-[#64748B] mt-1">Monitor and manage all nodes in your fleet</p>
           </div>
           {wsConnected && (
             <div className="flex items-center gap-2">
@@ -367,8 +367,8 @@ export default function FleetPage() {
                   <Server className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-[#F9FAFB]">Fleet Status Matrix</h2>
-                  <p className="text-xs text-[#6B7280]">All registered nodes</p>
+                  <h2 className="text-lg font-semibold text-[#F1F5F9]">Fleet Status Matrix</h2>
+                  <p className="text-xs text-[#64748B]">All registered nodes</p>
                 </div>
               </div>
               
@@ -402,27 +402,27 @@ export default function FleetPage() {
               <table className="w-full min-w-[800px]">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]"></th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280] cursor-pointer hover:text-[#F9FAFB]" onClick={() => handleSort('status')}>Status</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280] cursor-pointer hover:text-[#F9FAFB]" onClick={() => handleSort('name')}>Name</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Role</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Location</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280] cursor-pointer hover:text-[#F9FAFB]" onClick={() => handleSort('blockHeight')}>Height</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280] cursor-pointer hover:text-[#F9FAFB]" onClick={() => handleSort('syncPercent')}>Sync</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280] cursor-pointer hover:text-[#F9FAFB]" onClick={() => handleSort('peers')}>Peers</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">CPU</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Mem</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]">Disk</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]"></th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B] cursor-pointer hover:text-[#F1F5F9]" onClick={() => handleSort('status')}>Status</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B] cursor-pointer hover:text-[#F1F5F9]" onClick={() => handleSort('name')}>Name</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Role</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Location</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B] cursor-pointer hover:text-[#F1F5F9]" onClick={() => handleSort('blockHeight')}>Height</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B] cursor-pointer hover:text-[#F1F5F9]" onClick={() => handleSort('syncPercent')}>Sync</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B] cursor-pointer hover:text-[#F1F5F9]" onClick={() => handleSort('peers')}>Peers</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">CPU</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Mem</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Disk</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {loading ? (
                     <tr>
-                      <td colSpan={12} className="py-8 text-center text-[#6B7280]">Loading...</td>
+                      <td colSpan={12} className="py-8 text-center text-[#64748B]">Loading...</td>
                     </tr>
                   ) : filteredAndSortedNodes.length === 0 ? (
                     <tr>
-                      <td colSpan={12} className="py-8 text-center text-[#6B7280]">No nodes match filters</td>
+                      <td colSpan={12} className="py-8 text-center text-[#64748B]">No nodes match filters</td>
                     </tr>
                   ) : (
                     filteredAndSortedNodes.map((node) => (
@@ -433,7 +433,7 @@ export default function FleetPage() {
                           onClick={() => handleRowClick(node.id)}
                         >
                           <td className="py-3 px-3">
-                            <ChevronRight className="w-4 h-4 text-[#6B7280]" />
+                            <ChevronRight className="w-4 h-4 text-[#64748B]" />
                           </td>
                           <td className="py-3 px-3">
                             <StatusDot status={node.status} />
@@ -443,7 +443,7 @@ export default function FleetPage() {
                             <span className="px-2 py-0.5 bg-white/5 rounded text-xs">{node.role}</span>
                           </td>
                           <td className="py-3 px-3">
-                            <div className="flex items-center gap-1 text-xs text-[#6B7280]">
+                            <div className="flex items-center gap-1 text-xs text-[#64748B]">
                               <MapPin className="w-3 h-3" />
                               {node.location_city}
                             </div>
@@ -457,19 +457,19 @@ export default function FleetPage() {
                           <td className="py-3 px-3 font-mono-nums">{node.peer_count || 0}</td>
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-2">
-                              <Cpu className="w-3 h-3 text-[#6B7280]" />
+                              <Cpu className="w-3 h-3 text-[#64748B]" />
                               <span className={(node.cpu_percent || 0) > 80 ? 'text-[#EF4444]' : ''}>{Math.round(node.cpu_percent || 0)}%</span>
                             </div>
                           </td>
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-2">
-                              <MemoryStick className="w-3 h-3 text-[#6B7280]" />
+                              <MemoryStick className="w-3 h-3 text-[#64748B]" />
                               <span className={(node.memory_percent || 0) > 90 ? 'text-[#EF4444]' : ''}>{Math.round(node.memory_percent || 0)}%</span>
                             </div>
                           </td>
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-2">
-                              <HardDrive className="w-3 h-3 text-[#6B7280]" />
+                              <HardDrive className="w-3 h-3 text-[#64748B]" />
                               <span className={(node.disk_percent || 0) > 85 ? 'text-[#F59E0B]' : ''}>{Math.round(node.disk_percent || 0)}%</span>
                             </div>
                           </td>
@@ -489,14 +489,14 @@ export default function FleetPage() {
                   <AlertTriangle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-[#F9FAFB]">Active Incidents</h2>
-                  <p className="text-xs text-[#6B7280]">{activeIncidents.length} requiring attention</p>
+                  <h2 className="text-lg font-semibold text-[#F1F5F9]">Active Incidents</h2>
+                  <p className="text-xs text-[#64748B]">{activeIncidents.length} requiring attention</p>
                 </div>
               </div>
               
               <div className="space-y-3">
                 {activeIncidents.length === 0 ? (
-                  <div className="text-center py-6 text-[#6B7280]">
+                  <div className="text-center py-6 text-[#64748B]">
                     <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-[#10B981]" />
                     <p>All systems operational</p>
                   </div>
@@ -508,11 +508,11 @@ export default function FleetPage() {
                           <SeverityBadge severity={incident.severity} />
                           <span className="text-sm font-medium">{incident.type}</span>
                         </div>
-                        <span className="text-xs text-[#6B7280]">{formatTimeAgo(incident.detected_at)}</span>
+                        <span className="text-xs text-[#64748B]">{formatTimeAgo(incident.detected_at)}</span>
                       </div>
-                      <p className="text-xs text-[#6B7280] mb-2">{incident.description}</p>
+                      <p className="text-xs text-[#64748B] mb-2">{incident.description}</p>
                       <div className="flex items-center gap-2 text-xs">
-                        <Server className="w-3 h-3 text-[#6B7280]" />
+                        <Server className="w-3 h-3 text-[#64748B]" />
                         <span>{incident.node_name}</span>
                       </div>
                     </div>
@@ -527,8 +527,8 @@ export default function FleetPage() {
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-[#F9FAFB]">Health Score</h2>
-                  <p className="text-xs text-[#6B7280]">Fleet-wide health</p>
+                  <h2 className="text-lg font-semibold text-[#F1F5F9]">Health Score</h2>
+                  <p className="text-xs text-[#64748B]">Fleet-wide health</p>
                 </div>
               </div>
               

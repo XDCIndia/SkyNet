@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import Sidebar from '@/components/Sidebar';
+import DashboardLayout from '@/components/DashboardLayout';
 import { 
   Activity, 
   Clock, 
@@ -103,10 +103,10 @@ function StatCard({
             <Icon className="w-5 h-5" style={{ color }} />
           </div>
           <div>
-            <p className="text-xs text-[#6B7280] uppercase tracking-wider mb-0.5">{label}</p>
-            <p className="text-2xl font-bold text-[#F9FAFB] font-mono-nums">{value}</p>
+            <p className="text-xs text-[#64748B] uppercase tracking-wider mb-0.5">{label}</p>
+            <p className="text-2xl font-bold text-[#F1F5F9] font-mono-nums">{value}</p>
             {subValue && (
-              <p className="text-xs text-[#6B7280] mt-0.5">{subValue}</p>
+              <p className="text-xs text-[#64748B] mt-0.5">{subValue}</p>
             )}
           </div>
         </div>
@@ -129,7 +129,7 @@ function BlockTimeChart({ data }: { data: number[] }) {
     <div className="card-xdc">
       <div className="flex items-center gap-2 mb-4">
         <Clock className="w-4 h-4 text-[#1E90FF]" />
-        <h3 className="text-sm font-semibold text-[#F9FAFB]">Block Time (last 25 blocks)</h3>
+        <h3 className="text-sm font-semibold text-[#F1F5F9]">Block Time (last 25 blocks)</h3>
       </div>
       
       <div className="relative h-[140px]">
@@ -147,7 +147,7 @@ function BlockTimeChart({ data }: { data: number[] }) {
               <text
                 x="15"
                 y={chartHeight - (val / maxValue) * chartHeight + 3}
-                fill="#6B7280"
+                fill="#64748B"
                 fontSize="6"
                 textAnchor="end"
               >
@@ -176,7 +176,7 @@ function BlockTimeChart({ data }: { data: number[] }) {
         </svg>
       </div>
       
-      <div className="flex items-center justify-between text-[10px] text-[#6B7280] mt-2">
+      <div className="flex items-center justify-between text-[10px] text-[#64748B] mt-2">
         <span>Latest &rarr;</span>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
@@ -202,7 +202,7 @@ function TransactionsChart({ data }: { data: number[] }) {
     <div className="card-xdc">
       <div className="flex items-center gap-2 mb-4">
         <Layers className="w-4 h-4 text-[#1E90FF]" />
-        <h3 className="text-sm font-semibold text-[#F9FAFB]">Transactions Per Block</h3>
+        <h3 className="text-sm font-semibold text-[#F1F5F9]">Transactions Per Block</h3>
       </div>
       
       <div className="relative h-[140px]">
@@ -220,7 +220,7 @@ function TransactionsChart({ data }: { data: number[] }) {
               <text
                 x="15"
                 y={chartHeight - (val / maxValue) * chartHeight + 3}
-                fill="#6B7280"
+                fill="#64748B"
                 fontSize="6"
                 textAnchor="end"
               >
@@ -248,7 +248,7 @@ function TransactionsChart({ data }: { data: number[] }) {
         </svg>
       </div>
       
-      <div className="flex items-center justify-between text-[10px] text-[#6B7280] mt-2">
+      <div className="flex items-center justify-between text-[10px] text-[#64748B] mt-2">
         <span>Latest &rarr;</span>
         <span>Max: {maxValue} txns</span>
       </div>
@@ -265,7 +265,7 @@ function GasUsageChart({ data, gasLimit }: { data: number[]; gasLimit: number })
     <div className="card-xdc">
       <div className="flex items-center gap-2 mb-4">
         <Flame className="w-4 h-4 text-[#F59E0B]" />
-        <h3 className="text-sm font-semibold text-[#F9FAFB]">Gas Usage (% of limit)</h3>
+        <h3 className="text-sm font-semibold text-[#F1F5F9]">Gas Usage (% of limit)</h3>
       </div>
       
       <div className="relative h-[140px]">
@@ -283,7 +283,7 @@ function GasUsageChart({ data, gasLimit }: { data: number[]; gasLimit: number })
               <text
                 x="15"
                 y={chartHeight - (val / maxValue) * chartHeight + 3}
-                fill="#6B7280"
+                fill="#64748B"
                 fontSize="6"
                 textAnchor="end"
               >
@@ -312,7 +312,7 @@ function GasUsageChart({ data, gasLimit }: { data: number[]; gasLimit: number })
         </svg>
       </div>
       
-      <div className="flex items-center justify-between text-[10px] text-[#6B7280] mt-2">
+      <div className="flex items-center justify-between text-[10px] text-[#64748B] mt-2">
         <span>Latest &rarr;</span>
         <span>Gas Limit: {(gasLimit / 1e6).toFixed(0)}M</span>
       </div>
@@ -331,7 +331,7 @@ function EpochProgress({ epoch }: { epoch: NetworkStats['epoch'] }) {
     <div className="card-xdc">
       <div className="flex items-center gap-2 mb-4">
         <Timer className="w-4 h-4 text-[#1E90FF]" />
-        <h3 className="text-sm font-semibold text-[#F9FAFB]">Epoch Progress</h3>
+        <h3 className="text-sm font-semibold text-[#F1F5F9]">Epoch Progress</h3>
       </div>
       
       <div className="flex items-center justify-center">
@@ -361,8 +361,8 @@ function EpochProgress({ epoch }: { epoch: NetworkStats['epoch'] }) {
           </svg>
           
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-bold text-[#F9FAFB] font-mono-nums">{epoch.number}</span>
-            <span className="text-[10px] text-[#6B7280]">Epoch</span>
+            <span className="text-2xl font-bold text-[#F1F5F9] font-mono-nums">{epoch.number}</span>
+            <span className="text-[10px] text-[#64748B]">Epoch</span>
           </div>
         </div>
       </div>
@@ -370,16 +370,16 @@ function EpochProgress({ epoch }: { epoch: NetworkStats['epoch'] }) {
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div className="text-center">
           <p className="text-lg font-bold text-[#1E90FF] font-mono-nums">{epoch.progress}%</p>
-          <p className="text-[10px] text-[#6B7280]">Progress</p>
+          <p className="text-[10px] text-[#64748B]">Progress</p>
         </div>
         <div className="text-center">
-          <p className="text-lg font-bold text-[#F9FAFB] font-mono-nums">{epoch.blocksRemaining}</p>
-          <p className="text-[10px] text-[#6B7280]">Blocks Left</p>
+          <p className="text-lg font-bold text-[#F1F5F9] font-mono-nums">{epoch.blocksRemaining}</p>
+          <p className="text-[10px] text-[#64748B]">Blocks Left</p>
         </div>
       </div>      
       
       <div className="mt-3 pt-3 border-t border-white/5 text-center">
-        <p className="text-[10px] text-[#6B7280]">
+        <p className="text-[10px] text-[#64748B]">
           Next epoch in ~{formatTimeRemaining(epoch.secondsToNextEpoch)}
         </p>
       </div>
@@ -393,21 +393,21 @@ function LastBlocksTable({ blocks }: { blocks: NetworkStats['lastBlocks'] }) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Box className="w-4 h-4 text-[#1E90FF]" />
-          <h3 className="text-sm font-semibold text-[#F9FAFB]">Last 25 Blocks</h3>
+          <h3 className="text-sm font-semibold text-[#F1F5F9]">Last 25 Blocks</h3>
         </div>
-        <span className="text-xs text-[#6B7280]">Auto-refreshing</span>
+        <span className="text-xs text-[#64748B]">Auto-refreshing</span>
       </div>
       
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-white/5">
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#6B7280] uppercase">#</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#6B7280] uppercase">Block</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#6B7280] uppercase">Txns</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#6B7280] uppercase">Gas Used</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#6B7280] uppercase">Miner</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#6B7280] uppercase">Time</th>
+              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">#</th>
+              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Block</th>
+              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Txns</th>
+              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Gas Used</th>
+              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Miner</th>
+              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Time</th>
             </tr>
           </thead>
           <tbody>
@@ -416,29 +416,29 @@ function LastBlocksTable({ blocks }: { blocks: NetworkStats['lastBlocks'] }) {
                 key={block.number} 
                 className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
               >
-                <td className="py-2.5 px-2 text-xs text-[#6B7280]">{index + 1}</td>
+                <td className="py-2.5 px-2 text-xs text-[#64748B]">{index + 1}</td>
                 <td className="py-2.5 px-2">
                   <span className="text-xs font-mono text-[#1E90FF]">
                     {formatNumber(block.number)}
                   </span>
                 </td>
                 <td className="py-2.5 px-2">
-                  <span className={`text-xs font-mono ${block.txCount > 0 ? 'text-[#10B981]' : 'text-[#6B7280]'}`}>
+                  <span className={`text-xs font-mono ${block.txCount > 0 ? 'text-[#10B981]' : 'text-[#64748B]'}`}>
                     {block.txCount}
                   </span>
                 </td>
                 <td className="py-2.5 px-2">
-                  <span className="text-xs text-[#F9FAFB]">
+                  <span className="text-xs text-[#F1F5F9]">
                     {(block.gasUsed / 1e6).toFixed(2)}M
                   </span>
                 </td>
                 <td className="py-2.5 px-2">
-                  <span className="text-xs font-mono text-[#9CA3AF]">
+                  <span className="text-xs font-mono text-[#94A3B8]">
                     {block.miner}
                   </span>
                 </td>
                 <td className="py-2.5 px-2">
-                  <span className="text-xs text-[#6B7280]">{block.time}</span>
+                  <span className="text-xs text-[#64748B]">{block.time}</span>
                 </td>
               </tr>
             ))}
@@ -454,18 +454,18 @@ function NodePerformanceTable({ nodes }: { nodes: NodeInfo[] }) {
     <div className="card-xdc overflow-hidden">
       <div className="flex items-center gap-2 mb-4">
         <Server className="w-4 h-4 text-[#1E90FF]" />
-        <h3 className="text-sm font-semibold text-[#F9FAFB]">Node Performance</h3>
+        <h3 className="text-sm font-semibold text-[#F1F5F9]">Node Performance</h3>
       </div>
       
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-white/5">
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#6B7280] uppercase">Node</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#6B7280] uppercase">Location</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#6B7280] uppercase">Peers</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#6B7280] uppercase">Block</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#6B7280] uppercase">Status</th>
+              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Node</th>
+              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Location</th>
+              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Peers</th>
+              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Block</th>
+              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -480,14 +480,14 @@ function NodePerformanceTable({ nodes }: { nodes: NodeInfo[] }) {
                       node.status === 'healthy' ? 'bg-[#10B981]' : 
                       node.status === 'syncing' ? 'bg-[#F59E0B]' : 'bg-[#EF4444]'
                     }`}></span>
-                    <span className="text-xs font-medium text-[#F9FAFB]">{node.name}</span>
+                    <span className="text-xs font-medium text-[#F1F5F9]">{node.name}</span>
                   </div>
                 </td>
                 <td className="py-2.5 px-2">
-                  <span className="text-xs text-[#9CA3AF]">{node.ipv4 || '—'}</span>
+                  <span className="text-xs text-[#94A3B8]">{node.ipv4 || '—'}</span>
                 </td>
                 <td className="py-2.5 px-2">
-                  <span className="text-xs font-mono text-[#F9FAFB]">{node.peerCount}</span>
+                  <span className="text-xs font-mono text-[#F1F5F9]">{node.peerCount}</span>
                 </td>
                 <td className="py-2.5 px-2">
                   <span className="text-xs font-mono text-[#1E90FF]">
@@ -513,20 +513,14 @@ function NodePerformanceTable({ nodes }: { nodes: NodeInfo[] }) {
 
 function LoadingState() {
   return (
-    <div className="min-h-screen bg-[#0A0E1A]">
-      <Sidebar />
-      <main className="lg:ml-[220px] min-h-screen pb-20 lg:pb-6">
-        <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-6">
-          <div className="h-8 w-48 bg-white/5 rounded animate-pulse mb-6"></div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-24 bg-white/5 rounded-xl animate-pulse"></div>
-            ))}
-          </div>
-        </div>
-      </main>
-    </div>
+    <DashboardLayout>
+      <div className="h-8 w-48 bg-white/5 rounded animate-pulse mb-6"></div>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="h-24 bg-white/5 rounded-xl animate-pulse"></div>
+        ))}
+      </div>
+    </DashboardLayout>
   );
 }
 
@@ -583,32 +577,23 @@ export default function NetworkPage() {
 
   if (!stats) {
     return (
-      <div className="min-h-screen bg-[#0A0E1A]">
-        <Sidebar />
-        <main className="lg:ml-[220px] min-h-screen pb-20 lg:pb-6">
-          <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-6">
-            <div className="p-4 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444]">
-              Failed to load network stats. Please try again later.
-            </div>
-          </div>
-        </main>
-      </div>
+      <DashboardLayout>
+        <div className="p-4 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444]">
+          Failed to load network stats. Please try again later.
+        </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A]">
-      <Sidebar />
-
-      <main className="lg:ml-[220px] min-h-screen pb-20 lg:pb-6">
-        <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-6">
+    <DashboardLayout>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-[#F9FAFB] flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-[#F1F5F9] flex items-center gap-3">
                 <Activity className="w-6 h-6 text-[#1E90FF]" />
                 Network Stats
               </h1>
-              <p className="text-sm text-[#6B7280] mt-1">
+              <p className="text-sm text-[#64748B] mt-1">
                 Real-time XDC network monitoring
                 {lastUpdated < 3 && (
                   <span className="inline-flex items-center gap-1 ml-2">
@@ -624,7 +609,7 @@ export default function NetworkPage() {
             
             <button
               onClick={fetchData}
-              className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-[#F9FAFB] transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-[#F1F5F9] transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
               Refresh
@@ -680,7 +665,7 @@ export default function NetworkPage() {
               label="Pending Txs"
               value={stats.pendingTxs}
               icon={BarChart3}
-              color="#6B7280"
+              color="#64748B"
             />
           </div>
 
@@ -695,8 +680,6 @@ export default function NetworkPage() {
             <LastBlocksTable blocks={stats.lastBlocks} />
             <NodePerformanceTable nodes={nodes} />
           </div>
-        </div>
-      </main>
-    </div>
+    </DashboardLayout>
   );
 }
