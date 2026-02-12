@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, Node } from '@/lib/db';
+import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 
 // GET /api/nodes - List all nodes with latest metrics
 export async function GET() {
@@ -41,9 +42,15 @@ export async function GET() {
   }
 }
 
-// POST /api/nodes - Register new node
+// POST /api/nodes - Register new node (protected)
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate request
+    const auth = await authenticateRequest(request);
+    if (!auth.valid) {
+      return unauthorizedResponse(auth.error);
+    }
+
     const body = await request.json();
     const {
       name,
@@ -101,9 +108,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE /api/nodes - Remove nodes by filter (bulk delete)
+// DELETE /api/nodes - Remove nodes by filter (bulk delete) (protected)
 export async function DELETE(request: NextRequest) {
   try {
+    // Authenticate request
+    const auth = await authenticateRequest(request);
+    if (!auth.valid) {
+      return unauthorizedResponse(auth.error);
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const name = searchParams.get('name');

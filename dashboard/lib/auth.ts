@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 
 export interface AuthResult {
   valid: boolean;
@@ -132,16 +133,12 @@ export function serverErrorResponse(message = 'Internal server error'): NextResp
 }
 
 /**
- * Generate a secure random API key
+ * Generate a secure random API key using crypto.randomBytes
  */
 export function generateApiKey(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const length = 48;
-  let result = 'xdc_';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  // Generate 32 bytes of random data and convert to hex
+  const randomBytes = crypto.randomBytes(32).toString('hex');
+  return 'xdc_' + randomBytes;
 }
 
 /**

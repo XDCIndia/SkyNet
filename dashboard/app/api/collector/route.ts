@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCollectorStatus, startCollector, stopCollector } from '@/lib/collector';
 import { query } from '@/lib/db';
+import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 
 // GET /api/collector - Get collector status
 export async function GET() {
@@ -31,9 +32,15 @@ export async function GET() {
   }
 }
 
-// POST /api/collector - Control collector
+// POST /api/collector - Control collector (protected)
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate request
+    const auth = await authenticateRequest(request);
+    if (!auth.valid) {
+      return unauthorizedResponse(auth.error);
+    }
+
     const body = await request.json();
     const { action } = body;
 

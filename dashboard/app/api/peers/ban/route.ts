@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 
-// POST /api/peers/ban - Ban a peer
+// POST /api/peers/ban - Ban a peer (protected)
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate request
+    const auth = await authenticateRequest(request);
+    if (!auth.valid) {
+      return unauthorizedResponse(auth.error);
+    }
+
     const body = await request.json();
     const { enode, ip, reason } = body;
 
@@ -58,9 +65,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE /api/peers/ban - Unban a peer
+// DELETE /api/peers/ban - Unban a peer (protected)
 export async function DELETE(request: NextRequest) {
   try {
+    // Authenticate request
+    const auth = await authenticateRequest(request);
+    if (!auth.valid) {
+      return unauthorizedResponse(auth.error);
+    }
+
     const { searchParams } = new URL(request.url);
     const enode = searchParams.get('enode');
     const id = searchParams.get('id');

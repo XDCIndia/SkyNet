@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 
 // GET /api/upgrades - List upgrade plans
 export async function GET(request: NextRequest) {
@@ -41,9 +42,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/upgrades - Create upgrade plan
+// POST /api/upgrades - Create upgrade plan (protected)
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate request
+    const auth = await authenticateRequest(request);
+    if (!auth.valid) {
+      return unauthorizedResponse(auth.error);
+    }
+
     const body = await request.json();
     const {
       name,
@@ -102,9 +109,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH /api/upgrades - Update upgrade plan status
+// PATCH /api/upgrades - Update upgrade plan status (protected)
 export async function PATCH(request: NextRequest) {
   try {
+    // Authenticate request
+    const auth = await authenticateRequest(request);
+    if (!auth.valid) {
+      return unauthorizedResponse(auth.error);
+    }
+
     const body = await request.json();
     const { id, status, startedAt, completedAt, notes } = body;
 

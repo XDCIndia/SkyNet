@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
-// POST /api/diagnostics - Run diagnostics on a node
+// POST /api/diagnostics - Run diagnostics on a node (protected)
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate request
+    const auth = await authenticateRequest(request);
+    if (!auth.valid) {
+      return unauthorizedResponse(auth.error);
+    }
+
     const body = await request.json();
     const { nodeId, command } = body;
 

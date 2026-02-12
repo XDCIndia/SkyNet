@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 
 // GET /api/nodes/[id] - Get single node with details
 export async function GET(
@@ -58,12 +59,18 @@ export async function GET(
   }
 }
 
-// PATCH /api/nodes/[id] - Update node
+// PATCH /api/nodes/[id] - Update node (protected)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Authenticate request
+    const auth = await authenticateRequest(request);
+    if (!auth.valid) {
+      return unauthorizedResponse(auth.error);
+    }
+
     const { id } = params;
     const body = await request.json();
     const updates: Record<string, unknown> = {};

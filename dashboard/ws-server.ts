@@ -5,11 +5,19 @@ import WebSocket, { WebSocketServer } from 'ws';
 import { Pool } from 'pg';
 
 const WS_PORT = parseInt(process.env.WS_PORT || '3006');
-const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://gateway:gateway_secret_2026@localhost:5443/xdc_gateway';
+const DATABASE_URL = process.env.DATABASE_URL;
+
+if (!DATABASE_URL) {
+  console.error('Error: DATABASE_URL environment variable is required');
+  process.exit(1);
+}
+
+// Type assertion since we checked above
+const DB_URL: string = DATABASE_URL;
 
 // Database pool
 const pool = new Pool({
-  connectionString: DATABASE_URL,
+  connectionString: DB_URL,
   max: 5,
   idleTimeoutMillis: 30000,
 });
@@ -232,7 +240,7 @@ function main(): void {
   }, 10000);
 
   console.log(`[WebSocket] Server started on port ${WS_PORT}`);
-  console.log(`[WebSocket] Database: ${DATABASE_URL.replace(/:[^:@]+@/, ':***@')}`);
+  console.log(`[WebSocket] Database: ${DB_URL.replace(/:[^:@]+@/, ':***@')}`);
 
   // Graceful shutdown
   process.on('SIGTERM', () => {

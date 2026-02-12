@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 
 // GET /api/incidents - Get incidents with filters
 export async function GET(request: NextRequest) {
@@ -57,9 +58,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/incidents - Create manual incident
+// POST /api/incidents - Create manual incident (protected)
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate request
+    const auth = await authenticateRequest(request);
+    if (!auth.valid) {
+      return unauthorizedResponse(auth.error);
+    }
+
     const body = await request.json();
     const {
       nodeId,
@@ -119,9 +126,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH /api/incidents - Update incident status (bulk update supported via query params)
+// PATCH /api/incidents - Update incident status (bulk update supported via query params) (protected)
 export async function PATCH(request: NextRequest) {
   try {
+    // Authenticate request
+    const auth = await authenticateRequest(request);
+    if (!auth.valid) {
+      return unauthorizedResponse(auth.error);
+    }
+
     const body = await request.json();
     const { id, status, resolution } = body;
 

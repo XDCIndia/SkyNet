@@ -1,6 +1,10 @@
 import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 
-const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://gateway:gateway_secret_2026@localhost:5443/xdc_gateway';
+const DATABASE_URL = process.env.DATABASE_URL;
+
+if (!DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is required');
+}
 
 // Create a singleton pool instance
 let pool: Pool | null = null;
