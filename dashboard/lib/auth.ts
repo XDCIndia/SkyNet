@@ -34,8 +34,14 @@ export async function authenticateRequest(req: NextRequest): Promise<AuthResult>
     return { valid: false, error: 'Server misconfiguration: no API keys configured' };
   }
 
-  // Check if token is a valid master API key
-  if (allowedKeys.includes(token)) {
+  // Check if token is a valid master API key (timing-safe comparison)
+  const tokenBuf = Buffer.from(token);
+  const isValidMasterKey = allowedKeys.some(key => {
+    const keyBuf = Buffer.from(key);
+    if (tokenBuf.length !== keyBuf.length) return false;
+    return crypto.timingSafeEqual(tokenBuf, keyBuf);
+  });
+  if (isValidMasterKey) {
     return { 
       valid: true, 
       permissions: ['*'] // Master keys have all permissions
