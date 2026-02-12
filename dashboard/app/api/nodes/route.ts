@@ -71,6 +71,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Input length validation
+    if (typeof name !== 'string' || name.length > 100) {
+      return NextResponse.json(
+        { error: 'name must be a string of max 100 characters' },
+        { status: 400 }
+      );
+    }
+    if (typeof host !== 'string' || host.length > 255) {
+      return NextResponse.json(
+        { error: 'host must be a string of max 255 characters' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize: strip HTML tags from name
+    const sanitizedName = name.replace(/<[^>]*>/g, '').trim();
+    if (!sanitizedName) {
+      return NextResponse.json(
+        { error: 'name cannot be empty after sanitization' },
+        { status: 400 }
+      );
+    }
+
     const validRoles = ['masternode', 'fullnode', 'archive', 'rpc'];
     if (!validRoles.includes(role)) {
       return NextResponse.json(
@@ -84,7 +107,7 @@ export async function POST(request: NextRequest) {
        (name, host, role, location_city, location_country, location_lat, location_lng, tags)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [name, host, role, location_city, location_country, location_lat, location_lng, tags || []]
+      [sanitizedName, host, role, location_city, location_country, location_lat, location_lng, tags || []]
     );
 
     return NextResponse.json({

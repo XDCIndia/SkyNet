@@ -8,12 +8,11 @@ import { authenticateRequest, unauthorizedResponse, isDashboardReadRequest } fro
  */
 export async function GET(request: NextRequest) {
   try {
-    // Authenticate request
-    if (!isDashboardReadRequest(request)) {
-      const auth = await authenticateRequest(request);
-      if (!auth.valid) {
-        return unauthorizedResponse(auth.error);
-      }
+    // Always require auth - alert configs contain PII (emails, chat IDs)
+    const auth = await authenticateRequest(request);
+    const isDashboard = isDashboardReadRequest(request);
+    if (!isDashboard && !auth.valid) {
+      return unauthorizedResponse(auth.error);
     }
 
     const { searchParams } = new URL(request.url);
