@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 // Public registration schema (no auth required)
 const PublicRegistrationSchema = z.object({
-  name: z.string().min(3).max(100).regex(/^[a-zA-Z0-9_-]+$/),
+  name: z.string().min(3).max(100).regex(/^[a-zA-Z0-9._-]+$/),
   host: z.string().min(1).max(255),
   rpcUrl: z.string().url().optional(),
   role: z.enum(['masternode', 'fullnode', 'archive', 'rpc']),
@@ -56,35 +56,60 @@ async function postHandler(request: NextRequest) {
     const result = await withTransaction(async (client) => {
       // Check if name already exists
       const existingNode = await client.query(
-        'SELECT id FROM skynet.nodes WHERE name = $1',
-        [data.name]
+        'SELECT id FROM skynet.nodes WHERE name = $1 OR host = $2',
+        [data.name, data.host]
       );
+
+      let node;
+      let isUpdate = false;
 
       if (existingNode.rows.length > 0) {
-        throw new Error(`Node name "${data.name}" already exists`);
+        // Update existing node (re-registration)
+        isUpdate = true;
+        const updateResult = await client.query(
+          `UPDATE skynet.nodes 
+           SET host = $2, role = $3, location_city = $4, location_country = $5,
+               is_active = true, email = COALESCE(NULLIF($6, ''), email),
+               telegram = COALESCE(NULLIF($7, ''), telegram), updated_at = NOW()
+           WHERE name = $1
+           RETURNING id, name, host, role, created_at`,
+          [
+            data.name,
+            data.host,
+            data.role,
+            data.locationCity || null,
+            data.locationCountry || null,
+            data.email || null,
+            data.telegram || null,
+          ]
+        );
+        node = updateResult.rows[0];
+      } else {
+        // Insert new node
+        const nodeResult = await client.query(
+          `INSERT INTO skynet.nodes 
+           (name, host, role, location_city, location_country, tags, is_active, email, telegram)
+           VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8)
+           RETURNING id, name, host, role, created_at`,
+          [
+            data.name,
+            data.host,
+            data.role,
+            data.locationCity || null,
+            data.locationCountry || null,
+            [`registered_by:${data.email || 'unknown'}`],
+            data.email || null,
+            data.telegram || null,
+          ]
+        );
+        node = nodeResult.rows[0];
       }
 
-      // Insert node
-      const nodeResult = await client.query(
-        `INSERT INTO skynet.nodes 
-         (name, host, role, location_city, location_country, tags, is_active, email, telegram)
-         VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8)
-         RETURNING id, name, host, role, created_at`,
-        [
-          data.name,
-          data.host,
-          data.role,
-          data.locationCity || null,
-          data.locationCountry || null,
-          [`registered_by:${data.email || 'unknown'}`],
-          data.email || null,
-          data.telegram || null,
-        ]
-      );
-
-      const node = nodeResult.rows[0];
-
-      // Create API key for this node
+      // Create or refresh API key for this node
+      if (isUpdate) {
+        // Delete old keys and create fresh one
+        await client.query('DELETE FROM skynet.api_keys WHERE node_id = $1', [node.id]);
+      }
       await client.query(
         `INSERT INTO skynet.api_keys 
          (key, node_id, name, permissions)
