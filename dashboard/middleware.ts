@@ -142,37 +142,9 @@ export async function middleware(req: NextRequest) {
           apiVersion,
         });
 
-        // Check rate limit
+        // Rate limiting disabled for now
+        // TODO: Re-enable when production traffic warrants it
         const apiKey = req.headers.get('authorization')?.replace('Bearer ', '');
-        const rateLimitTier = determineRateLimitTier(
-          req.method,
-          req.nextUrl.pathname,
-          !!apiKey
-        );
-        const rateLimitId = getRateLimitIdentifier(req, apiKey);
-        const rateLimitResult = await checkRateLimit(rateLimitId, rateLimitTier);
-
-        if (rateLimitResult.limited) {
-          const response = NextResponse.json(
-            {
-              error: 'Too many requests',
-              code: 'RATE_LIMITED',
-              retryAfter: rateLimitResult.retryAfter,
-            },
-            { status: 429 }
-          );
-
-          // Add rate limit headers
-          const headers = createRateLimitHeaders(rateLimitResult);
-          Object.entries(headers).forEach(([key, value]) => {
-            response.headers.set(key, value);
-          });
-
-          response.headers.set('x-request-id', requestId);
-
-          log.request(req.method, req.nextUrl.pathname, 429, Date.now() - startTime);
-          return response;
-        }
 
         // Continue to route handler
         const response = NextResponse.next();
@@ -188,12 +160,6 @@ export async function middleware(req: NextRequest) {
 
         // Add API version headers
         addVersionHeaders(response, apiVersion);
-
-        // Add rate limit headers
-        const headers = createRateLimitHeaders(rateLimitResult);
-        Object.entries(headers).forEach(([key, value]) => {
-          response.headers.set(key, value);
-        });
 
         // Remove X-Powered-By
         response.headers.delete('X-Powered-By');

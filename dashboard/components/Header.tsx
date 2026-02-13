@@ -40,11 +40,8 @@ export default function Header({
         {/* Left: Logo + Title */}
         <div className="flex items-center gap-3">
           {/* XDC Logo SVG */}
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1E90FF]/20 to-[#10B981]/20 flex items-center justify-center border border-[var(--accent-blue)]/20">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="10" stroke="#1E90FF" strokeWidth="2"/>
-              <path d="M8 8L16 16M16 8L8 16" stroke="#1E90FF" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden">
+            <img src="https://s2.coinmarketcap.com/static/img/coins/200x200/2634.png" alt="XDC" width={40} height={40} className="rounded-full" />
           </div>
           <div>
             <h1 className="text-lg lg:text-xl font-semibold text-[#F9FAFB]" style={{ fontFamily: 'var(--font-fira-sans)' }}>

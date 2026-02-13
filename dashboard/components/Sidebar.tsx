@@ -175,11 +175,8 @@ export default function Sidebar() {
     <>
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-[var(--border-subtle)]">
-        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[var(--accent-blue)]/20 to-[var(--success)]/20 flex items-center justify-center border border-[var(--accent-blue)]/30 flex-shrink-0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="var(--accent-blue)" strokeWidth="2"/>
-            <path d="M8 8L16 16M16 8L8 16" stroke="var(--accent-blue)" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+          <img src="https://s2.coinmarketcap.com/static/img/coins/200x200/2634.png" alt="XDC" width={36} height={36} className="rounded-lg" />
         </div>
         {(!collapsed || isMobile) && (
           <div className="overflow-hidden">

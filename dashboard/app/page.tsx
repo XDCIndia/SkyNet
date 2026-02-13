@@ -1218,10 +1218,24 @@ export default function Home() {
       // Fetch fleet status
       const fleetRes = await fetch('/api/v1/fleet/status', { cache: 'no-store' });
       if (fleetRes.ok) {
-        const fleetData = await fleetRes.json();
-        setFleet(fleetData.fleet);
-        setNodes(fleetData.nodes || []);
-        setIncidents(fleetData.incidents?.active || []);
+        const json = await fleetRes.json();
+        const d = json.data || json;
+        const counts = d.nodeCounts || d.nodes || {};
+        setFleet({
+          totalNodes: d.totalNodes || 0,
+          healthyNodes: counts.healthy || 0,
+          degradedNodes: counts.degraded || 0,
+          offlineNodes: counts.offline || 0,
+          syncingNodes: counts.syncing || 0,
+          healthScore: d.healthScore || 0,
+          totalPeers: 0,
+          mainnetHead: d.maxBlockHeight || 0,
+        });
+        // nodes array from API (or empty)
+        const nodeArr = Array.isArray(d.nodes) ? d.nodes : [];
+        setNodes(nodeArr);
+        const inc = d.incidents;
+        setIncidents(inc?.active || (Array.isArray(inc) ? inc : []));
       }
       
       // Fetch healthy peers summary

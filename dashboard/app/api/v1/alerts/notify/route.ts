@@ -29,8 +29,8 @@ async function postHandler(request: NextRequest) {
   // Fetch the alert
   const alert = await queryOne(
     `SELECT i.*, n.name as node_name
-     FROM skynet.incidents i
-     LEFT JOIN skynet.nodes n ON i.node_id = n.id
+     FROM netown.incidents i
+     LEFT JOIN netown.nodes n ON i.node_id = n.id
      WHERE i.id = $1`,
     [alertId]
   );

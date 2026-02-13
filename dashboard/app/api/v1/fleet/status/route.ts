@@ -25,7 +25,7 @@ async function getHandler(request: NextRequest) {
   const data = await withCache(cacheKey, async () => {
     // Get latest health snapshot
     const healthRows = await queryAll(`
-      SELECT * FROM skynet.network_health
+      SELECT * FROM netown.network_health
       ORDER BY collected_at DESC
       LIMIT 1
     `);
@@ -43,15 +43,17 @@ async function getHandler(request: NextRequest) {
           memory_percent,
           disk_percent,
           collected_at
-        FROM skynet.node_metrics
+        FROM netown.node_metrics
         WHERE collected_at > NOW() - INTERVAL '5 minutes'
         ORDER BY node_id, collected_at DESC
       )
       SELECT
         n.id,
         n.name,
+        n.host,
         n.role,
         n.is_active,
+        n.created_at,
         m.sync_percent,
         m.peer_count,
         m.is_syncing,
@@ -65,7 +67,7 @@ async function getHandler(request: NextRequest) {
           WHEN m.peer_count < 3 OR m.cpu_percent > 90 OR m.disk_percent > 90 THEN 'degraded'
           ELSE 'healthy'
         END as status
-      FROM skynet.nodes n
+      FROM netown.nodes n
       LEFT JOIN latest_metrics m ON n.id = m.node_id
       WHERE n.is_active = true
     `);
@@ -85,7 +87,7 @@ async function getHandler(request: NextRequest) {
     // Get active incidents count
     const incidentRows = await queryAll(`
       SELECT severity, COUNT(*) as count
-      FROM skynet.incidents
+      FROM netown.incidents
       WHERE status = 'active'
       GROUP BY severity
     `);
@@ -111,10 +113,28 @@ async function getHandler(request: NextRequest) {
        (statusCounts.offline * 0)) / totalNodes
     );
 
+    // Build node list for frontend
+    const nodeList = nodeStatusRows.map((n: any) => ({
+      id: n.id,
+      name: n.name,
+      host: n.host,
+      role: n.role,
+      isActive: n.is_active,
+      createdAt: n.created_at,
+      status: n.status,
+      syncPercent: n.sync_percent ?? 0,
+      peerCount: n.peer_count ?? 0,
+      cpuPercent: n.cpu_percent ?? 0,
+      memoryPercent: n.memory_percent ?? 0,
+      diskPercent: n.disk_percent ?? 0,
+      lastSeen: n.collected_at || n.created_at,
+    }));
+
     return {
       healthScore,
       totalNodes,
-      nodes: statusCounts,
+      nodes: nodeList,
+      nodeCounts: statusCounts,
       incidents,
       avgBlockHeight: health?.avg_block_height || 0,
       maxBlockHeight: health?.max_block_height || 0,
