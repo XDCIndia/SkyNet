@@ -17,8 +17,8 @@ const firaCode = Fira_Code({
 });
 
 export const metadata: Metadata = {
-  title: "XDC Node Dashboard",
-  description: "Monitor your XDC Network node in real-time with premium analytics",
+  title: "XDC SkyNet | Network Ownership Dashboard",
+  description: "XDC SkyNet - Own Your Network. The definitive dashboard and API platform for XDC Network owners and operators.",
   icons: {
     icon: "/xdc-logo.png",
     apple: "/xdc-logo.png",

@@ -1,4 +1,4 @@
-# XDCNetOwn
+# XDC SkyNet
 
 > **Own Your Network.** The definitive dashboard and API platform for XDC Network owners and operators.
 
@@ -6,14 +6,14 @@
 [![XDC Network](https://img.shields.io/badge/XDC-Network-blue)](https://xdc.network)
 
 <p align="center">
-  <img src="docs/images/dashboard-preview.png" alt="XDCNetOwn Dashboard" width="800"/>
+  <img src="docs/images/dashboard-preview.png" alt="XDC SkyNet Dashboard" width="800"/>
 </p>
 
-## What is XDCNetOwn?
+## What is XDC SkyNet?
 
-**XDCNetOwn** is a **dashboard + API platform** for XDC Network owners. It provides real-time monitoring, fleet management, and operational intelligence for your XDC nodes — think **Datadog meets Polygon Supernets Dashboard**, purpose-built for XDC.
+**XDC SkyNet** is a **dashboard + API platform** for XDC Network owners. It provides real-time monitoring, fleet management, and operational intelligence for your XDC nodes — think **Datadog meets Polygon Supernets Dashboard**, purpose-built for XDC.
 
-> ⚠️ **Note:** XDCNetOwn is **NOT** a node setup toolkit. For deploying and configuring XDC nodes, use [xdc-node-setup](https://github.com/AnilChinchawale/xdc-node-setup) instead.
+> ⚠️ **Note:** XDC SkyNet is **NOT** a node setup toolkit. For deploying and configuring XDC nodes, use [xdc-node-setup](https://github.com/AnilChinchawale/xdc-node-setup) instead.
 
 ### Key Capabilities
 
@@ -41,8 +41,8 @@
 ### Installation
 
 ```bash
-git clone https://github.com/AnilChinchawale/XDCNetOwn.git
-cd XDCNetOwn/dashboard
+git clone https://github.com/AnilChinchawale/XDCSkyNet.git
+cd XDCSkyNet/dashboard
 
 # Install dependencies
 npm install
@@ -52,7 +52,7 @@ cp .env.example .env.local
 # Edit .env.local with your DATABASE_URL and API_KEYS
 
 # Run database migrations
-psql $DATABASE_URL -f ../lib/db/schema.sql
+npm run db:init
 
 # Start development server
 npm run dev
@@ -78,13 +78,15 @@ See [docs/INTEGRATION.md](docs/INTEGRATION.md) for complete integration instruct
 ## Architecture
 
 ```
-XDCNetOwn (Dashboard + API Platform)
+XDC SkyNet (Dashboard + API Platform)
 ├── dashboard/              # Next.js 14 application
 │   ├── app/               # App router pages
 │   ├── components/        # React components (Tailwind + Fira Sans)
 │   ├── lib/
 │   │   ├── db/           # PostgreSQL client & schema
 │   │   ├── auth.ts       # API key authentication
+│   │   ├── validation.ts # Zod schemas for API validation
+│   │   ├── errors.ts     # Structured error handling
 │   │   └── hooks/        # React hooks
 │   ├── app/api/v1/       # REST API routes
 │   │   ├── nodes/register     # Node self-registration
@@ -219,11 +221,11 @@ See [docs/INTEGRATION.md](docs/INTEGRATION.md) for complete API documentation.
 | Project | Description | Link |
 |---------|-------------|------|
 | **xdc-node-setup** | Node deployment toolkit (CLI, scripts, Docker) | [GitHub](https://github.com/AnilChinchawale/xdc-node-setup) |
-| **XDCNetOwn** | Dashboard + API platform (this repo) | [GitHub](https://github.com/AnilChinchawale/XDCNetOwn) |
+| **XDC SkyNet** | Dashboard + API platform (this repo) | [GitHub](https://github.com/AnilChinchawale/XDCSkyNet) |
 
 ## Documentation
 
-- [Integration Guide](docs/INTEGRATION.md) — Connect xdc-node-setup to XDCNetOwn
+- [Integration Guide](docs/INTEGRATION.md) — Connect xdc-node-setup to XDC SkyNet
 - [Architecture Overview](docs/ARCHITECTURE.md) — Technical design and data flow
 - [API Reference](docs/INTEGRATION.md#api-endpoints-reference) — Complete endpoint documentation
 - [Roadmap](ROADMAP.md) — Development phases and milestones
@@ -247,6 +249,9 @@ npm run type-check
 
 # Run linting
 npm run lint
+
+# Run tests
+npm run test
 ```
 
 ## Environment Variables
@@ -257,6 +262,7 @@ npm run lint
 | `API_KEYS` | Yes | Comma-separated list of master API keys |
 | `NEXT_PUBLIC_API_URL` | No | Public API base URL |
 | `WEBSOCKET_URL` | No | WebSocket server URL |
+| `REDIS_URL` | No | Redis URL for distributed rate limiting |
 
 ## Contributing
 
@@ -270,4 +276,4 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 **Built for network owners. By network builders.**
 
-*XDCNetOwn — Own Your Network.*
+*XDC SkyNet — Own Your Network.*
