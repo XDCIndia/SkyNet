@@ -1,9 +1,9 @@
 /**
  * XDC SkyNet - Advanced Rate Limiting
- * Supports Redis-based distributed rate limiting with LRU fallback
+ * Uses LRU cache for Edge-compatible rate limiting
+ * Note: Redis support removed for Edge runtime compatibility
  */
 
-import { getRedis, isRedisConnected } from './redis';
 import { LRUCache } from 'lru-cache';
 
 // =============================================================================
@@ -80,64 +80,6 @@ const lruCache = new LRUCache<string, LimiterEntry>({
 });
 
 // =============================================================================
-// Redis Rate Limiting (Sliding Window)
-// =============================================================================
-
-async function checkRedisRateLimit(
-  key: string,
-  config: RateLimitConfig
-): Promise<RateLimitResult> {
-  const redis = getRedis();
-  if (!redis) {
-    throw new Error('Redis not available');
-  }
-
-  const now = Date.now();
-  const windowStart = now - config.windowMs;
-  const windowKey = `ratelimit:${key}`;
-
-  const pipeline = redis.pipeline();
-  
-  // Remove entries outside the window
-  pipeline.zremrangebyscore(windowKey, 0, windowStart);
-  
-  // Count current entries
-  pipeline.zcard(windowKey);
-  
-  // Add current request
-  const entryId = `${now}-${Math.random().toString(36).substring(2, 11)}`;
-  pipeline.zadd(windowKey, now, entryId);
-  
-  // Set expiry on the key
-  pipeline.pexpire(windowKey, config.windowMs);
-  
-  // Get the oldest entry for reset time calculation
-  pipeline.zrange(windowKey, 0, 0, 'WITHSCORES');
-
-  const results = await pipeline.exec();
-  
-  if (!results) {
-    return { limited: false, remaining: config.maxRequests, resetAt: now + config.windowMs, totalLimit: config.maxRequests };
-  }
-
-  const currentCount = (results[1]?.[1] as number) || 0;
-  const oldestEntry = results[4]?.[1] as string[];
-  const oldestTimestamp = oldestEntry?.[1] ? parseInt(oldestEntry[1]) : now;
-  
-  const resetAt = oldestTimestamp + config.windowMs;
-  const remaining = Math.max(0, config.maxRequests - currentCount - 1);
-  const limited = currentCount >= config.maxRequests;
-
-  return {
-    limited,
-    remaining,
-    resetAt,
-    totalLimit: config.maxRequests,
-    retryAfter: limited ? Math.ceil((resetAt - now) / 1000) : undefined,
-  };
-}
-
-// =============================================================================
 // LRU Rate Limiting (Sliding Window)
 // =============================================================================
 
@@ -180,16 +122,7 @@ export async function checkRateLimit(
   const config = RATE_LIMIT_TIERS[tier];
   const key = `${tier}:${identifier}`;
   
-  // Try Redis first
-  if (isRedisConnected()) {
-    try {
-      return await checkRedisRateLimit(key, config);
-    } catch (error) {
-      console.warn('[RateLimit] Redis failed, falling back to LRU:', error);
-    }
-  }
-  
-  // Fallback to LRU
+  // Use LRU cache (Edge-compatible)
   return checkLruRateLimit(key, config);
 }
 

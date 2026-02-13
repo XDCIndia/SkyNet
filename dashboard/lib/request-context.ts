@@ -1,13 +1,11 @@
 /**
  * XDC SkyNet - Request ID Tracing
  * Provides request correlation and context propagation
+ * Edge Runtime Compatible
  */
 
-import { randomUUID } from 'crypto';
-import { AsyncLocalStorage } from 'async_hooks';
-
 // =============================================================================
-// AsyncLocalStorage for Request Context
+// Request Context Type
 // =============================================================================
 
 interface RequestContext {
@@ -19,14 +17,24 @@ interface RequestContext {
   ip?: string;
 }
 
-const asyncLocalStorage = new AsyncLocalStorage<RequestContext>();
+// Simple context store (per-request, not async)
+let currentContext: RequestContext | undefined;
 
 // =============================================================================
-// Request ID Generation
+// Request ID Generation (Edge-compatible)
 // =============================================================================
 
 export function generateRequestId(): string {
-  return randomUUID();
+  // Use Web Crypto API (available in Edge runtime)
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for environments without crypto.randomUUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
 
 export function getRequestIdFromHeader(req: Request): string | undefined {
@@ -37,22 +45,28 @@ export function getRequestIdFromHeader(req: Request): string | undefined {
 }
 
 // =============================================================================
-// Context Management
+// Context Management (Simplified for Edge)
 // =============================================================================
 
 export function getRequestContext(): RequestContext | undefined {
-  return asyncLocalStorage.getStore();
+  return currentContext;
 }
 
 export function getCurrentRequestId(): string | undefined {
-  return asyncLocalStorage.getStore()?.requestId;
+  return currentContext?.requestId;
 }
 
-export function runWithContext<T>(
+export async function runWithContext<T>(
   context: RequestContext,
   fn: () => T | Promise<T>
 ): Promise<T> {
-  return asyncLocalStorage.run(context, async () => fn());
+  const previousContext = currentContext;
+  currentContext = context;
+  try {
+    return await fn();
+  } finally {
+    currentContext = previousContext;
+  }
 }
 
 // =============================================================================
@@ -60,13 +74,12 @@ export function runWithContext<T>(
 // =============================================================================
 
 export function getRequestDuration(): number {
-  const context = asyncLocalStorage.getStore();
-  if (!context) return 0;
-  return Date.now() - context.startTime;
+  if (!currentContext) return 0;
+  return Date.now() - currentContext.startTime;
 }
 
 // =============================================================================
-// Request ID Middleware Factory
+// Request ID Config
 // =============================================================================
 
 export interface RequestIdConfig {
