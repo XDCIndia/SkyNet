@@ -13,8 +13,8 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-[var(--bg-body)]">
       <Sidebar />
       
-      {/* Main content — offset by sidebar width on desktop */}
-      <main className="lg:ml-[220px] min-h-screen pb-20 lg:pb-6">
+      {/* Main content — offset by sidebar width on desktop, header height on mobile */}
+      <main className="lg:ml-[220px] min-h-screen pb-6 pt-16 lg:pt-0">
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-4">
           {children}
         </div>

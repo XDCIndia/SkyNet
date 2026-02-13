@@ -15,6 +15,11 @@ import {
   Sun,
   Moon,
   Monitor,
+  Bell,
+  ServerCog,
+  TrendingUp,
+  Menu,
+  X,
 } from 'lucide-react';
 
 interface NavItem {
@@ -24,15 +29,20 @@ interface NavItem {
   path: string;
   badge?: string;
   section?: string;
+  isPublic?: boolean;
 }
 
 const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, path: '/', section: 'Overview' },
   { id: 'executive', label: 'Executive', icon: <Building2 className="w-5 h-5" />, path: '/executive', section: 'Overview' },
   { id: 'fleet', label: 'Fleet', icon: <Wrench className="w-5 h-5" />, path: '/fleet', section: 'Operations' },
+  { id: 'alerts', label: 'Alerts', icon: <Bell className="w-5 h-5" />, path: '/alerts', section: 'Operations' },
+  { id: 'analytics', label: 'Analytics', icon: <TrendingUp className="w-5 h-5" />, path: '/analytics', section: 'Operations' },
   { id: 'network', label: 'Network Stats', icon: <BarChart3 className="w-5 h-5" />, path: '/network', section: 'Network' },
   { id: 'peers', label: 'Peers', icon: <Globe className="w-5 h-5" />, path: '/peers', section: 'Network' },
   { id: 'masternodes', label: 'Masternodes', icon: <Pickaxe className="w-5 h-5" />, path: '/masternodes', section: 'Network' },
+  { id: 'explorer', label: 'Explorer', icon: <Globe className="w-5 h-5" />, path: '/explorer', section: 'Public', isPublic: true },
+  { id: 'register', label: 'Register Node', icon: <ServerCog className="w-5 h-5" />, path: '/register', section: 'Public', isPublic: true },
 ];
 
 interface NetworkStatus {
@@ -108,6 +118,7 @@ function ThemeToggle({ collapsed }: { collapsed: boolean }) {
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus | null>(null);
@@ -139,137 +150,208 @@ export default function Sidebar() {
     return () => clearInterval(interval);
   }, []);
 
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Close mobile menu on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileOpen(false);
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, []);
+
   const sections = Array.from(new Set(navItems.map(i => i.section)));
 
-  return (
+  const handleNavClick = (path: string) => {
+    router.push(path);
+    setMobileOpen(false);
+  };
+
+  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <>
-      {/* Desktop Sidebar */}
-      <aside
-        className={`hidden lg:flex flex-col fixed left-0 top-0 h-screen z-50 transition-all duration-300 ${
-          collapsed ? 'w-[68px]' : 'w-[220px]'
-        } bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)]`}
-      >
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-4 py-5 border-b border-[var(--border-subtle)]">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[var(--accent-blue)]/20 to-[var(--success)]/20 flex items-center justify-center border border-[var(--accent-blue)]/30 flex-shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="var(--accent-blue)" strokeWidth="2"/>
-              <path d="M8 8L16 16M16 8L8 16" stroke="var(--accent-blue)" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </div>
-          {!collapsed && (
-            <div className="overflow-hidden">
-              <h1 className="text-sm font-bold text-[var(--text-primary)] whitespace-nowrap">XDCNetOwn</h1>
-              <p className="text-[10px] text-[var(--text-tertiary)] whitespace-nowrap">Network Dashboard</p>
-            </div>
-          )}
+      {/* Logo */}
+      <div className="flex items-center gap-3 px-4 py-5 border-b border-[var(--border-subtle)]">
+        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[var(--accent-blue)]/20 to-[var(--success)]/20 flex items-center justify-center border border-[var(--accent-blue)]/30 flex-shrink-0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="var(--accent-blue)" strokeWidth="2"/>
+            <path d="M8 8L16 16M16 8L8 16" stroke="var(--accent-blue)" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
         </div>
-
-        {/* Network Status */}
-        {!collapsed && networkStatus && (
-          <div className="px-4 py-3 border-b border-[var(--border-subtle)]">
-            <div className="flex items-center gap-2 text-xs">
-              <span className={`w-2 h-2 rounded-full ${networkStatus.online ? 'bg-[var(--success)]' : 'bg-[var(--critical)]'}`} />
-              <span className="text-[var(--text-secondary)]">XDC Mainnet</span>
-            </div>
-            <div className="text-xs text-[var(--text-tertiary)] mt-1">
-              Block #{formatBlock(networkStatus.bestBlock)}
-              <span className="mx-1">•</span>
-              <span className={networkStatus.online ? 'text-[var(--success)]' : 'text-[var(--critical)]'}>
-                {networkStatus.online ? 'Online' : 'Offline'}
-              </span>
-            </div>
+        {(!collapsed || isMobile) && (
+          <div className="overflow-hidden">
+            <h1 className="text-sm font-bold text-[var(--text-primary)] whitespace-nowrap">XDC SkyNet</h1>
+            <p className="text-[10px] text-[var(--text-tertiary)] whitespace-nowrap">Network Dashboard</p>
           </div>
         )}
-        {collapsed && networkStatus && (
-          <div className="flex justify-center py-2 border-b border-[var(--border-subtle)]">
-            <span className={`w-2.5 h-2.5 rounded-full ${networkStatus.online ? 'bg-[var(--success)]' : 'bg-[var(--critical)]'}`} title={`Block #${networkStatus.bestBlock.toLocaleString()}`} />
-          </div>
+        {isMobile && (
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="ml-auto p-2 hover:bg-[var(--bg-hover)] rounded-lg"
+          >
+            <X className="w-5 h-5 text-[var(--text-secondary)]" />
+          </button>
         )}
+      </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-3 px-2">
-          {sections.map(section => (
-            <div key={section} className="mb-3">
-              {!collapsed && (
-                <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                  {section}
-                </p>
-              )}
-              {navItems
-                .filter(i => i.section === section)
-                .map(item => {
-                  const isActive = pathname === item.path || 
-                    (item.path !== '/' && pathname.startsWith(item.path));
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => router.push(item.path)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 transition-all text-left ${
-                        isActive
-                          ? 'bg-[var(--bg-active)] text-[var(--accent-blue)] border border-[var(--accent-blue)]/20'
-                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] border border-transparent'
-                      }`}
-                      title={collapsed ? item.label : undefined}
-                    >
-                      <span className="flex-shrink-0">{item.icon}</span>
-                      {!collapsed && (
-                        <span className="text-sm font-medium truncate">{item.label}</span>
-                      )}
-                      {!collapsed && item.badge && (
-                        <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--critical)]/20 text-[var(--critical)]">
-                          {item.badge}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-            </div>
-          ))}
-        </nav>
-
-        {/* Theme Toggle */}
-        <div className="px-2 py-2 border-t border-[var(--border-subtle)]">
-          <ThemeToggle collapsed={collapsed} />
+      {/* Network Status */}
+      {(!collapsed || isMobile) && networkStatus && (
+        <div className="px-4 py-3 border-b border-[var(--border-subtle)]">
+          <div className="flex items-center gap-2 text-xs">
+            <span className={`w-2 h-2 rounded-full ${networkStatus.online ? 'bg-[var(--success)]' : 'bg-[var(--critical)]'}`} />
+            <span className="text-[var(--text-secondary)]">XDC Mainnet</span>
+          </div>
+          <div className="text-xs text-[var(--text-tertiary)] mt-1">
+            Block #{formatBlock(networkStatus.bestBlock)}
+            <span className="mx-1">•</span>
+            <span className={networkStatus.online ? 'text-[var(--success)]' : 'text-[var(--critical)]'}>
+              {networkStatus.online ? 'Online' : 'Offline'}
+            </span>
+          </div>
         </div>
+      )}
+      {!isMobile && collapsed && networkStatus && (
+        <div className="flex justify-center py-2 border-b border-[var(--border-subtle)]">
+          <span className={`w-2.5 h-2.5 rounded-full ${networkStatus.online ? 'bg-[var(--success)]' : 'bg-[var(--critical)]'}`} title={`Block #${networkStatus.bestBlock.toLocaleString()}`} />
+        </div>
+      )}
 
-        {/* Last Updated */}
-        {!collapsed && lastFetched > 0 && (
-          <div className="px-4 py-2 border-t border-[var(--border-subtle)]">
-            <p className="text-[10px] text-[var(--text-tertiary)]">Last updated: {formatTimeAgoShort(lastFetched)}</p>
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2">
+        {sections.map(section => (
+          <div key={section} className="mb-3">
+            {(!collapsed || isMobile) && (
+              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                {section}
+              </p>
+            )}
+            {navItems
+              .filter(i => i.section === section)
+              .map(item => {
+                const isActive = pathname === item.path || 
+                  (item.path !== '/' && pathname.startsWith(item.path));
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavClick(item.path)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 transition-all text-left ${
+                      isActive
+                        ? 'bg-[var(--bg-active)] text-[var(--accent-blue)] border border-[var(--accent-blue)]/20'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] border border-transparent'
+                    }`}
+                    title={collapsed && !isMobile ? item.label : undefined}
+                  >
+                    <span className="flex-shrink-0">{item.icon}</span>
+                    {(!collapsed || isMobile) && (
+                      <span className="text-sm font-medium truncate">{item.label}</span>
+                    )}
+                    {(!collapsed || isMobile) && item.badge && (
+                      <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--critical)]/20 text-[var(--critical)]">
+                        {item.badge}
+                      </span>
+                    )}
+                    {(!collapsed || isMobile) && item.isPublic && (
+                      <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-[var(--bg-hover)] text-[var(--text-muted)]">
+                        Public
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
           </div>
-        )}
+        ))}
+      </nav>
 
-        {/* Collapse Toggle */}
+      {/* Theme Toggle */}
+      <div className="px-2 py-2 border-t border-[var(--border-subtle)]">
+        <ThemeToggle collapsed={collapsed && !isMobile} />
+      </div>
+
+      {/* Last Updated */}
+      {(!collapsed || isMobile) && lastFetched > 0 && (
+        <div className="px-4 py-2 border-t border-[var(--border-subtle)]">
+          <p className="text-[10px] text-[var(--text-tertiary)]">Last updated: {formatTimeAgoShort(lastFetched)}</p>
+        </div>
+      )}
+
+      {/* Collapse Toggle (Desktop Only) */}
+      {!isMobile && (
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex items-center justify-center py-3 border-t border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
+      )}
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile Header Bar */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[var(--bg-sidebar)]/95 backdrop-blur-xl border-b border-[var(--border-subtle)]">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="p-2 -ml-2 hover:bg-[var(--bg-hover)] rounded-lg"
+              aria-label="Open menu"
+            >
+              <Menu className="w-6 h-6 text-[var(--text-secondary)]" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[var(--accent-blue)]/20 to-[var(--success)]/20 flex items-center justify-center border border-[var(--accent-blue)]/30">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="var(--accent-blue)" strokeWidth="2"/>
+                  <path d="M8 8L16 16M16 8L8 16" stroke="var(--accent-blue)" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <span className="text-sm font-bold text-[var(--text-primary)]">SkyNet</span>
+            </div>
+          </div>
+          
+          {networkStatus && (
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${networkStatus.online ? 'bg-[var(--success)]' : 'bg-[var(--critical)]'}`} />
+              <span className="text-xs text-[var(--text-tertiary)]">#{formatBlock(networkStatus.bestBlock)}</span>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Mobile Sidebar Overlay */}
+      {mobileOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile Sidebar */}
+      <aside
+        className={`lg:hidden fixed left-0 top-0 h-screen z-50 w-[280px] bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] transform transition-transform duration-300 ease-out ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex flex-col h-full">
+          <SidebarContent isMobile />
+        </div>
       </aside>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--bg-sidebar)]/95 backdrop-blur-xl border-t border-[var(--border-subtle)]">
-        <div className="flex items-center justify-around px-2 py-2">
-          {navItems.filter(i => !['nodes', 'alerts'].includes(i.id)).map(item => {
-            const isActive = pathname === item.path ||
-              (item.path !== '/' && pathname.startsWith(item.path));
-            return (
-              <button
-                key={item.id}
-                onClick={() => router.push(item.path)}
-                className={`flex flex-col items-center gap-0.5 px-3 py-2.5 min-w-[44px] min-h-[44px] rounded-lg transition-colors ${
-                  isActive ? 'text-[var(--accent-blue)]' : 'text-[var(--text-tertiary)]'
-                }`}
-              >
-                {item.icon}
-                <span className="text-[10px] font-medium">{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+      {/* Desktop Sidebar */}
+      <aside
+        className={`hidden lg:flex flex-col fixed left-0 top-0 h-screen z-50 transition-all duration-300 ${
+          collapsed ? 'w-[68px]' : 'w-[220px]'
+        } bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)]`}
+      >
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Bottom Spacer (for fixed header) */}
+      <div className="lg:hidden h-14" />
     </>
   );
 }
