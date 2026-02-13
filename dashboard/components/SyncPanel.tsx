@@ -66,12 +66,12 @@ function ETACountdown({ eta }: { eta: number }) {
   return (
     <div className="flex items-center gap-3 p-4 rounded-xl bg-[rgba(30,144,255,0.05)] border border-[rgba(30,144,255,0.15)]">
       <div className="relative w-12 h-12">
-        <div className="w-12 h-12 rounded-full border-4 border-[#1E90FF] border-t-transparent animate-spin" />
-        <Clock className="w-5 h-5 text-[#1E90FF] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+        <div className="w-12 h-12 rounded-full border-4 border-[var(--accent-blue)] border-t-transparent animate-spin" />
+        <Clock className="w-5 h-5 text-[var(--accent-blue)] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
       </div>
       <div>
         <div className="section-header mb-1">Estimated Time to Sync</div>
-        <div className="text-2xl font-bold font-mono-nums text-[#1E90FF]">
+        <div className="text-2xl font-bold font-mono-nums text-[var(--accent-blue)]">
           {formatETA()}
         </div>
       </div>
@@ -114,7 +114,7 @@ export default function SyncPanel({ data, blockchain }: SyncPanelProps) {
       {/* Header */}
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1E90FF]/20 to-[#1E90FF]/10 flex items-center justify-center">
-          <RefreshCw className="w-5 h-5 text-[#1E90FF]" />
+          <RefreshCw className="w-5 h-5 text-[var(--accent-blue)]" />
         </div>
         <div>
           <h2 className="text-lg font-semibold text-[#F9FAFB]">Sync & Performance</h2>
@@ -128,11 +128,11 @@ export default function SyncPanel({ data, blockchain }: SyncPanelProps) {
       ) : (blockchain?.syncPercent ?? 0) >= 99.9 ? (
         <div className="flex items-center gap-3 p-4 rounded-xl bg-[rgba(16,185,129,0.05)] border border-[rgba(16,185,129,0.15)]">
           <div className="w-12 h-12 rounded-full bg-[rgba(16,185,129,0.1)] flex items-center justify-center">
-            <CheckCircle2 className="w-6 h-6 text-[#10B981]" />
+            <CheckCircle2 className="w-6 h-6 text-[var(--success)]" />
           </div>
           <div>
             <div className="section-header mb-1">Status</div>
-            <div className="text-2xl font-bold text-[#10B981]">Fully Synced</div>
+            <div className="text-2xl font-bold text-[var(--success)]">Fully Synced</div>
           </div>
         </div>
       ) : null}
@@ -165,11 +165,11 @@ export default function SyncPanel({ data, blockchain }: SyncPanelProps) {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1">
-              <span className="text-[#10B981]">+</span>
+              <span className="text-[var(--success)]">+</span>
               <span className="text-lg font-semibold font-mono-nums">{data.reorgsAdd || 0}</span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-[#EF4444]">-</span>
+              <span className="text-[var(--critical)]">-</span>
               <span className="text-lg font-semibold font-mono-nums">{data.reorgsDrop || 0}</span>
             </div>
           </div>

@@ -83,7 +83,7 @@ function HealthScoreGauge({ score, rating }: { score: number; rating: string }) 
           <span className="text-5xl font-bold font-mono-nums" style={{ color: getColor() }}>
             {score}
           </span>
-          <span className="text-sm text-[#64748B] mt-1 capitalize">{rating}</span>
+          <span className="text-sm text-[var(--text-tertiary)] mt-1 capitalize">{rating}</span>
         </div>
       </div>
     </div>
@@ -107,11 +107,11 @@ function StatCard({
   return (
     <div className="card-xdc">
       <div className="flex items-start justify-between mb-3">
-        <div className="w-10 h-10 rounded-xl bg-[rgba(30,144,255,0.1)] flex items-center justify-center text-[#1E90FF]">
+        <div className="w-10 h-10 rounded-xl bg-[var(--accent-blue-glow)] flex items-center justify-center text-[var(--accent-blue)]">
           {icon}
         </div>
         {change !== undefined && (
-          <div className={`flex items-center gap-1 text-xs ${change >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+          <div className={`flex items-center gap-1 text-xs ${change >= 0 ? 'text-[var(--success)]' : 'text-[var(--critical)]'}`}>
             {change >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
             <span>{Math.abs(change)}%</span>
           </div>
@@ -120,7 +120,7 @@ function StatCard({
       <div className="section-header mb-1">{label}</div>
       <div className="flex items-baseline gap-1">
         <span className="stat-value font-mono-nums">{value}</span>
-        {suffix && <span className="text-sm text-[#64748B]">{suffix}</span>}
+        {suffix && <span className="text-sm text-[var(--text-tertiary)]">{suffix}</span>}
       </div>
     </div>
   );
@@ -204,12 +204,12 @@ export default function ExecutiveDashboard() {
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[#F1F5F9]">Executive Dashboard</h1>
-            <p className="text-[#64748B] mt-1">Network-wide metrics and validator overview</p>
+            <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Executive Dashboard</h1>
+            <p className="text-[var(--text-tertiary)] mt-1">Network-wide metrics and validator overview</p>
           </div>
           <button
             onClick={() => setShowSocialCard(true)}
-            className="py-2 px-4 bg-[#1E90FF]/10 text-[#1E90FF] rounded-lg hover:bg-[#1E90FF]/20 transition-colors text-sm font-medium flex items-center gap-2"
+            className="py-2 px-4 bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] rounded-lg hover:bg-[var(--accent-blue)]/20 transition-colors text-sm font-medium flex items-center gap-2"
           >
             <Share2 className="w-4 h-4" />
             Generate Social Card
@@ -256,12 +256,12 @@ export default function ExecutiveDashboard() {
           {/* Network Health Score */}
           <div className="card-xdc">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-[rgba(30,144,255,0.1)] flex items-center justify-center text-[#1E90FF]">
+              <div className="w-10 h-10 rounded-xl bg-[var(--accent-blue-glow)] flex items-center justify-center text-[var(--accent-blue)]">
                 <Activity className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-[#F1F5F9]">Network Health</h2>
-                <p className="text-xs text-[#64748B]">Composite score from all metrics</p>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Network Health</h2>
+                <p className="text-xs text-[var(--text-tertiary)]">Composite score from all metrics</p>
               </div>
             </div>
 
@@ -272,34 +272,34 @@ export default function ExecutiveDashboard() {
 
             <div className="mt-6 space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#64748B]">Node Uptime</span>
+                <span className="text-[var(--text-tertiary)]">Node Uptime</span>
                 <span className="font-medium">{fleetStats?.healthyNodes || 0}/{fleetStats?.totalNodes || 0}</span>
               </div>
-              <div className="w-full bg-white/5 rounded-full h-1.5">
+              <div className="w-full bg-[var(--bg-hover)] rounded-full h-1.5">
                 <div
-                  className="bg-[#1E90FF] h-1.5 rounded-full"
+                  className="bg-[var(--accent-blue)] h-1.5 rounded-full"
                   style={{ width: `${fleetStats?.totalNodes ? (fleetStats.healthyNodes / fleetStats.totalNodes) * 100 : 0}%` }}
                 />
               </div>
 
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#64748B]">Active Validators</span>
+                <span className="text-[var(--text-tertiary)]">Active Validators</span>
                 <span className="font-medium">{masternodeStats?.totalActive || 0}</span>
               </div>
-              <div className="w-full bg-white/5 rounded-full h-1.5">
+              <div className="w-full bg-[var(--bg-hover)] rounded-full h-1.5">
                 <div
-                  className="bg-[#10B981] h-1.5 rounded-full"
+                  className="bg-[var(--success)] h-1.5 rounded-full"
                   style={{ width: `${masternodeStats?.totalActive ? Math.min(100, (masternodeStats.totalActive / 108) * 100) : 0}%` }}
                 />
               </div>
 
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#64748B]">Epoch Progress</span>
+                <span className="text-[var(--text-tertiary)]">Epoch Progress</span>
                 <span className="font-medium">{epochData?.epochProgress || 0}%</span>
               </div>
-              <div className="w-full bg-white/5 rounded-full h-1.5">
+              <div className="w-full bg-[var(--bg-hover)] rounded-full h-1.5">
                 <div
-                  className="bg-[#F59E0B] h-1.5 rounded-full"
+                  className="bg-[var(--warning)] h-1.5 rounded-full"
                   style={{ width: `${epochData?.epochProgress || 0}%` }}
                 />
               </div>
@@ -313,8 +313,8 @@ export default function ExecutiveDashboard() {
                 <Users className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-[#F1F5F9]">Validator Leaderboard</h2>
-                <p className="text-xs text-[#64748B]">Top validators by stake</p>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Validator Leaderboard</h2>
+                <p className="text-xs text-[var(--text-tertiary)]">Top validators by stake</p>
               </div>
             </div>
 
@@ -322,36 +322,36 @@ export default function ExecutiveDashboard() {
               <table className="w-full min-w-[500px]">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B]">Rank</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B]">Validator</th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-[#64748B]">Stake</th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-[#64748B]">Share</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-[var(--text-tertiary)]">Rank</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-[var(--text-tertiary)]">Validator</th>
+                    <th className="text-right py-3 px-4 text-xs font-medium text-[var(--text-tertiary)]">Stake</th>
+                    <th className="text-right py-3 px-4 text-xs font-medium text-[var(--text-tertiary)]">Share</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {loading ? (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-[#64748B]">Loading...</td>
+                      <td colSpan={4} className="py-8 text-center text-[var(--text-tertiary)]">Loading...</td>
                     </tr>
                   ) : masternodeStats?.topValidators.slice(0, 10).map((validator, index) => (
                     <tr key={validator.address} className="hover:bg-white/[0.02]">
                       <td className="py-3 px-4">
                         <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                          index < 3 ? 'bg-[#1E90FF]/20 text-[#1E90FF]' : 'bg-white/5 text-[#64748B]'
+                          index < 3 ? 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]' : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)]'
                         }`}>
                           {index + 1}
                         </span>
                       </td>
                       <td className="py-3 px-4">
                         <div>
-                          <div className="font-medium text-[#F1F5F9] font-mono">{truncateAddress(validator.address)}</div>
+                          <div className="font-medium text-[var(--text-primary)] font-mono">{truncateAddress(validator.address)}</div>
                         </div>
                       </td>
                       <td className="py-3 px-4 text-right font-mono-nums">
                         {parseInt(validator.stake.replace(/,/g, '')).toLocaleString()}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <span className={parseFloat(validator.percentage) > 5 ? 'text-[#1E90FF]' : 'text-[#64748B]'}>
+                        <span className={parseFloat(validator.percentage) > 5 ? 'text-[var(--accent-blue)]' : 'text-[var(--text-tertiary)]'}>
                           {validator.percentage}%
                         </span>
                       </td>
@@ -372,7 +372,7 @@ export default function ExecutiveDashboard() {
               <h3 className="text-lg font-semibold">Social Card Preview</h3>
               <button
                 onClick={() => setShowSocialCard(false)}
-                className="text-[#64748B] hover:text-white transition-colors"
+                className="text-[var(--text-tertiary)] hover:text-white transition-colors"
               >
                 ×
               </button>
@@ -391,37 +391,37 @@ export default function ExecutiveDashboard() {
 
               <div className="relative z-10 h-full flex flex-col">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1E90FF]/20 to-[#10B981]/20 flex items-center justify-center border border-[#1E90FF]/30">
-                    <Pickaxe className="w-5 h-5 text-[#1E90FF]" />
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1E90FF]/20 to-[#10B981]/20 flex items-center justify-center border border-[var(--accent-blue)]/30">
+                    <Pickaxe className="w-5 h-5 text-[var(--accent-blue)]" />
                   </div>
                   <div>
                     <div className="font-semibold">XDC NetOwn</div>
-                    <div className="text-xs text-[#64748B]">{new Date().toLocaleDateString()}</div>
+                    <div className="text-xs text-[var(--text-tertiary)]">{new Date().toLocaleDateString()}</div>
                   </div>
                 </div>
 
                 <div className="flex-1 flex items-center">
                   <div className="grid grid-cols-2 gap-4 w-full">
                     <div>
-                      <div className="text-2xl font-bold text-[#1E90FF] font-mono-nums">{fleetStats?.totalNodes || 0}</div>
-                      <div className="text-xs text-[#64748B]">Active Nodes</div>
+                      <div className="text-2xl font-bold text-[var(--accent-blue)] font-mono-nums">{fleetStats?.totalNodes || 0}</div>
+                      <div className="text-xs text-[var(--text-tertiary)]">Active Nodes</div>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-[#10B981] font-mono-nums">{masternodeStats?.totalActive || 0}</div>
-                      <div className="text-xs text-[#64748B]">Validators</div>
+                      <div className="text-2xl font-bold text-[var(--success)] font-mono-nums">{masternodeStats?.totalActive || 0}</div>
+                      <div className="text-xs text-[var(--text-tertiary)]">Validators</div>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-[#F1F5F9] font-mono-nums">{formatStaked(masternodeStats?.totalStaked || '0')}M</div>
-                      <div className="text-xs text-[#64748B]">Total Staked</div>
+                      <div className="text-2xl font-bold text-[var(--text-primary)] font-mono-nums">{formatStaked(masternodeStats?.totalStaked || '0')}M</div>
+                      <div className="text-xs text-[var(--text-tertiary)]">Total Staked</div>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-[#F1F5F9] font-mono-nums">{fleetStats?.healthScore || 0}%</div>
-                      <div className="text-xs text-[#64748B]">Network Health</div>
+                      <div className="text-2xl font-bold text-[var(--text-primary)] font-mono-nums">{fleetStats?.healthScore || 0}%</div>
+                      <div className="text-xs text-[var(--text-tertiary)]">Network Health</div>
                     </div>
                   </div>
                 </div>
 
-                <div className="text-xs text-[#64748B] mt-2">
+                <div className="text-xs text-[var(--text-tertiary)] mt-2">
                   xdc.network · #XDC #Blockchain
                 </div>
               </div>
@@ -430,14 +430,14 @@ export default function ExecutiveDashboard() {
             <div className="flex gap-3 mt-4">
               <button
                 onClick={() => setShowSocialCard(false)}
-                className="flex-1 py-2 px-4 bg-[#1E90FF]/10 text-[#1E90FF] rounded-lg hover:bg-[#1E90FF]/20 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                className="flex-1 py-2 px-4 bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] rounded-lg hover:bg-[var(--accent-blue)]/20 transition-colors text-sm font-medium flex items-center justify-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 Download PNG
               </button>
               <button
                 onClick={() => setShowSocialCard(false)}
-                className="flex-1 py-2 px-4 bg-[#1E90FF] text-white rounded-lg hover:bg-[#1E90FF]/90 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                className="flex-1 py-2 px-4 bg-[var(--accent-blue)] text-white rounded-lg hover:bg-[var(--accent-blue)]/90 transition-colors text-sm font-medium flex items-center justify-center gap-2"
               >
                 <Share2 className="w-4 h-4" />
                 Share

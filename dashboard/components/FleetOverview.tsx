@@ -251,9 +251,9 @@ export default function FleetOverview() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'healthy': return { bg: 'bg-[rgba(16,185,129,0.15)]', text: 'text-[#10B981]', border: 'border-[rgba(16,185,129,0.3)]', icon: CheckCircle2 };
-      case 'warning': return { bg: 'bg-[rgba(245,158,11,0.15)]', text: 'text-[#F59E0B]', border: 'border-[rgba(245,158,11,0.3)]', icon: AlertTriangle };
-      case 'critical': return { bg: 'bg-[rgba(239,68,68,0.15)]', text: 'text-[#EF4444]', border: 'border-[rgba(239,68,68,0.3)]', icon: AlertTriangle };
+      case 'healthy': return { bg: 'bg-[rgba(16,185,129,0.15)]', text: 'text-[var(--success)]', border: 'border-[rgba(16,185,129,0.3)]', icon: CheckCircle2 };
+      case 'warning': return { bg: 'bg-[rgba(245,158,11,0.15)]', text: 'text-[var(--warning)]', border: 'border-[rgba(245,158,11,0.3)]', icon: AlertTriangle };
+      case 'critical': return { bg: 'bg-[rgba(239,68,68,0.15)]', text: 'text-[var(--critical)]', border: 'border-[rgba(239,68,68,0.3)]', icon: AlertTriangle };
       case 'offline': return { bg: 'bg-[rgba(107,114,128,0.15)]', text: 'text-[#6B7280]', border: 'border-[rgba(107,114,128,0.3)]', icon: Square };
       default: return { bg: 'bg-[rgba(107,114,128,0.15)]', text: 'text-[#6B7280]', border: 'border-[rgba(107,114,128,0.3)]', icon: Activity };
     }
@@ -281,7 +281,7 @@ export default function FleetOverview() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1E90FF]/20 to-[#1E90FF]/10 flex items-center justify-center">
-            <Server className="w-5 h-5 text-[#1E90FF]" />
+            <Server className="w-5 h-5 text-[var(--accent-blue)]" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-[#F9FAFB]">Fleet Overview</h2>
@@ -295,16 +295,16 @@ export default function FleetOverview() {
         {/* Stats Summary */}
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(16,185,129,0.15)] border border-[rgba(16,185,129,0.3)]">
-            <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
-            <span className="text-sm font-medium text-[#10B981]">{stats.healthy} Healthy</span>
+            <CheckCircle2 className="w-4 h-4 text-[var(--success)]" />
+            <span className="text-sm font-medium text-[var(--success)]">{stats.healthy} Healthy</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(245,158,11,0.15)] border border-[rgba(245,158,11,0.3)]">
-            <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
-            <span className="text-sm font-medium text-[#F59E0B]">{stats.warning} Warning</span>
+            <AlertTriangle className="w-4 h-4 text-[var(--warning)]" />
+            <span className="text-sm font-medium text-[var(--warning)]">{stats.warning} Warning</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(239,68,68,0.15)] border border-[rgba(239,68,68,0.3)]">
-            <AlertTriangle className="w-4 h-4 text-[#EF4444]" />
-            <span className="text-sm font-medium text-[#EF4444]">{stats.critical} Critical</span>
+            <AlertTriangle className="w-4 h-4 text-[var(--critical)]" />
+            <span className="text-sm font-medium text-[var(--critical)]">{stats.critical} Critical</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(107,114,128,0.15)] border border-[rgba(107,114,128,0.3)]">
             <Square className="w-4 h-4 text-[#6B7280]" />
@@ -314,7 +314,7 @@ export default function FleetOverview() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4 mb-6 p-4 rounded-xl bg-[#111827] border border-[rgba(255,255,255,0.06)]">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-4 mb-6 p-4 rounded-xl bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)]">
         <div className="flex items-center gap-2 text-[#6B7280]">
           <Filter className="w-4 h-4" />
           <span className="text-sm">Filters:</span>
@@ -324,7 +324,7 @@ export default function FleetOverview() {
           <select
             value={filterRegion}
             onChange={(e) => setFilterRegion(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-[#0A0E1A] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] focus:outline-none focus:border-[#1E90FF]"
+            className="px-3 py-1.5 rounded-lg bg-[var(--bg-body)] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] focus:outline-none focus:border-[var(--accent-blue)]"
           >
             <option value="all">All Regions</option>
             {regions.filter(r => r !== 'all').map(r => (
@@ -335,7 +335,7 @@ export default function FleetOverview() {
           <select
             value={filterRole}
             onChange={(e) => setFilterRole(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-[#0A0E1A] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] focus:outline-none focus:border-[#1E90FF]"
+            className="px-3 py-1.5 rounded-lg bg-[var(--bg-body)] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] focus:outline-none focus:border-[var(--accent-blue)]"
           >
             <option value="all">All Roles</option>
             {roles.filter(r => r !== 'all').map(r => (
@@ -346,7 +346,7 @@ export default function FleetOverview() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-[#0A0E1A] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] focus:outline-none focus:border-[#1E90FF]"
+            className="px-3 py-1.5 rounded-lg bg-[var(--bg-body)] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] focus:outline-none focus:border-[var(--accent-blue)]"
           >
             <option value="all">All Statuses</option>
             {statuses.filter(s => s !== 'all').map(s => (
@@ -359,20 +359,20 @@ export default function FleetOverview() {
             placeholder="Filter by tag..."
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-[#0A0E1A] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] placeholder-[#6B7280] focus:outline-none focus:border-[#1E90FF]"
+            className="px-3 py-1.5 rounded-lg bg-[var(--bg-body)] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] placeholder-[#6B7280] focus:outline-none focus:border-[var(--accent-blue)]"
           />
         </div>
         
         <div className="flex items-center gap-2 ml-auto">
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-[rgba(30,144,255,0.25)] text-[#1E90FF]' : 'text-[#6B7280] hover:text-[#F9FAFB]'}`}
+            className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-[rgba(30,144,255,0.25)] text-[var(--accent-blue)]' : 'text-[#6B7280] hover:text-[#F9FAFB]'}`}
           >
             <Grid3X3 className="w-4 h-4" />
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-[rgba(30,144,255,0.25)] text-[#1E90FF]' : 'text-[#6B7280] hover:text-[#F9FAFB]'}`}
+            className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-[rgba(30,144,255,0.25)] text-[var(--accent-blue)]' : 'text-[#6B7280] hover:text-[#F9FAFB]'}`}
           >
             <List className="w-4 h-4" />
           </button>
@@ -386,14 +386,14 @@ export default function FleetOverview() {
           <div className="flex items-center gap-2 ml-auto">
             <button 
               onClick={() => handleBulkAction('restart')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(245,158,11,0.15)] text-[#F59E0B] hover:bg-[rgba(245,158,11,0.25)] transition-colors text-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(245,158,11,0.15)] text-[var(--warning)] hover:bg-[rgba(245,158,11,0.25)] transition-colors text-sm"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               Restart
             </button>
             <button 
               onClick={() => handleBulkAction('update')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(30,144,255,0.15)] text-[#1E90FF] hover:bg-[rgba(30,144,255,0.25)] transition-colors text-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(30,144,255,0.15)] text-[var(--accent-blue)] hover:bg-[rgba(30,144,255,0.25)] transition-colors text-sm"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Update
@@ -421,15 +421,15 @@ export default function FleetOverview() {
                 key={node.id}
                 className={`relative p-4 rounded-xl border transition-all cursor-pointer ${
                   isSelected 
-                    ? 'bg-[rgba(30,144,255,0.15)] border-[#1E90FF]' 
-                    : 'bg-[#111827] border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)]'
+                    ? 'bg-[rgba(30,144,255,0.15)] border-[var(--accent-blue)]' 
+                    : 'bg-[var(--bg-card)] border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)]'
                 }`}
                 onClick={() => handleSelectNode(node.id)}
               >
                 {/* Selection checkbox */}
                 <div className="absolute top-3 left-3">
                   <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                    isSelected ? 'bg-[#1E90FF] border-[#1E90FF]' : 'border-[#6B7280]'
+                    isSelected ? 'bg-[var(--accent-blue)] border-[var(--accent-blue)]' : 'border-[#6B7280]'
                   }`}>
                     {isSelected && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
                   </div>
@@ -536,13 +536,13 @@ export default function FleetOverview() {
       {viewMode === 'list' && (
         <div className="overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.06)]">
           <table className="w-full min-w-[1000px]">
-            <thead className="bg-[#111827]">
+            <thead className="bg-[var(--bg-card)]">
               <tr className="border-b border-[rgba(255,255,255,0.06)]">
                 <th className="text-left py-3 px-4">
                   <button onClick={handleSelectAll} className="flex items-center gap-2">
                     <div className={`w-4 h-4 rounded border flex items-center justify-center ${
                       selectedNodes.size === filteredNodes.length && filteredNodes.length > 0
-                        ? 'bg-[#1E90FF] border-[#1E90FF]' 
+                        ? 'bg-[var(--accent-blue)] border-[var(--accent-blue)]' 
                         : 'border-[#6B7280]'
                     }`}>
                       {selectedNodes.size === filteredNodes.length && filteredNodes.length > 0 && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
@@ -570,7 +570,7 @@ export default function FleetOverview() {
                     <td className="py-3 px-4">
                       <div 
                         className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer ${
-                          isSelected ? 'bg-[#1E90FF] border-[#1E90FF]' : 'border-[#6B7280]'
+                          isSelected ? 'bg-[var(--accent-blue)] border-[var(--accent-blue)]' : 'border-[#6B7280]'
                         }`}
                         onClick={() => handleSelectNode(node.id)}
                       >
@@ -614,14 +614,14 @@ export default function FleetOverview() {
                       <div className="flex items-center justify-end gap-1">
                         <button 
                           onClick={() => handleNodeAction(node.id, 'restart')}
-                          className="p-1.5 rounded hover:bg-[rgba(245,158,11,0.15)] text-[#6B7280] hover:text-[#F59E0B] transition-colors"
+                          className="p-1.5 rounded hover:bg-[rgba(245,158,11,0.15)] text-[#6B7280] hover:text-[var(--warning)] transition-colors"
                           title="Restart"
                         >
                           <RotateCcw className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => handleNodeAction(node.id, 'logs')}
-                          className="p-1.5 rounded hover:bg-[rgba(30,144,255,0.15)] text-[#6B7280] hover:text-[#1E90FF] transition-colors"
+                          className="p-1.5 rounded hover:bg-[rgba(30,144,255,0.15)] text-[#6B7280] hover:text-[var(--accent-blue)] transition-colors"
                           title="Logs"
                         >
                           <Terminal className="w-4 h-4" />
@@ -648,7 +648,7 @@ export default function FleetOverview() {
               setFilterStatus('all');
               setFilterTag('');
             }}
-            className="mt-4 text-[#1E90FF] hover:underline"
+            className="mt-4 text-[var(--accent-blue)] hover:underline"
           >
             Clear filters
           </button>

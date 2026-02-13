@@ -75,15 +75,15 @@ interface MasternodeDetail {
 
 function StatusBadge({ status }: { status: 'active' | 'standby' | 'penalized' }) {
   const styles = {
-    active: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20',
-    standby: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20',
-    penalized: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20',
+    active: 'bg-[var(--success)]/10 text-[var(--success)] border-[#10B981]/20',
+    standby: 'bg-[var(--warning)]/10 text-[var(--warning)] border-[var(--warning)]/20',
+    penalized: 'bg-[var(--critical)]/10 text-[var(--critical)] border-[#EF4444]/20',
   };
   
   const pulses = {
-    active: 'animate-pulse bg-[#10B981]',
-    standby: 'bg-[#F59E0B]',
-    penalized: 'bg-[#EF4444]',
+    active: 'animate-pulse bg-[var(--success)]',
+    standby: 'bg-[var(--warning)]',
+    penalized: 'bg-[var(--critical)]',
   };
   
   return (
@@ -111,7 +111,7 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
       className="p-2 hover:bg-white/5 rounded-lg transition-colors"
       title={copied ? 'Copied!' : `Copy ${label || 'address'}`}
     >
-      <Copy className={`w-4 h-4 ${copied ? 'text-[#10B981]' : 'text-[#6B7280]'}`} />
+      <Copy className={`w-4 h-4 ${copied ? 'text-[var(--success)]' : 'text-[#6B7280]'}`} />
     </button>
   );
 }
@@ -131,17 +131,17 @@ function NodeTypeBadge({ nodeType, confirmed = false }: { nodeType?: string; con
 
   const styles: Record<string, { bg: string; icon: React.ReactNode; label: string }> = {
     masternode: {
-      bg: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20',
+      bg: 'bg-[var(--success)]/10 text-[var(--success)] border-[#10B981]/20',
       icon: <Pickaxe className="w-3 h-3" />,
       label: confirmed ? '⛏ Masternode (Confirmed)' : '⛏ Masternode'
     },
     standby: {
-      bg: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20',
+      bg: 'bg-[var(--warning)]/10 text-[var(--warning)] border-[var(--warning)]/20',
       icon: <Clock className="w-3 h-3" />,
       label: '⏳ Standby'
     },
     fullnode: {
-      bg: 'bg-[#1E90FF]/10 text-[#1E90FF] border-[#1E90FF]/20',
+      bg: 'bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border-[var(--accent-blue)]/20',
       icon: <Link2 className="w-3 h-3" />,
       label: '🔗 Full Node'
     },
@@ -163,7 +163,7 @@ function ClientTypeBadge({ clientType }: { clientType?: string }) {
 
   const styles: Record<string, { bg: string; icon: React.ReactNode }> = {
     XDC: {
-      bg: 'bg-[#1E90FF]/10 text-[#1E90FF] border-[#1E90FF]/20',
+      bg: 'bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border-[var(--accent-blue)]/20',
       icon: <Terminal className="w-3 h-3" />
     },
     Erigon: {
@@ -171,7 +171,7 @@ function ClientTypeBadge({ clientType }: { clientType?: string }) {
       icon: <Layers className="w-3 h-3" />
     },
     Geth: {
-      bg: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20',
+      bg: 'bg-[var(--success)]/10 text-[var(--success)] border-[#10B981]/20',
       icon: <Globe className="w-3 h-3" />
     },
   };
@@ -225,13 +225,13 @@ function VoterPieChart({ voters, totalStake }: { voters: Voter[]; totalStake: nu
             <path
               d={slice.path}
               fill={slice.color}
-              stroke="#0A0E1A"
+              stroke="var(--bg-body)"
               strokeWidth="2"
             />
           </g>
         ))}
         {/* Center hole for donut effect */}
-        <circle cx="100" cy="100" r="40" fill="#0A0E1A" />
+        <circle cx="100" cy="100" r="40" fill="var(--bg-body)" />
         <text x="100" y="95" textAnchor="middle" fill="#F9FAFB" fontSize="12" fontWeight="bold">
           {voters.length}
         </text>
@@ -315,7 +315,7 @@ export default function MasternodeDetailPage() {
       <DashboardLayout>
         <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center">
-            <Pickaxe className="w-12 h-12 mx-auto mb-4 text-[#1E90FF] animate-pulse" />
+            <Pickaxe className="w-12 h-12 mx-auto mb-4 text-[var(--accent-blue)] animate-pulse" />
             <p className="text-[#6B7280]">Loading masternode details...</p>
           </div>
         </div>
@@ -328,10 +328,10 @@ export default function MasternodeDetailPage() {
       <DashboardLayout>
         <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center">
-            <p className="text-[#EF4444] mb-4">{error || 'Masternode not found'}</p>
+            <p className="text-[var(--critical)] mb-4">{error || 'Masternode not found'}</p>
             <button
               onClick={() => router.push('/masternodes')}
-              className="px-4 py-2 bg-[#1E90FF]/10 text-[#1E90FF] rounded-lg hover:bg-[#1E90FF]/20 transition-colors"
+              className="px-4 py-2 bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] rounded-lg hover:bg-[var(--accent-blue)]/20 transition-colors"
             >
               ← Back to Masternodes
             </button>
@@ -357,7 +357,7 @@ export default function MasternodeDetailPage() {
         <div className="card-xdc">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-[rgba(30,144,255,0.1)] flex items-center justify-center text-[#1E90FF]">
+              <div className="w-16 h-16 rounded-2xl bg-[var(--accent-blue-glow)] flex items-center justify-center text-[var(--accent-blue)]">
                 <Pickaxe className="w-8 h-8" />
               </div>
               <div>
@@ -370,7 +370,7 @@ export default function MasternodeDetailPage() {
             </div>
             
             <div className="text-right">
-              <div className="text-3xl font-bold font-mono-nums text-[#1E90FF]">{detail.stake || '0'}</div>
+              <div className="text-3xl font-bold font-mono-nums text-[var(--accent-blue)]">{detail.stake || '0'}</div>
               <div className="text-sm text-[#6B7280]">Total Stake (XDC)</div>
             </div>
           </div>
@@ -407,7 +407,7 @@ export default function MasternodeDetailPage() {
                     rel="noopener noreferrer"
                     className="p-2 hover:bg-white/5 rounded-lg transition-colors"
                   >
-                    <ExternalLink className="w-4 h-4 text-[#1E90FF]" />
+                    <ExternalLink className="w-4 h-4 text-[var(--accent-blue)]" />
                   </a>
                 </div>
               </div>
@@ -417,39 +417,39 @@ export default function MasternodeDetailPage() {
         
         {/* Node Health Section — shows when coinbase matches a registered node */}
         {nodeHealth && (
-          <div className="card-xdc border border-[#1E90FF]/20 bg-gradient-to-r from-[#1E90FF]/5 to-transparent">
+          <div className="card-xdc border border-[var(--accent-blue)]/20 bg-gradient-to-r from-[#1E90FF]/5 to-transparent">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  nodeHealth.status === 'healthy' ? 'bg-[#10B981]/10 text-[#10B981]' :
-                  nodeHealth.status === 'degraded' ? 'bg-[#F59E0B]/10 text-[#F59E0B]' :
-                  'bg-[#EF4444]/10 text-[#EF4444]'
+                  nodeHealth.status === 'healthy' ? 'bg-[var(--success)]/10 text-[var(--success)]' :
+                  nodeHealth.status === 'degraded' ? 'bg-[var(--warning)]/10 text-[var(--warning)]' :
+                  'bg-[var(--critical)]/10 text-[var(--critical)]'
                 }`}>
                   <Activity className="w-5 h-5" />
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-[#F9FAFB]">Monitored Node</h2>
                   <p className="text-xs text-[#6B7280]">
-                    This masternode is running on <span className="text-[#1E90FF] font-medium">{nodeHealth.name}</span> ({nodeHealth.host})
+                    This masternode is running on <span className="text-[var(--accent-blue)] font-medium">{nodeHealth.name}</span> ({nodeHealth.host})
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <span className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
-                  nodeHealth.status === 'healthy' ? 'bg-[#10B981]/10 text-[#10B981]' :
-                  nodeHealth.status === 'degraded' ? 'bg-[#F59E0B]/10 text-[#F59E0B]' :
-                  'bg-[#EF4444]/10 text-[#EF4444]'
+                  nodeHealth.status === 'healthy' ? 'bg-[var(--success)]/10 text-[var(--success)]' :
+                  nodeHealth.status === 'degraded' ? 'bg-[var(--warning)]/10 text-[var(--warning)]' :
+                  'bg-[var(--critical)]/10 text-[var(--critical)]'
                 }`}>
                   <span className={`w-2 h-2 rounded-full ${
-                    nodeHealth.status === 'healthy' ? 'bg-[#10B981] animate-pulse' :
-                    nodeHealth.status === 'degraded' ? 'bg-[#F59E0B]' :
-                    'bg-[#EF4444]'
+                    nodeHealth.status === 'healthy' ? 'bg-[var(--success)] animate-pulse' :
+                    nodeHealth.status === 'degraded' ? 'bg-[var(--warning)]' :
+                    'bg-[var(--critical)]'
                   }`} />
                   {nodeHealth.status.charAt(0).toUpperCase() + nodeHealth.status.slice(1)}
                 </span>
                 <button
                   onClick={() => router.push(`/nodes/${nodeHealth.id}`)}
-                  className="px-3 py-1.5 text-sm bg-[#1E90FF]/10 text-[#1E90FF] rounded-lg hover:bg-[#1E90FF]/20 transition-colors"
+                  className="px-3 py-1.5 text-sm bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] rounded-lg hover:bg-[var(--accent-blue)]/20 transition-colors"
                 >
                   War Room →
                 </button>
@@ -489,15 +489,15 @@ export default function MasternodeDetailPage() {
               <div className="bg-white/5 rounded-lg p-3">
                 <div className="text-[10px] uppercase text-[#6B7280] mb-1">CPU</div>
                 <div className={`text-lg font-bold font-mono-nums ${
-                  nodeHealth.metrics.cpuPercent > 80 ? 'text-[#EF4444]' : 
-                  nodeHealth.metrics.cpuPercent > 60 ? 'text-[#F59E0B]' : 'text-[#10B981]'
+                  nodeHealth.metrics.cpuPercent > 80 ? 'text-[var(--critical)]' : 
+                  nodeHealth.metrics.cpuPercent > 60 ? 'text-[var(--warning)]' : 'text-[var(--success)]'
                 }`}>{nodeHealth.metrics.cpuPercent?.toFixed(1) ?? '—'}%</div>
               </div>
               <div className="bg-white/5 rounded-lg p-3">
                 <div className="text-[10px] uppercase text-[#6B7280] mb-1">Memory</div>
                 <div className={`text-lg font-bold font-mono-nums ${
-                  nodeHealth.metrics.memoryPercent > 85 ? 'text-[#EF4444]' : 
-                  nodeHealth.metrics.memoryPercent > 70 ? 'text-[#F59E0B]' : 'text-[#10B981]'
+                  nodeHealth.metrics.memoryPercent > 85 ? 'text-[var(--critical)]' : 
+                  nodeHealth.metrics.memoryPercent > 70 ? 'text-[var(--warning)]' : 'text-[var(--success)]'
                 }`}>{nodeHealth.metrics.memoryPercent?.toFixed(1) ?? '—'}%</div>
               </div>
               <div className="bg-white/5 rounded-lg p-3">
@@ -512,8 +512,8 @@ export default function MasternodeDetailPage() {
               <div className="bg-white/5 rounded-lg p-3">
                 <div className="text-[10px] uppercase text-[#6B7280] mb-1">RPC Latency</div>
                 <div className={`text-lg font-bold font-mono-nums ${
-                  nodeHealth.metrics.rpcLatencyMs > 500 ? 'text-[#EF4444]' : 
-                  nodeHealth.metrics.rpcLatencyMs > 100 ? 'text-[#F59E0B]' : 'text-[#10B981]'
+                  nodeHealth.metrics.rpcLatencyMs > 500 ? 'text-[var(--critical)]' : 
+                  nodeHealth.metrics.rpcLatencyMs > 100 ? 'text-[var(--warning)]' : 'text-[var(--success)]'
                 }`}>{nodeHealth.metrics.rpcLatencyMs ?? '—'}ms</div>
               </div>
             </div>
@@ -522,19 +522,19 @@ export default function MasternodeDetailPage() {
             <div className="flex flex-wrap gap-4 mt-3 text-xs text-[#6B7280]">
               <span>Client: <span className="text-[#9CA3AF]">{nodeHealth.metrics.clientVersion || 'Unknown'}</span></span>
               <span>TxPool: <span className="text-[#9CA3AF]">{nodeHealth.metrics.txPoolPending ?? 0} pending / {nodeHealth.metrics.txPoolQueued ?? 0} queued</span></span>
-              <span>Syncing: <span className={nodeHealth.metrics.isSyncing ? 'text-[#F59E0B]' : 'text-[#10B981]'}>{nodeHealth.metrics.isSyncing ? 'Yes' : 'No'}</span></span>
+              <span>Syncing: <span className={nodeHealth.metrics.isSyncing ? 'text-[var(--warning)]' : 'text-[var(--success)]'}>{nodeHealth.metrics.isSyncing ? 'Yes' : 'No'}</span></span>
             </div>
 
             {/* Active Incidents */}
             {nodeHealth.incidents.filter(i => i.status === 'active').length > 0 && (
               <div className="mt-4 pt-3 border-t border-white/10">
-                <div className="text-xs font-semibold text-[#EF4444] mb-2">⚠ Active Incidents</div>
+                <div className="text-xs font-semibold text-[var(--critical)] mb-2">⚠ Active Incidents</div>
                 <div className="space-y-1">
                   {nodeHealth.incidents.filter(i => i.status === 'active').map((inc, i) => (
                     <div key={i} className="flex items-center gap-2 text-xs">
                       <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                        inc.severity === 'critical' ? 'bg-[#EF4444]/20 text-[#EF4444]' :
-                        inc.severity === 'warning' ? 'bg-[#F59E0B]/20 text-[#F59E0B]' :
+                        inc.severity === 'critical' ? 'bg-[var(--critical)]/20 text-[var(--critical)]' :
+                        inc.severity === 'warning' ? 'bg-[var(--warning)]/20 text-[var(--warning)]' :
                         'bg-[#6B7280]/20 text-[#6B7280]'
                       }`}>{inc.severity}</span>
                       <span className="text-[#9CA3AF]">{inc.title}</span>
@@ -548,9 +548,9 @@ export default function MasternodeDetailPage() {
 
         {/* No matching node — show masternode type based on contract status */}
         {!nodeHealth && detail && (
-          <div className="card-xdc border border-[#F59E0B]/20 bg-gradient-to-r from-[#F59E0B]/5 to-transparent">
+          <div className="card-xdc border border-[var(--warning)]/20 bg-gradient-to-r from-[var(--warning)]/5 to-transparent">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-[var(--warning)]/10 text-[var(--warning)] flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
@@ -563,17 +563,17 @@ export default function MasternodeDetailPage() {
 
             <div className="flex flex-wrap gap-2 mb-4">
               {detail.status === 'active' ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border bg-[var(--success)]/10 text-[var(--success)] border-[#10B981]/20">
                   <Pickaxe className="w-3 h-3" />
                   ⛏ Masternode (Active)
                 </span>
               ) : detail.status === 'standby' ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border bg-[var(--warning)]/10 text-[var(--warning)] border-[var(--warning)]/20">
                   <Clock className="w-3 h-3" />
                   ⏳ Standby
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border bg-[var(--critical)]/10 text-[var(--critical)] border-[#EF4444]/20">
                   <AlertTriangle className="w-3 h-3" />
                   Penalized
                 </span>
@@ -592,7 +592,7 @@ export default function MasternodeDetailPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="card-xdc">
             <div className="flex items-center gap-3 mb-3">
-              <Users className="w-5 h-5 text-[#1E90FF]" />
+              <Users className="w-5 h-5 text-[var(--accent-blue)]" />
               <span className="text-sm text-[#6B7280]">Voters</span>
             </div>
             <div className="text-2xl font-bold font-mono-nums">{detail.voters.length}</div>
@@ -600,7 +600,7 @@ export default function MasternodeDetailPage() {
           
           <div className="card-xdc">
             <div className="flex items-center gap-3 mb-3">
-              <Coins className="w-5 h-5 text-[#10B981]" />
+              <Coins className="w-5 h-5 text-[var(--success)]" />
               <span className="text-sm text-[#6B7280]">Voter Stake</span>
             </div>
             <div className="text-2xl font-bold font-mono-nums">{totalVoterStake.toLocaleString('en-US', { maximumFractionDigits: 0 })}</div>
@@ -608,7 +608,7 @@ export default function MasternodeDetailPage() {
           
           <div className="card-xdc">
             <div className="flex items-center gap-3 mb-3">
-              <Activity className="w-5 h-5 text-[#F59E0B]" />
+              <Activity className="w-5 h-5 text-[var(--warning)]" />
               <span className="text-sm text-[#6B7280]">Self Stake %</span>
             </div>
             <div className="text-2xl font-bold font-mono-nums">
@@ -634,7 +634,7 @@ export default function MasternodeDetailPage() {
           {/* Voters Table */}
           <div className="card-xdc lg:col-span-2">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-[rgba(30,144,255,0.1)] flex items-center justify-center text-[#1E90FF]">
+              <div className="w-10 h-10 rounded-xl bg-[var(--accent-blue-glow)] flex items-center justify-center text-[var(--accent-blue)]">
                 <Users className="w-5 h-5" />
               </div>
               <div>
@@ -667,7 +667,7 @@ export default function MasternodeDetailPage() {
                         <tr key={voter.address} className="hover:bg-white/[0.02]">
                           <td className="py-3 px-4">
                             <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                              index < 3 ? 'bg-[#1E90FF]/20 text-[#1E90FF]' : 'bg-white/5 text-[#6B7280]'
+                              index < 3 ? 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]' : 'bg-white/5 text-[#6B7280]'
                             }`}>
                               {index + 1}
                             </span>
@@ -680,7 +680,7 @@ export default function MasternodeDetailPage() {
                           </td>
                           <td className="py-3 px-4 text-right font-mono-nums">{voter.stake}</td>
                           <td className="py-3 px-4 text-right">
-                            <span className={share > 10 ? 'text-[#1E90FF]' : 'text-[#6B7280]'}>
+                            <span className={share > 10 ? 'text-[var(--accent-blue)]' : 'text-[#6B7280]'}>
                               {share.toFixed(2)}%
                             </span>
                           </td>
@@ -696,7 +696,7 @@ export default function MasternodeDetailPage() {
           {/* Voter Distribution Chart */}
           <div className="card-xdc">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-[rgba(16,185,129,0.1)] flex items-center justify-center text-[#10B981]">
+              <div className="w-10 h-10 rounded-xl bg-[rgba(16,185,129,0.1)] flex items-center justify-center text-[var(--success)]">
                 <PieChart className="w-5 h-5" />
               </div>
               <div>

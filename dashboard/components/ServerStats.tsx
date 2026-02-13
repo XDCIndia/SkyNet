@@ -110,7 +110,7 @@ export default function ServerStats({ data }: ServerStatsProps) {
       {/* Header */}
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#EF4444]/20 to-[#F59E0B]/10 flex items-center justify-center">
-          <Monitor className="w-5 h-5 text-[#EF4444]" />
+          <Monitor className="w-5 h-5 text-[var(--critical)]" />
         </div>
         <div>
           <h2 className="text-lg font-semibold text-[#F9FAFB]">Server Resources</h2>

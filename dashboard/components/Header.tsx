@@ -40,7 +40,7 @@ export default function Header({
         {/* Left: Logo + Title */}
         <div className="flex items-center gap-3">
           {/* XDC Logo SVG */}
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1E90FF]/20 to-[#10B981]/20 flex items-center justify-center border border-[#1E90FF]/20">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1E90FF]/20 to-[#10B981]/20 flex items-center justify-center border border-[var(--accent-blue)]/20">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="12" cy="12" r="10" stroke="#1E90FF" strokeWidth="2"/>
               <path d="M8 8L16 16M16 8L8 16" stroke="#1E90FF" strokeWidth="2" strokeLinecap="round"/>
@@ -53,7 +53,7 @@ export default function Header({
             <div className="hidden sm:flex items-center gap-2 text-xs flex-wrap">
               {ethstatsName && (
                 <>
-                  <span className="text-[#10B981] font-medium">{ethstatsName}</span>
+                  <span className="text-[var(--success)] font-medium">{ethstatsName}</span>
                   <span className="text-[#6B7280]">·</span>
                 </>
               )}
@@ -71,10 +71,10 @@ export default function Header({
         </div>
 
         {/* Center: Live Status Pill */}
-        <div className="hidden md:flex items-center gap-3 px-4 py-2 rounded-full bg-[#111827] border border-[rgba(255,255,255,0.06)]">
+        <div className="hidden md:flex items-center gap-3 px-4 py-2 rounded-full bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)]">
           <div className="flex items-center gap-2">
             <span className={`status-dot ${isSyncing ? 'syncing' : connected ? 'active' : 'inactive'}`} />
-            <span className={`text-sm font-medium ${isSyncing ? 'text-[#F59E0B]' : connected ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+            <span className={`text-sm font-medium ${isSyncing ? 'text-[var(--warning)]' : connected ? 'text-[var(--success)]' : 'text-[var(--critical)]'}`}>
               {isSyncing ? 'Syncing' : connected ? 'Synced' : 'Disconnected'}
             </span>
           </div>
@@ -98,7 +98,7 @@ export default function Header({
               aria-label="Refresh"
             >
               <RefreshCw 
-                className={`w-4 h-4 text-[#1E90FF] ${isSpinning ? 'animate-spin' : ''}`}
+                className={`w-4 h-4 text-[var(--accent-blue)] ${isSpinning ? 'animate-spin' : ''}`}
                 style={{ animationDuration: isSpinning ? '1s' : '10s' }}
               />
             </button>
@@ -108,8 +108,8 @@ export default function Header({
           </div>
 
           {/* Peers badge */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111827] border border-[rgba(255,255,255,0.06)]">
-            <Users className="w-4 h-4 text-[#1E90FF]" />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)]">
+            <Users className="w-4 h-4 text-[var(--accent-blue)]" />
             <span className="text-sm font-medium text-[#F9FAFB]">{peers || '—'}</span>
           </div>
 

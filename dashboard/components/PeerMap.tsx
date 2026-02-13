@@ -28,7 +28,7 @@ const PeerMapChart = dynamic(() => import('./PeerMapChart'), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-[300px] sm:h-[350px] lg:h-[450px]">
-      <div className="w-12 h-12 border-4 border-[#1E90FF] border-t-transparent rounded-full animate-spin"></div>
+      <div className="w-12 h-12 border-4 border-[var(--accent-blue)] border-t-transparent rounded-full animate-spin"></div>
     </div>
   )
 });
@@ -211,9 +211,9 @@ export default function PeerMap({ peers }: PeerMapProps) {
 
   const getTrustIcon = (level: string) => {
     switch (level) {
-      case 'whitelisted': return <Star className="w-4 h-4 text-[#1E90FF]" />;
-      case 'trusted': return <Shield className="w-4 h-4 text-[#10B981]" />;
-      case 'basic': return <Signal className="w-4 h-4 text-[#F59E0B]" />;
+      case 'whitelisted': return <Star className="w-4 h-4 text-[var(--accent-blue)]" />;
+      case 'trusted': return <Shield className="w-4 h-4 text-[var(--success)]" />;
+      case 'basic': return <Signal className="w-4 h-4 text-[var(--warning)]" />;
       default: return <AlertTriangle className="w-4 h-4 text-[#6B7280]" />;
     }
   };
@@ -224,7 +224,7 @@ export default function PeerMap({ peers }: PeerMapProps) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#10B981]/20 to-[#1E90FF]/10 flex items-center justify-center">
-            <Globe className="w-5 h-5 text-[#10B981]" />
+            <Globe className="w-5 h-5 text-[var(--success)]" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-[#F9FAFB]">Global Peer Distribution</h2>
@@ -238,14 +238,14 @@ export default function PeerMap({ peers }: PeerMapProps) {
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="text-center sm:text-right">
             <div className="section-header">Inbound</div>
-            <div className="text-xl font-bold font-mono-nums text-[#10B981]">{inboundCount}</div>
+            <div className="text-xl font-bold font-mono-nums text-[var(--success)]">{inboundCount}</div>
           </div>
           <div className="text-center sm:text-right">
             <div className="section-header">Outbound</div>
-            <div className="text-xl font-bold font-mono-nums text-[#1E90FF]">{outboundCount}</div>
+            <div className="text-xl font-bold font-mono-nums text-[var(--accent-blue)]">{outboundCount}</div>
           </div>
           <div className="text-center sm:text-right">
-            <div className="text-2xl sm:text-3xl font-bold font-mono-nums text-[#1E90FF]">{peers.totalPeers || 0}</div>
+            <div className="text-2xl sm:text-3xl font-bold font-mono-nums text-[var(--accent-blue)]">{peers.totalPeers || 0}</div>
             <div className="section-header flex items-center gap-1 justify-center sm:justify-end">
               <Users className="w-3 h-3" /> Total Peers
             </div>
@@ -255,9 +255,9 @@ export default function PeerMap({ peers }: PeerMapProps) {
 
       {/* Scoring Overview Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="p-4 rounded-xl bg-[#111827] border border-[rgba(255,255,255,0.06)]">
+        <div className="p-4 rounded-xl bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)]">
           <div className="flex items-center gap-2 mb-2">
-            <Signal className="w-4 h-4 text-[#1E90FF]" />
+            <Signal className="w-4 h-4 text-[var(--accent-blue)]" />
             <span className="text-xs text-[#6B7280]">Avg Latency</span>
           </div>
           <div className="text-xl font-bold font-mono-nums" style={{ color: getLatencyColor(avgLatency) }}>
@@ -265,9 +265,9 @@ export default function PeerMap({ peers }: PeerMapProps) {
           </div>
         </div>
         
-        <div className="p-4 rounded-xl bg-[#111827] border border-[rgba(255,255,255,0.06)]">
+        <div className="p-4 rounded-xl bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)]">
           <div className="flex items-center gap-2 mb-2">
-            <Star className="w-4 h-4 text-[#F59E0B]" />
+            <Star className="w-4 h-4 text-[var(--warning)]" />
             <span className="text-xs text-[#6B7280]">Avg Score</span>
           </div>
           <div className="text-xl font-bold font-mono-nums" style={{ color: getScoreColor(avgScore) }}>
@@ -275,24 +275,24 @@ export default function PeerMap({ peers }: PeerMapProps) {
           </div>
         </div>
         
-        <div className="p-4 rounded-xl bg-[#111827] border border-[rgba(255,255,255,0.06)]">
+        <div className="p-4 rounded-xl bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)]">
           <div className="flex items-center gap-2 mb-2">
-            <MapPin className="w-4 h-4 text-[#10B981]" />
+            <MapPin className="w-4 h-4 text-[var(--success)]" />
             <span className="text-xs text-[#6B7280]">Geo Diversity</span>
           </div>
-          <div className="text-xl font-bold font-mono-nums text-[#10B981]">
+          <div className="text-xl font-bold font-mono-nums text-[var(--success)]">
             {geoDiversityScore}%
           </div>
         </div>
         
-        <div className="p-4 rounded-xl bg-[#111827] border border-[rgba(255,255,255,0.06)]">
+        <div className="p-4 rounded-xl bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)]">
           <div className="flex items-center gap-2 mb-2">
-            <Network className="w-4 h-4 text-[#1E90FF]" />
+            <Network className="w-4 h-4 text-[var(--accent-blue)]" />
             <span className="text-xs text-[#6B7280]">Protocol</span>
           </div>
           <div className="text-sm text-[#F9FAFB]">
             {Object.entries(protocolDistribution).map(([ver, count]) => (
-              <span key={ver} className={`block ${ver === 'eth/100' ? 'text-[#10B981]' : ver === 'eth/63' ? 'text-[#F59E0B]' : 'text-[#EF4444]'}`}>
+              <span key={ver} className={`block ${ver === 'eth/100' ? 'text-[var(--success)]' : ver === 'eth/63' ? 'text-[var(--warning)]' : 'text-[var(--critical)]'}`}>
                 {ver}: {count}
               </span>
             ))}
@@ -304,19 +304,19 @@ export default function PeerMap({ peers }: PeerMapProps) {
       <div className="flex flex-wrap gap-3 mb-6">
         <button 
           onClick={() => setShowAddPeerModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(30,144,255,0.15)] text-[#1E90FF] hover:bg-[rgba(30,144,255,0.25)] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(30,144,255,0.15)] text-[var(--accent-blue)] hover:bg-[rgba(30,144,255,0.25)] transition-colors"
         >
           <Plus className="w-4 h-4" />
           Add Static Peer
         </button>
         <button 
           onClick={() => setShowBannedPeers(!showBannedPeers)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showBannedPeers ? 'bg-[rgba(239,68,68,0.25)] text-[#EF4444]' : 'bg-[rgba(239,68,68,0.15)] text-[#EF4444] hover:bg-[rgba(239,68,68,0.25)]'}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showBannedPeers ? 'bg-[rgba(239,68,68,0.25)] text-[var(--critical)]' : 'bg-[rgba(239,68,68,0.15)] text-[var(--critical)] hover:bg-[rgba(239,68,68,0.25)]'}`}
         >
           <Ban className="w-4 h-4" />
           Banned Peers ({mockBannedPeers.length})
         </button>
-        <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(16,185,129,0.15)] text-[#10B981] hover:bg-[rgba(16,185,129,0.25)] transition-colors">
+        <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(16,185,129,0.15)] text-[var(--success)] hover:bg-[rgba(16,185,129,0.25)] transition-colors">
           <Settings className="w-4 h-4" />
           Optimize Peers
         </button>
@@ -325,7 +325,7 @@ export default function PeerMap({ peers }: PeerMapProps) {
       {/* Add Peer Modal */}
       {showAddPeerModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#111827] rounded-2xl p-6 max-w-lg w-full border border-[rgba(255,255,255,0.1)]">
+          <div className="bg-[var(--bg-card)] rounded-2xl p-6 max-w-lg w-full border border-[rgba(255,255,255,0.1)]">
             <h3 className="text-lg font-semibold text-[#F9FAFB] mb-4">Add Static Peer</h3>
             <div className="space-y-4">
               <div>
@@ -335,13 +335,13 @@ export default function PeerMap({ peers }: PeerMapProps) {
                   value={newPeerEnode}
                   onChange={(e) => setNewPeerEnode(e.target.value)}
                   placeholder="enode://pubkey@ip:port"
-                  className="w-full px-4 py-2 rounded-lg bg-[#0A0E1A] border border-[rgba(255,255,255,0.1)] text-[#F9FAFB] text-sm focus:outline-none focus:border-[#1E90FF]"
+                  className="w-full px-4 py-2 rounded-lg bg-[var(--bg-body)] border border-[rgba(255,255,255,0.1)] text-[#F9FAFB] text-sm focus:outline-none focus:border-[var(--accent-blue)]"
                 />
               </div>
               <div className="flex gap-3">
                 <button 
                   onClick={handleAddPeer}
-                  className="flex-1 py-2 rounded-lg bg-[#1E90FF] text-white font-medium hover:bg-[#1a7fd9] transition-colors"
+                  className="flex-1 py-2 rounded-lg bg-[var(--accent-blue)] text-white font-medium hover:bg-[#1a7fd9] transition-colors"
                 >
                   Add Peer
                 </button>
@@ -359,8 +359,8 @@ export default function PeerMap({ peers }: PeerMapProps) {
 
       {/* Banned Peers Section */}
       {showBannedPeers && (
-        <div className="mb-6 p-4 rounded-xl bg-[#111827] border border-[rgba(239,68,68,0.3)]">
-          <h3 className="text-sm font-semibold text-[#EF4444] mb-3 flex items-center gap-2">
+        <div className="mb-6 p-4 rounded-xl bg-[var(--bg-card)] border border-[rgba(239,68,68,0.3)]">
+          <h3 className="text-sm font-semibold text-[var(--critical)] mb-3 flex items-center gap-2">
             <Ban className="w-4 h-4" />
             Banned Peers ({mockBannedPeers.length})
           </h3>
@@ -385,7 +385,7 @@ export default function PeerMap({ peers }: PeerMapProps) {
                       {peer.expiresAt ? new Date(peer.expiresAt).toLocaleDateString() : 'Permanent'}
                     </td>
                     <td className="py-2 px-3 text-right">
-                      <button className="text-xs text-[#1E90FF] hover:text-[#60a5fa] transition-colors">
+                      <button className="text-xs text-[var(--accent-blue)] hover:text-[#60a5fa] transition-colors">
                         Unban
                       </button>
                     </td>
@@ -402,12 +402,12 @@ export default function PeerMap({ peers }: PeerMapProps) {
         <div className="lg:col-span-3 relative">
           {/* Legend */}
           <div className="absolute top-2 left-2 z-10 flex flex-wrap gap-2 text-xs">
-            <div className="flex items-center gap-1.5 bg-[#111827] px-2 py-1 rounded-full border border-[rgba(255,255,255,0.06)]">
-              <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
+            <div className="flex items-center gap-1.5 bg-[var(--bg-card)] px-2 py-1 rounded-full border border-[rgba(255,255,255,0.06)]">
+              <span className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse"></span>
               <span className="text-[#6B7280]">In</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-[#111827] px-2 py-1 rounded-full border border-[rgba(255,255,255,0.06)]">
-              <span className="w-2 h-2 rounded-full bg-[#1E90FF] animate-pulse"></span>
+            <div className="flex items-center gap-1.5 bg-[var(--bg-card)] px-2 py-1 rounded-full border border-[rgba(255,255,255,0.06)]">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-blue)] animate-pulse"></span>
               <span className="text-[#6B7280]">Out</span>
             </div>
           </div>
@@ -417,7 +417,7 @@ export default function PeerMap({ peers }: PeerMapProps) {
 
         {/* Country List */}
         <div className="lg:col-span-1">
-          <div className="bg-[#111827] rounded-xl p-4 h-full border border-[rgba(255,255,255,0.06)]">
+          <div className="bg-[var(--bg-card)] rounded-xl p-4 h-full border border-[rgba(255,255,255,0.06)]">
             <div className="section-header mb-4">Top Countries</div>
 
             {sortedCountries.length === 0 ? (
@@ -437,13 +437,13 @@ export default function PeerMap({ peers }: PeerMapProps) {
                     onClick={() => setSelectedCountry(selectedCountry === code ? null : code)}
                   >
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#111827] flex items-center justify-center text-xs font-bold text-[#6B7280]">
+                      <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[var(--bg-card)] flex items-center justify-center text-xs font-bold text-[#6B7280]">
                         {index + 1}
                       </span>
                       <span className="inline-flex">{getCountryFlag(code)}</span>
                       <span className="text-xs sm:text-sm text-[#F9FAFB] truncate max-w-[60px] sm:max-w-[80px]">{info.name}</span>
                     </div>
-                    <span className="text-sm font-bold font-mono-nums text-[#1E90FF]">{info.count}</span>
+                    <span className="text-sm font-bold font-mono-nums text-[var(--accent-blue)]">{info.count}</span>
                   </div>
                 ))}
               </div>
@@ -471,7 +471,7 @@ export default function PeerMap({ peers }: PeerMapProps) {
               onClick={() => handleSort('score')}
               className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-colors ${
                 sortField === 'score' 
-                  ? 'bg-[rgba(30,144,255,0.15)] text-[#1E90FF]' 
+                  ? 'bg-[rgba(30,144,255,0.15)] text-[var(--accent-blue)]' 
                   : 'text-[#6B7280] hover:text-[#F9FAFB]'
               }`}
             >
@@ -482,7 +482,7 @@ export default function PeerMap({ peers }: PeerMapProps) {
               onClick={() => handleSort('latency')}
               className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-colors ${
                 sortField === 'latency' 
-                  ? 'bg-[rgba(30,144,255,0.15)] text-[#1E90FF]' 
+                  ? 'bg-[rgba(30,144,255,0.15)] text-[var(--accent-blue)]' 
                   : 'text-[#6B7280] hover:text-[#F9FAFB]'
               }`}
             >
@@ -493,7 +493,7 @@ export default function PeerMap({ peers }: PeerMapProps) {
               onClick={() => handleSort('country')}
               className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-colors ${
                 sortField === 'country' 
-                  ? 'bg-[rgba(30,144,255,0.15)] text-[#1E90FF]' 
+                  ? 'bg-[rgba(30,144,255,0.15)] text-[var(--accent-blue)]' 
                   : 'text-[#6B7280] hover:text-[#F9FAFB]'
               }`}
             >
@@ -504,7 +504,7 @@ export default function PeerMap({ peers }: PeerMapProps) {
               onClick={() => handleSort('version')}
               className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-colors ${
                 sortField === 'version' 
-                  ? 'bg-[rgba(30,144,255,0.15)] text-[#1E90FF]' 
+                  ? 'bg-[rgba(30,144,255,0.15)] text-[var(--accent-blue)]' 
                   : 'text-[#6B7280] hover:text-[#F9FAFB]'
               }`}
             >
@@ -516,7 +516,7 @@ export default function PeerMap({ peers }: PeerMapProps) {
 
         <div className="overflow-x-auto -mx-4 sm:mx-0 rounded-xl border border-[rgba(255,255,255,0.06)]">
           <table className="w-full min-w-[800px]">
-            <thead className="bg-[#111827]">
+            <thead className="bg-[var(--bg-card)]">
               <tr className="border-b border-[rgba(255,255,255,0.06)]">
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Trust</th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">IP Address</th>
@@ -575,10 +575,10 @@ export default function PeerMap({ peers }: PeerMapProps) {
                     <td className="py-2 sm:py-3 px-4">
                       <span className={`text-xs px-2 py-1 rounded-full ${
                         peer.protocolVersion === 'eth/100' 
-                          ? 'bg-[rgba(16,185,129,0.15)] text-[#10B981]' 
+                          ? 'bg-[rgba(16,185,129,0.15)] text-[var(--success)]' 
                           : peer.protocolVersion === 'eth/63'
-                          ? 'bg-[rgba(245,158,11,0.15)] text-[#F59E0B]'
-                          : 'bg-[rgba(239,68,68,0.15)] text-[#EF4444]'
+                          ? 'bg-[rgba(245,158,11,0.15)] text-[var(--warning)]'
+                          : 'bg-[rgba(239,68,68,0.15)] text-[var(--critical)]'
                       }`}>
                         {peer.protocolVersion}
                       </span>
@@ -586,8 +586,8 @@ export default function PeerMap({ peers }: PeerMapProps) {
                     <td className="py-2 sm:py-3 px-4">
                       <span className={`text-xs px-2 py-1 rounded-full ${
                         peer.inbound 
-                          ? 'bg-[rgba(16,185,129,0.1)] text-[#10B981]' 
-                          : 'bg-[rgba(30,144,255,0.1)] text-[#1E90FF]'
+                          ? 'bg-[rgba(16,185,129,0.1)] text-[var(--success)]' 
+                          : 'bg-[rgba(30,144,255,0.1)] text-[var(--accent-blue)]'
                       }`}>
                         {peer.inbound ? <ArrowDownLeft className="w-3 h-3 inline mr-1" /> : <ArrowUpRight className="w-3 h-3 inline mr-1" />}
                         {peer.inbound ? 'In' : 'Out'}
@@ -597,14 +597,14 @@ export default function PeerMap({ peers }: PeerMapProps) {
                       <div className="flex items-center justify-end gap-2">
                         <button 
                           onClick={() => handleRemovePeer(peer.id)}
-                          className="p-1 rounded hover:bg-[rgba(239,68,68,0.15)] text-[#6B7280] hover:text-[#EF4444] transition-colors"
+                          className="p-1 rounded hover:bg-[rgba(239,68,68,0.15)] text-[#6B7280] hover:text-[var(--critical)] transition-colors"
                           title="Remove peer"
                         >
                           <Minus className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => handleBanPeer(peer.id)}
-                          className="p-1 rounded hover:bg-[rgba(239,68,68,0.15)] text-[#6B7280] hover:text-[#EF4444] transition-colors"
+                          className="p-1 rounded hover:bg-[rgba(239,68,68,0.15)] text-[#6B7280] hover:text-[var(--critical)] transition-colors"
                           title="Ban peer"
                         >
                           <Ban className="w-4 h-4" />
@@ -630,13 +630,13 @@ export default function PeerMap({ peers }: PeerMapProps) {
 function getCountryFlag(countryCode: string): React.ReactNode {
   if (!countryCode) {
     return (
-      <span className="w-5 h-5 rounded-full bg-[#1E90FF]/20 flex items-center justify-center text-[9px] font-bold text-[#1E90FF]">
+      <span className="w-5 h-5 rounded-full bg-[var(--accent-blue)]/20 flex items-center justify-center text-[9px] font-bold text-[var(--accent-blue)]">
         ?
       </span>
     );
   }
   return (
-    <span className="w-5 h-5 rounded-full bg-[#1E90FF]/20 flex items-center justify-center text-[9px] font-bold text-[#1E90FF]">
+    <span className="w-5 h-5 rounded-full bg-[var(--accent-blue)]/20 flex items-center justify-center text-[9px] font-bold text-[var(--accent-blue)]">
       {countryCode.toUpperCase()}
     </span>
   );

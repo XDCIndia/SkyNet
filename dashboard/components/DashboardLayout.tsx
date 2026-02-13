@@ -10,7 +10,7 @@ export default function DashboardLayout({
   children, 
 }: DashboardLayoutProps) {
   return (
-    <div className="min-h-screen bg-[#0A0E1A]">
+    <div className="min-h-screen bg-[var(--bg-body)]">
       <Sidebar />
       
       {/* Main content — offset by sidebar width on desktop */}

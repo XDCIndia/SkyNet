@@ -125,10 +125,10 @@ interface NetworkStats {
 
 function StatusDot({ status }: { status: string }) {
   const colors = {
-    healthy: 'bg-[#10B981]',
-    degraded: 'bg-[#F59E0B]',
-    syncing: 'bg-[#F59E0B]',
-    offline: 'bg-[#EF4444]',
+    healthy: 'bg-[var(--success)]',
+    degraded: 'bg-[var(--warning)]',
+    syncing: 'bg-[var(--warning)]',
+    offline: 'bg-[var(--critical)]',
   };
   
   return (
@@ -138,10 +138,10 @@ function StatusDot({ status }: { status: string }) {
 
 function RoleBadge({ role }: { role: string }) {
   const colors: Record<string, string> = {
-    masternode: 'bg-[#1E90FF]/10 text-[#1E90FF] border-[#1E90FF]/20',
-    fullnode: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20',
-    archive: 'bg-[#8B5CF6]/10 text-[#8B5CF6] border-[#8B5CF6]/20',
-    rpc: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20',
+    masternode: 'bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border-[var(--accent-blue)]/20',
+    fullnode: 'bg-[var(--success)]/10 text-[var(--success)] border-[#10B981]/20',
+    archive: 'bg-[var(--purple)]/10 text-[var(--purple)] border-[#8B5CF6]/20',
+    rpc: 'bg-[var(--warning)]/10 text-[var(--warning)] border-[#F59E0B]/20',
   };
   
   return (
@@ -157,15 +157,15 @@ function NodeTypeBadge({ nodeType }: { nodeType?: string }) {
   
   const styles: Record<string, { bg: string; icon: React.ReactNode }> = {
     masternode: { 
-      bg: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20', 
+      bg: 'bg-[var(--success)]/10 text-[var(--success)] border-[#10B981]/20', 
       icon: <Pickaxe className="w-3 h-3" /> 
     },
     standby: { 
-      bg: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20', 
+      bg: 'bg-[var(--warning)]/10 text-[var(--warning)] border-[#F59E0B]/20', 
       icon: <Clock className="w-3 h-3" /> 
     },
     fullnode: { 
-      bg: 'bg-[#1E90FF]/10 text-[#1E90FF] border-[#1E90FF]/20', 
+      bg: 'bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border-[var(--accent-blue)]/20', 
       icon: <Link2 className="w-3 h-3" /> 
     },
   };
@@ -186,20 +186,20 @@ function ClientTypeBadge({ clientType }: { clientType?: string }) {
   
   const styles: Record<string, { bg: string; icon: React.ReactNode }> = {
     XDC: { 
-      bg: 'bg-[#1E90FF]/10 text-[#1E90FF] border-[#1E90FF]/20', 
+      bg: 'bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border-[var(--accent-blue)]/20', 
       icon: <Terminal className="w-3 h-3" /> 
     },
     Erigon: { 
-      bg: 'bg-[#8B5CF6]/10 text-[#8B5CF6] border-[#8B5CF6]/20', 
+      bg: 'bg-[var(--purple)]/10 text-[var(--purple)] border-[#8B5CF6]/20', 
       icon: <Layers className="w-3 h-3" /> 
     },
     Geth: { 
-      bg: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20', 
+      bg: 'bg-[var(--success)]/10 text-[var(--success)] border-[#10B981]/20', 
       icon: <Globe className="w-3 h-3" /> 
     },
   };
   
-  const style = styles[clientType] || { bg: 'bg-white/5 text-[#64748B] border-white/10', icon: <Terminal className="w-3 h-3" /> };
+  const style = styles[clientType] || { bg: 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] border-[var(--border-subtle)]', icon: <Terminal className="w-3 h-3" /> };
   
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border ${style.bg}`}>
@@ -211,9 +211,9 @@ function ClientTypeBadge({ clientType }: { clientType?: string }) {
 
 function SeverityBadge({ severity }: { severity: 'critical' | 'warning' | 'info' }) {
   const styles = {
-    critical: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20',
-    warning: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20',
-    info: 'bg-[#1E90FF]/10 text-[#1E90FF] border-[#1E90FF]/20',
+    critical: 'bg-[var(--critical)]/10 text-[var(--critical)] border-[#EF4444]/20',
+    warning: 'bg-[var(--warning)]/10 text-[var(--warning)] border-[#F59E0B]/20',
+    info: 'bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border-[var(--accent-blue)]/20',
   };
   
   return (
@@ -254,7 +254,7 @@ function MiniSparkline({ value, color = '#1E90FF' }: { value: number; color?: st
 function ProgressBar({ value, color = '#1E90FF', height = 6 }: { value: number; color?: string; height?: number }) {
   const clampedValue = Math.max(0, Math.min(100, value));
   return (
-    <div className="w-full bg-white/10 rounded-full overflow-hidden" style={{ height }}>
+    <div className="w-full bg-[var(--bg-hover)] rounded-full overflow-hidden" style={{ height }}>
       <div 
         className="h-full rounded-full transition-all duration-300"
         style={{ width: `${clampedValue}%`, backgroundColor: color }}
@@ -265,7 +265,7 @@ function ProgressBar({ value, color = '#1E90FF', height = 6 }: { value: number; 
 
 // Compact metric bar for table view
 function CompactMetricBar({ value, label }: { value: number | null; label: string }) {
-  if (value === null) return <span className="text-[#64748B]">—</span>;
+  if (value === null) return <span className="text-[var(--text-tertiary)]">—</span>;
   
   const color = value > 80 ? '#EF4444' : value > 60 ? '#F59E0B' : '#10B981';
   
@@ -274,14 +274,14 @@ function CompactMetricBar({ value, label }: { value: number | null; label: strin
       <div className="flex-1">
         <ProgressBar value={value} color={color} height={4} />
       </div>
-      <span className="text-[10px] font-mono w-7 text-right text-[#64748B]">{value}%</span>
+      <span className="text-[10px] font-mono w-7 text-right text-[var(--text-tertiary)]">{value}%</span>
     </div>
   );
 }
 
 // Security score badge
 function SecurityBadge({ score }: { score?: number }) {
-  if (score === undefined || score === null) return <span className="text-[#64748B]">—</span>;
+  if (score === undefined || score === null) return <span className="text-[var(--text-tertiary)]">—</span>;
   
   const color = score >= 90 ? '#10B981' : score >= 70 ? '#1E90FF' : score >= 50 ? '#F59E0B' : '#EF4444';
   
@@ -340,7 +340,7 @@ function NetworkHealthBanner({
         <div className="flex items-center gap-4">
           <div className="relative">
             <svg width="80" height="80" viewBox="0 0 80 80" className="transform -rotate-90">
-              <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8"/>
+              <circle cx="40" cy="40" r="36" fill="none" stroke="var(--border-subtle)" strokeWidth="8"/>
               <circle 
                 cx="40" 
                 cy="40" 
@@ -358,21 +358,21 @@ function NetworkHealthBanner({
               <span className="text-2xl font-bold font-mono-nums" style={{ color: healthColor }}>
                 {fleet.healthScore}
               </span>
-              <span className="text-[10px] text-[#64748B]">HEALTH</span>
+              <span className="text-[10px] text-[var(--text-tertiary)]">HEALTH</span>
             </div>
           </div>
           
           <div>
-            <h1 className="text-xl font-semibold text-[#F1F5F9]">Network Health</h1>
-            <p className="text-sm text-[#64748B]">
+            <h1 className="text-xl font-semibold text-[var(--text-primary)]">Network Health</h1>
+            <p className="text-sm text-[var(--text-tertiary)]">
               Last updated {lastUpdated}s ago
               {lastUpdated < 3 && (
                 <span className="inline-flex items-center gap-1 ml-2">
                   <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10B981]"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--success)] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--success)]"></span>
                   </span>
-                  <span className="text-[#10B981] text-xs">Live</span>
+                  <span className="text-[var(--success)] text-xs">Live</span>
                 </span>
               )}
             </p>
@@ -394,7 +394,7 @@ function NetworkHealthBanner({
           <StatBox 
             label="Masternodes" 
             value={masternodeCount} 
-            icon=<Pickaxe className="w-3 h-3 text-[#F59E0B]" />
+            icon=<Pickaxe className="w-3 h-3 text-[var(--warning)]" />
           />
         </div>
       </div>
@@ -413,34 +413,34 @@ function NetworkStatsBar({
   if (!stats) return null;
 
   return (
-    <div className="bg-gradient-to-r from-[#111827] to-[#0f1729] rounded-xl p-4 border border-white/5 mb-6">
+    <div className="bg-gradient-to-r from-[var(--bg-card)] to-[var(--bg-body)] rounded-xl p-4 border border-[var(--border-subtle)] mb-6">
       {/* Top Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
         {/* Best Block */}
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[#1E90FF]/10">
-            <Hash className="w-4 h-4 text-[#1E90FF]" />
+          <div className="p-2 rounded-lg bg-[var(--accent-blue)]/10">
+            <Hash className="w-4 h-4 text-[var(--accent-blue)]" />
           </div>
           <div>
-            <p className="text-[10px] text-[#64748B] uppercase tracking-wider">Best Block</p>
-            <p className="text-lg font-bold text-[#F1F5F9] font-mono-nums">
+            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">Best Block</p>
+            <p className="text-lg font-bold text-[var(--text-primary)] font-mono-nums">
               {stats.bestBlock.toLocaleString()}
             </p>
           </div>
           <span className="relative flex h-2 w-2 ml-auto">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10B981]"></span>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--success)] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--success)]"></span>
           </span>
         </div>
 
         {/* Avg Block Time */}
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[#10B981]/10">
-            <Clock className="w-4 h-4 text-[#10B981]" />
+          <div className="p-2 rounded-lg bg-[var(--success)]/10">
+            <Clock className="w-4 h-4 text-[var(--success)]" />
           </div>
           <div>
-            <p className="text-[10px] text-[#64748B] uppercase tracking-wider">Avg Block Time</p>
-            <p className="text-lg font-bold text-[#F1F5F9] font-mono-nums">
+            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">Avg Block Time</p>
+            <p className="text-lg font-bold text-[var(--text-primary)] font-mono-nums">
               {stats.avgBlockTime.toFixed(1)}s
             </p>
           </div>
@@ -448,12 +448,12 @@ function NetworkStatsBar({
 
         {/* Gas Price */}
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[#F59E0B]/10">
-            <Zap className="w-4 h-4 text-[#F59E0B]" />
+          <div className="p-2 rounded-lg bg-[var(--warning)]/10">
+            <Zap className="w-4 h-4 text-[var(--warning)]" />
           </div>
           <div>
-            <p className="text-[10px] text-[#64748B] uppercase tracking-wider">Gas Price</p>
-            <p className="text-lg font-bold text-[#F1F5F9] font-mono-nums">
+            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">Gas Price</p>
+            <p className="text-lg font-bold text-[var(--text-primary)] font-mono-nums">
               {stats.gasPrice}
             </p>
           </div>
@@ -461,12 +461,12 @@ function NetworkStatsBar({
 
         {/* Active Nodes */}
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[#8B5CF6]/10">
-            <Server className="w-4 h-4 text-[#8B5CF6]" />
+          <div className="p-2 rounded-lg bg-[var(--purple)]/10">
+            <Server className="w-4 h-4 text-[var(--purple)]" />
           </div>
           <div>
-            <p className="text-[10px] text-[#64748B] uppercase tracking-wider">Active Nodes</p>
-            <p className="text-lg font-bold text-[#F1F5F9] font-mono-nums">
+            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">Active Nodes</p>
+            <p className="text-lg font-bold text-[var(--text-primary)] font-mono-nums">
               {stats.activeNodes}
             </p>
           </div>
@@ -474,12 +474,12 @@ function NetworkStatsBar({
 
         {/* TPS */}
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[#EC4899]/10">
-            <TrendingUp className="w-4 h-4 text-[#EC4899]" />
+          <div className="p-2 rounded-lg bg-[var(--pink)]/10">
+            <TrendingUp className="w-4 h-4 text-[var(--pink)]" />
           </div>
           <div>
-            <p className="text-[10px] text-[#64748B] uppercase tracking-wider">TPS</p>
-            <p className="text-lg font-bold text-[#F1F5F9] font-mono-nums">
+            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">TPS</p>
+            <p className="text-lg font-bold text-[var(--text-primary)] font-mono-nums">
               {stats.tps.toFixed(1)}
             </p>
           </div>
@@ -487,12 +487,12 @@ function NetworkStatsBar({
 
         {/* Pending Txs */}
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-white/5">
-            <Flame className="w-4 h-4 text-[#64748B]" />
+          <div className="p-2 rounded-lg bg-[var(--bg-hover)]">
+            <Flame className="w-4 h-4 text-[var(--text-tertiary)]" />
           </div>
           <div>
-            <p className="text-[10px] text-[#64748B] uppercase tracking-wider">Pending</p>
-            <p className="text-lg font-bold text-[#F1F5F9] font-mono-nums">
+            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">Pending</p>
+            <p className="text-lg font-bold text-[var(--text-primary)] font-mono-nums">
               {stats.pendingTxs}
             </p>
           </div>
@@ -500,35 +500,35 @@ function NetworkStatsBar({
       </div>
 
       {/* Bottom Row - Epoch Info */}
-      <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-white/5">
+      <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-[var(--border-subtle)]">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[#64748B]">Epoch</span>
-          <span className="text-sm font-bold text-[#1E90FF] font-mono-nums">{stats.epoch.number.toLocaleString()}</span>
+          <span className="text-xs text-[var(--text-tertiary)]">Epoch</span>
+          <span className="text-sm font-bold text-[var(--accent-blue)] font-mono-nums">{stats.epoch.number.toLocaleString()}</span>
         </div>
         
         <div className="flex items-center gap-2 flex-1 max-w-[200px]">
-          <span className="text-xs text-[#64748B]">Progress</span>
-          <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <span className="text-xs text-[var(--text-tertiary)]">Progress</span>
+          <div className="flex-1 h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
             <div 
-              className="h-full bg-[#1E90FF] rounded-full transition-all duration-500"
+              className="h-full bg-[var(--accent-blue)] rounded-full transition-all duration-500"
               style={{ width: `${stats.epoch.progress}%` }}
             />
           </div>
-          <span className="text-xs text-[#F1F5F9] font-mono-nums">{stats.epoch.progress}%</span>
+          <span className="text-xs text-[var(--text-primary)] font-mono-nums">{stats.epoch.progress}%</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[#64748B]">Remaining</span>
-          <span className="text-sm font-bold text-[#F1F5F9] font-mono-nums">{stats.epoch.blocksRemaining} blocks</span>
+          <span className="text-xs text-[var(--text-tertiary)]">Remaining</span>
+          <span className="text-sm font-bold text-[var(--text-primary)] font-mono-nums">{stats.epoch.blocksRemaining} blocks</span>
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-          <span className="text-xs text-[#64748B]">Difficulty</span>
-          <span className="text-sm font-bold text-[#F1F5F9] font-mono-nums">{stats.difficulty}</span>
+          <span className="text-xs text-[var(--text-tertiary)]">Difficulty</span>
+          <span className="text-sm font-bold text-[var(--text-primary)] font-mono-nums">{stats.difficulty}</span>
         </div>
 
         {lastUpdated < 3 && (
-          <span className="text-xs text-[#10B981]">● Live</span>
+          <span className="text-xs text-[var(--success)]">● Live</span>
         )}
       </div>
     </div>
@@ -549,11 +549,11 @@ function StatBox({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="bg-white/5 rounded-lg p-3 text-center">
-      <div className={`text-lg font-bold font-mono-nums ${color ? '' : 'text-[#F1F5F9]'}`} style={{ color }}>
+    <div className="bg-[var(--bg-hover)] rounded-lg p-3 text-center">
+      <div className={`text-lg font-bold font-mono-nums ${color ? '' : 'text-[var(--text-primary)]'}`} style={{ color }}>
         {value}
       </div>
-      <div className="text-[10px] text-[#64748B] uppercase tracking-wider flex items-center justify-center gap-1">
+      <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider flex items-center justify-center gap-1">
         {icon}
         {label}
       </div>
@@ -573,14 +573,14 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
   return (
     <div 
       onClick={onClick}
-      className="card-xdc cursor-pointer hover:border-[#1E90FF]/30 transition-all hover:bg-[#111827]/80 group"
+      className="card-xdc cursor-pointer hover:border-[var(--accent-blue)]/30 transition-all hover:bg-[var(--bg-card)]/80 group"
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <StatusDot status={node.status} />
           <div>
-            <h3 className="font-semibold text-[#F1F5F9] text-sm truncate max-w-[140px]">{node.name}</h3>
-            <p className="text-xs text-[#64748B] truncate max-w-[140px]">{node.host}</p>
+            <h3 className="font-semibold text-[var(--text-primary)] text-sm truncate max-w-[140px]">{node.name}</h3>
+            <p className="text-xs text-[var(--text-tertiary)] truncate max-w-[140px]">{node.host}</p>
           </div>
         </div>
         <RoleBadge role={node.role} />
@@ -589,7 +589,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
       {/* IPv4 Display */}
       {node.ipv4 && (
         <div className="mb-2 text-xs">
-          <span className="font-mono text-[#1E90FF]">{node.ipv4}</span>
+          <span className="font-mono text-[var(--accent-blue)]">{node.ipv4}</span>
         </div>
       )}
       
@@ -601,7 +601,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
       
       {/* OS Info */}
       {node.os_info && (
-        <div className="text-[10px] text-[#64748B] mb-2 flex items-center gap-1">
+        <div className="text-[10px] text-[var(--text-tertiary)] mb-2 flex items-center gap-1">
           <span>{OSIcon({ osType: node.os_info.type })}</span>
           <span className="truncate">{formatOSInfo(node.os_info)}</span>
         </div>
@@ -610,13 +610,13 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
       <div className="space-y-3">
         {/* Block Height */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[#64748B]">Block</span>
+          <span className="text-xs text-[var(--text-tertiary)]">Block</span>
           <div className="text-right">
             <span className="text-sm font-mono-nums font-medium">
               {node.blockHeight > 0 ? node.blockHeight.toLocaleString() : '—'}
             </span>
             {node.blocksBehind > 0 && (
-              <span className="text-xs text-[#F59E0B] ml-2">
+              <span className="text-xs text-[var(--warning)] ml-2">
                 -{node.blocksBehind}
               </span>
             )}
@@ -633,22 +633,22 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
         
         {/* Peers */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[#64748B]">Peers</span>
+          <span className="text-xs text-[var(--text-tertiary)]">Peers</span>
           <span className="text-sm font-mono-nums">{node.peerCount || 0}</span>
         </div>
         
         {/* Security Score */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[#64748B]">Security</span>
+          <span className="text-xs text-[var(--text-tertiary)]">Security</span>
           <SecurityBadge score={node.security_score} />
         </div>
         
         {/* Resources Mini Bars */}
         {(node.cpuPercent !== null || node.memoryPercent !== null || node.diskPercent !== null) && (
-          <div className="space-y-1.5 pt-2 border-t border-white/5">
+          <div className="space-y-1.5 pt-2 border-t border-[var(--border-subtle)]">
             {node.cpuPercent !== null && (
               <div className="flex items-center gap-2">
-                <Cpu className="w-3 h-3 text-[#64748B]" />
+                <Cpu className="w-3 h-3 text-[var(--text-tertiary)]" />
                 <div className="flex-1">
                   <ProgressBar 
                     value={node.cpuPercent} 
@@ -661,7 +661,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
             )}
             {node.memoryPercent !== null && (
               <div className="flex items-center gap-2">
-                <Wifi className="w-3 h-3 text-[#64748B]" />
+                <Wifi className="w-3 h-3 text-[var(--text-tertiary)]" />
                 <div className="flex-1">
                   <ProgressBar 
                     value={node.memoryPercent}
@@ -674,7 +674,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
             )}
             {node.diskPercent !== null && (
               <div className="flex items-center gap-2">
-                <HardDrive className="w-3 h-3 text-[#64748B]" />
+                <HardDrive className="w-3 h-3 text-[var(--text-tertiary)]" />
                 <div className="flex-1">
                   <ProgressBar 
                     value={node.diskPercent}
@@ -689,15 +689,15 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
         )}
         
         {/* Last Seen */}
-        <div className="flex items-center gap-1 text-[10px] text-[#64748B] pt-2 border-t border-white/5">
+        <div className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)] pt-2 border-t border-[var(--border-subtle)]">
           <Clock className="w-3 h-3" />
           {node.lastSeen ? formatTimeAgo(node.lastSeen) : 'Never'}
         </div>
       </div>
       
-      <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
-        <span className="text-xs text-[#64748B]">{statusLabels[node.status]}</span>
-        <ArrowRight className="w-4 h-4 text-[#64748B] group-hover:text-[#1E90FF] transition-colors" />
+      <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between">
+        <span className="text-xs text-[var(--text-tertiary)]">{statusLabels[node.status]}</span>
+        <ArrowRight className="w-4 h-4 text-[var(--text-tertiary)] group-hover:text-[var(--accent-blue)] transition-colors" />
       </div>
     </div>
   );
@@ -723,17 +723,17 @@ function TableHeader({
   
   return (
     <th 
-      className={`text-left py-3 px-3 text-xs font-medium text-[#64748B] cursor-pointer select-none hover:text-[#F1F5F9] transition-colors ${className}`}
+      className={`text-left py-3 px-3 text-xs font-medium text-[var(--text-tertiary)] cursor-pointer select-none hover:text-[var(--text-primary)] transition-colors ${className}`}
       onClick={() => onSort(field)}
     >
       <div className="flex items-center gap-1">
         {label}
         <span className="inline-flex flex-col">
           <ChevronUp 
-            className={`w-3 h-3 -mb-1 ${isActive && sortDirection === 'asc' ? 'text-[#1E90FF]' : 'text-transparent'}`} 
+            className={`w-3 h-3 -mb-1 ${isActive && sortDirection === 'asc' ? 'text-[var(--accent-blue)]' : 'text-transparent'}`} 
           />
           <ChevronDown 
-            className={`w-3 h-3 ${isActive && sortDirection === 'desc' ? 'text-[#1E90FF]' : 'text-transparent'}`} 
+            className={`w-3 h-3 ${isActive && sortDirection === 'desc' ? 'text-[var(--accent-blue)]' : 'text-transparent'}`} 
           />
         </span>
       </div>
@@ -757,7 +757,7 @@ function TableRow({
 }) {
   return (
     <tr 
-      className="hover:bg-white/[0.03] cursor-pointer transition-colors border-b border-white/5"
+      className="hover:bg-white/[0.03] cursor-pointer transition-colors border-b border-[var(--border-subtle)]"
       onClick={onClick}
       style={style}
     >
@@ -765,8 +765,8 @@ function TableRow({
       <td className="py-2 px-3" onClick={onSelect}>
         <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
           isSelected 
-            ? 'bg-[#1E90FF] border-[#1E90FF]' 
-            : 'border-[#64748B] hover:border-[#1E90FF]'
+            ? 'bg-[var(--accent-blue)] border-[var(--accent-blue)]' 
+            : 'border-[#64748B] hover:border-[var(--accent-blue)]'
         }`}>
           {isSelected && <CheckSquare className="w-3 h-3 text-white" />}
         </div>
@@ -780,14 +780,14 @@ function TableRow({
       {/* Name */}
       <td className="py-2 px-3">
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-[#F1F5F9] truncate max-w-[150px]">{node.name}</span>
-          <span className="text-[10px] text-[#64748B] truncate max-w-[150px]">{node.host}</span>
+          <span className="text-sm font-medium text-[var(--text-primary)] truncate max-w-[150px]">{node.name}</span>
+          <span className="text-[10px] text-[var(--text-tertiary)] truncate max-w-[150px]">{node.host}</span>
         </div>
       </td>
       
       {/* IPv4 */}
       <td className="py-2 px-3">
-        <span className="text-xs font-mono text-[#1E90FF]">{node.ipv4 || '—'}</span>
+        <span className="text-xs font-mono text-[var(--accent-blue)]">{node.ipv4 || '—'}</span>
       </td>
       
       {/* Type */}
@@ -799,7 +799,7 @@ function TableRow({
       <td className="py-2 px-3">
         <div className="flex items-center gap-1">
           <ClientTypeBadge clientType={node.client_type} />
-          <span className="text-[10px] text-[#64748B]">
+          <span className="text-[10px] text-[var(--text-tertiary)]">
             {node.clientVersion?.split('/')[1]?.split('-')[0] || ''}
           </span>
         </div>
@@ -812,14 +812,14 @@ function TableRow({
             {node.blockHeight > 0 ? node.blockHeight.toLocaleString() : '—'}
           </span>
           {node.blocksBehind > 0 && (
-            <span className="text-[10px] text-[#F59E0B]">-{node.blocksBehind}</span>
+            <span className="text-[10px] text-[var(--warning)]">-{node.blocksBehind}</span>
           )}
         </div>
       </td>
       
       {/* Behind */}
       <td className="py-2 px-3">
-        <span className={`text-xs font-mono-nums ${node.blocksBehind > 100 ? 'text-[#EF4444]' : node.blocksBehind > 10 ? 'text-[#F59E0B]' : 'text-[#10B981]'}`}>
+        <span className={`text-xs font-mono-nums ${node.blocksBehind > 100 ? 'text-[var(--critical)]' : node.blocksBehind > 10 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}`}>
           {node.blocksBehind || 0}
         </span>
       </td>
@@ -848,7 +848,7 @@ function TableRow({
       <td className="py-2 px-3">
         <div className="flex items-center gap-1">
           <span>{OSIcon({ osType: node.os_info?.type })}</span>
-          <span className="text-xs text-[#64748B] truncate max-w-[100px]">
+          <span className="text-xs text-[var(--text-tertiary)] truncate max-w-[100px]">
             {formatOSInfo(node.os_info)}
           </span>
         </div>
@@ -861,7 +861,7 @@ function TableRow({
       
       {/* Last Seen */}
       <td className="py-2 px-3">
-        <span className="text-xs text-[#64748B]">
+        <span className="text-xs text-[var(--text-tertiary)]">
           {node.lastSeen ? formatTimeAgo(node.lastSeen) : 'Never'}
         </span>
       </td>
@@ -935,16 +935,16 @@ function VirtualTable({
         onScroll={handleScroll}
       >
         <table className="w-full">
-          <thead className="sticky top-0 bg-[#111827] z-10">
-            <tr className="border-b border-white/10">
+          <thead className="sticky top-0 bg-[var(--bg-card)] z-10">
+            <tr className="border-b border-[var(--border-subtle)]">
               <th className="py-3 px-3 w-8">
                 <div 
                   className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${
                     allSelected 
-                      ? 'bg-[#1E90FF] border-[#1E90FF]' 
+                      ? 'bg-[var(--accent-blue)] border-[var(--accent-blue)]' 
                       : selectedNodes.size > 0 
-                        ? 'bg-[#1E90FF]/50 border-[#1E90FF]' 
-                        : 'border-[#64748B] hover:border-[#1E90FF]'
+                        ? 'bg-[var(--accent-blue)]/50 border-[var(--accent-blue)]' 
+                        : 'border-[#64748B] hover:border-[var(--accent-blue)]'
                   }`}
                   onClick={() => onSelectAll(!allSelected)}
                 >
@@ -984,13 +984,13 @@ function VirtualTable({
       </div>
       
       {/* Pagination / Status Bar */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-white/10 bg-[#0A0E1A]">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border-subtle)] bg-[var(--bg-body)]">
         <div className="flex items-center gap-4">
-          <span className="text-sm text-[#64748B]">
+          <span className="text-sm text-[var(--text-tertiary)]">
             Showing {startIndex + 1}-{Math.min(endIndex, nodes.length)} of {nodes.length} nodes
           </span>
           {selectedNodes.size > 0 && (
-            <span className="text-sm text-[#1E90FF]">
+            <span className="text-sm text-[var(--accent-blue)]">
               {selectedNodes.size} selected
             </span>
           )}
@@ -999,13 +999,13 @@ function VirtualTable({
         <div className="flex items-center gap-2">
           <button
             onClick={() => containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="px-3 py-1.5 text-xs bg-white/5 hover:bg-white/10 rounded transition-colors"
+            className="px-3 py-1.5 text-xs bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)] rounded transition-colors"
           >
             Jump to Top
           </button>
           <button
             onClick={() => containerRef.current?.scrollTo({ top: totalHeight, behavior: 'smooth' })}
-            className="px-3 py-1.5 text-xs bg-white/5 hover:bg-white/10 rounded transition-colors"
+            className="px-3 py-1.5 text-xs bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)] rounded transition-colors"
           >
             Jump to Bottom
           </button>
@@ -1022,9 +1022,9 @@ function IncidentsStrip({ incidents }: { incidents: Incident[] }) {
   return (
     <div className="card-xdc mb-6">
       <div className="flex items-center gap-2 mb-4">
-        <ShieldAlert className="w-5 h-5 text-[#EF4444]" />
-        <h2 className="text-lg font-semibold text-[#F1F5F9]">Active Incidents</h2>
-        <span className="px-2 py-0.5 bg-[#EF4444]/10 text-[#EF4444] rounded text-xs font-medium">
+        <ShieldAlert className="w-5 h-5 text-[var(--critical)]" />
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Active Incidents</h2>
+        <span className="px-2 py-0.5 bg-[var(--critical)]/10 text-[var(--critical)] rounded text-xs font-medium">
           {incidents.length}
         </span>
       </div>
@@ -1034,24 +1034,24 @@ function IncidentsStrip({ incidents }: { incidents: Incident[] }) {
           <div key={incident.id} className="flex gap-3 relative">
             {/* Timeline line */}
             {idx < incidents.length - 1 && (
-              <div className="absolute left-[11px] top-6 bottom-0 w-px bg-white/10" />
+              <div className="absolute left-[11px] top-6 bottom-0 w-px bg-[var(--bg-hover)]" />
             )}
             {/* Dot */}
             <div className="flex-shrink-0 mt-1.5">
               <div className={`w-[10px] h-[10px] rounded-full border-2 ${
-                incident.severity === 'critical' ? 'border-[#EF4444] bg-[#EF4444]/30' :
-                incident.severity === 'warning' ? 'border-[#F59E0B] bg-[#F59E0B]/30' :
-                'border-[#1E90FF] bg-[#1E90FF]/30'
+                incident.severity === 'critical' ? 'border-[#EF4444] bg-[var(--critical)]/30' :
+                incident.severity === 'warning' ? 'border-[#F59E0B] bg-[var(--warning)]/30' :
+                'border-[var(--accent-blue)] bg-[var(--accent-blue)]/30'
               }`} />
             </div>
             {/* Content */}
             <div className="flex-1 pb-4">
               <div className="flex items-center gap-2 mb-0.5">
                 <SeverityBadge severity={incident.severity} />
-                <span className="text-xs text-[#64748B]">{formatTimeAgo(incident.detected_at)}</span>
+                <span className="text-xs text-[var(--text-tertiary)]">{formatTimeAgo(incident.detected_at)}</span>
               </div>
-              <p className="text-sm font-medium text-[#F1F5F9]">{incident.title}</p>
-              <p className="text-xs text-[#64748B]">{incident.node_name}</p>
+              <p className="text-sm font-medium text-[var(--text-primary)]">{incident.title}</p>
+              <p className="text-xs text-[var(--text-tertiary)]">{incident.node_name}</p>
             </div>
           </div>
         ))}
@@ -1080,20 +1080,20 @@ function FilterBar({
   
   return (
     <div className="flex items-center gap-2 overflow-x-auto pb-2">
-      <span className="text-sm text-[#64748B] mr-2">Filter:</span>
+      <span className="text-sm text-[var(--text-tertiary)] mr-2">Filter:</span>
       {filters.map(({ key, label }) => (
         <button
           key={key}
           onClick={() => onFilterChange(key)}
           className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
             activeFilter === key
-              ? 'bg-[#1E90FF]/20 text-[#1E90FF] border border-[#1E90FF]/30'
-              : 'bg-white/5 text-[#94A3B8] hover:bg-white/10 border border-transparent'
+              ? 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)] border border-[var(--accent-blue)]/30'
+              : 'bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] border border-transparent'
           }`}
         >
           {label}
           <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] ${
-            activeFilter === key ? 'bg-[#1E90FF]/20' : 'bg-white/10'
+            activeFilter === key ? 'bg-[var(--accent-blue)]/20' : 'bg-[var(--bg-hover)]'
           }`}>
             {counts[key]}
           </span>
@@ -1114,14 +1114,14 @@ function BulkActionsBar({
   if (selectedCount === 0) return null;
   
   return (
-    <div className="flex items-center justify-between px-4 py-3 mb-4 bg-[#1E90FF]/10 border border-[#1E90FF]/30 rounded-lg">
+    <div className="flex items-center justify-between px-4 py-3 mb-4 bg-[var(--accent-blue)]/10 border border-[var(--accent-blue)]/30 rounded-lg">
       <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-[#1E90FF]">
+        <span className="text-sm font-medium text-[var(--accent-blue)]">
           {selectedCount} node{selectedCount !== 1 ? 's' : ''} selected
         </span>
         <button
           onClick={onClearSelection}
-          className="text-xs text-[#64748B] hover:text-[#F1F5F9] underline"
+          className="text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline"
         >
           Clear selection
         </button>
@@ -1131,7 +1131,7 @@ function BulkActionsBar({
         <button
           disabled
           title="Coming soon"
-          className="px-3 py-1.5 text-xs bg-white/5 text-[#64748B] rounded cursor-not-allowed flex items-center gap-1"
+          className="px-3 py-1.5 text-xs bg-[var(--bg-hover)] text-[var(--text-tertiary)] rounded cursor-not-allowed flex items-center gap-1"
         >
           <RefreshCw className="w-3 h-3" />
           Restart
@@ -1139,7 +1139,7 @@ function BulkActionsBar({
         <button
           disabled
           title="Coming soon"
-          className="px-3 py-1.5 text-xs bg-white/5 text-[#64748B] rounded cursor-not-allowed flex items-center gap-1"
+          className="px-3 py-1.5 text-xs bg-[var(--bg-hover)] text-[var(--text-tertiary)] rounded cursor-not-allowed flex items-center gap-1"
         >
           <Settings className="w-3 h-3" />
           Update
@@ -1147,7 +1147,7 @@ function BulkActionsBar({
         <button
           disabled
           title="Coming soon"
-          className="px-3 py-1.5 text-xs bg-white/5 text-[#64748B] rounded cursor-not-allowed flex items-center gap-1"
+          className="px-3 py-1.5 text-xs bg-[var(--bg-hover)] text-[var(--text-tertiary)] rounded cursor-not-allowed flex items-center gap-1"
         >
           <MoreHorizontal className="w-3 h-3" />
           More
@@ -1163,10 +1163,10 @@ function LoadingState() {
     <DashboardLayout>
       <div className="card-xdc mb-6 h-32 animate-pulse">
         <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full bg-white/5"></div>
+          <div className="w-20 h-20 rounded-full bg-[var(--bg-hover)]"></div>
           <div className="space-y-2">
-            <div className="w-32 h-6 bg-white/5 rounded"></div>
-            <div className="w-48 h-4 bg-white/5 rounded"></div>
+            <div className="w-32 h-6 bg-[var(--bg-hover)] rounded"></div>
+            <div className="w-48 h-4 bg-[var(--bg-hover)] rounded"></div>
           </div>
         </div>
       </div>
@@ -1174,7 +1174,7 @@ function LoadingState() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map(i => (
           <div key={i} className="card-xdc h-48 animate-pulse">
-            <div className="w-full h-full bg-white/5 rounded"></div>
+            <div className="w-full h-full bg-[var(--bg-hover)] rounded"></div>
           </div>
         ))}
       </div>
@@ -1384,7 +1384,7 @@ export default function Home() {
   return (
     <DashboardLayout>
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] text-[#EF4444]">
+            <div className="mb-6 p-4 rounded-xl bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] text-[var(--critical)]">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5" />
                 <span>{error}</span>
@@ -1414,9 +1414,9 @@ export default function Home() {
             {/* Header Row */}
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
-                <Server className="w-5 h-5 text-[#1E90FF]" />
-                <h2 className="text-lg font-semibold text-[#F1F5F9]">Nodes</h2>
-                <span className="px-2 py-0.5 bg-white/10 text-[#64748B] rounded text-xs">
+                <Server className="w-5 h-5 text-[var(--accent-blue)]" />
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Nodes</h2>
+                <span className="px-2 py-0.5 bg-[var(--bg-hover)] text-[var(--text-tertiary)] rounded text-xs">
                   {filteredNodes.length} of {nodes.length}
                 </span>
               </div>
@@ -1424,28 +1424,28 @@ export default function Home() {
               <div className="flex items-center gap-3">
                 {/* Search */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
                   <input
                     type="text"
                     placeholder="Search nodes..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-[#F1F5F9] placeholder-[#64748B] focus:outline-none focus:border-[#1E90FF] w-64"
+                    className="pl-9 pr-4 py-2 bg-[var(--bg-hover)] border border-[var(--border-subtle)] rounded-lg text-sm text-[var(--text-primary)] placeholder-[#64748B] focus:outline-none focus:border-[var(--accent-blue)] w-64"
                   />
                 </div>
                 
                 {/* View Toggle */}
-                <div className="flex items-center bg-white/5 rounded-lg p-1">
+                <div className="flex items-center bg-[var(--bg-hover)] rounded-lg p-1">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded transition-colors ${viewMode === 'grid' ? 'bg-[#1E90FF]/20 text-[#1E90FF]' : 'text-[#64748B] hover:text-[#F1F5F9]'}`}
+                    className={`p-2 rounded transition-colors ${viewMode === 'grid' ? 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}`}
                     title="Grid view"
                   >
                     <Grid3X3 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setViewMode('table')}
-                    className={`p-2 rounded transition-colors ${viewMode === 'table' ? 'bg-[#1E90FF]/20 text-[#1E90FF]' : 'text-[#64748B] hover:text-[#F1F5F9]'}`}
+                    className={`p-2 rounded transition-colors ${viewMode === 'table' ? 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}`}
                     title="Table view"
                   >
                     <List className="w-4 h-4" />
@@ -1454,10 +1454,10 @@ export default function Home() {
                 
                 <button
                   onClick={fetchData}
-                  className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                  className="p-2 hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
                   title="Refresh now"
                 >
-                  <RefreshCw className="w-4 h-4 text-[#64748B]" />
+                  <RefreshCw className="w-4 h-4 text-[var(--text-tertiary)]" />
                 </button>
               </div>
             </div>
@@ -1474,7 +1474,7 @@ export default function Home() {
             />
 
             {filteredNodes.length === 0 ? (
-              <div className="text-center py-12 text-[#64748B]">
+              <div className="text-center py-12 text-[var(--text-tertiary)]">
                 <Server className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>No nodes match the selected filter</p>
               </div>

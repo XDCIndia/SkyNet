@@ -83,14 +83,14 @@ export default function ConsensusPanel({ data }: ConsensusPanelProps) {
       case 'Active':
         return {
           icon: <CheckCircle2 className="w-4 h-4" />,
-          color: 'text-[#10B981]',
+          color: 'text-[var(--success)]',
           bg: 'bg-[rgba(16,185,129,0.1)]',
           border: 'border-[rgba(16,185,129,0.3)]',
         };
       case 'Slashed':
         return {
           icon: <AlertTriangle className="w-4 h-4" />,
-          color: 'text-[#F59E0B]',
+          color: 'text-[var(--warning)]',
           bg: 'bg-[rgba(245,158,11,0.1)]',
           border: 'border-[rgba(245,158,11,0.3)]',
         };
@@ -98,7 +98,7 @@ export default function ConsensusPanel({ data }: ConsensusPanelProps) {
       default:
         return {
           icon: <AlertTriangle className="w-4 h-4" />,
-          color: 'text-[#EF4444]',
+          color: 'text-[var(--critical)]',
           bg: 'bg-[rgba(239,68,68,0.1)]',
           border: 'border-[rgba(239,68,68,0.3)]',
         };
@@ -113,7 +113,7 @@ export default function ConsensusPanel({ data }: ConsensusPanelProps) {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F59E0B]/20 to-[#F59E0B]/10 flex items-center justify-center">
-            <Crown className="w-5 h-5 text-[#F59E0B]" />
+            <Crown className="w-5 h-5 text-[var(--warning)]" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-[#F9FAFB]">XDPoS Consensus</h2>
@@ -140,10 +140,10 @@ export default function ConsensusPanel({ data }: ConsensusPanelProps) {
         <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.02)]">
           <div className="section-header mb-2">Signing Rate</div>
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold font-mono-nums text-[#10B981]">
+            <span className="text-2xl font-bold font-mono-nums text-[var(--success)]">
               {data.signingRate.toFixed(1)}%
             </span>
-            <TrendingUp className="w-4 h-4 text-[#10B981]" />
+            <TrendingUp className="w-4 h-4 text-[var(--success)]" />
           </div>
         </div>
         
@@ -168,11 +168,11 @@ export default function ConsensusPanel({ data }: ConsensusPanelProps) {
         <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.02)]">
           <div className="section-header mb-2">Total Rewards</div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-semibold text-[#10B981]">
+            <span className="text-lg font-semibold text-[var(--success)]">
               +{formatXDC(data.totalRewards)}
             </span>
             {data.penalties > 0 && (
-              <span className="text-sm text-[#EF4444]">
+              <span className="text-sm text-[var(--critical)]">
                 -{data.penalties} penalties
               </span>
             )}

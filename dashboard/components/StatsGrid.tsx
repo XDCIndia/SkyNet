@@ -29,8 +29,8 @@ function StatCard({ icon, label, value, change, changeType = 'neutral', suffix =
   };
   
   const getChangeColor = () => {
-    if (changeType === 'positive') return 'text-[#10B981]';
-    if (changeType === 'negative') return 'text-[#EF4444]';
+    if (changeType === 'positive') return 'text-[var(--success)]';
+    if (changeType === 'negative') return 'text-[var(--critical)]';
     return 'text-[#6B7280]';
   };
   
@@ -39,7 +39,7 @@ function StatCard({ icon, label, value, change, changeType = 'neutral', suffix =
   return (
     <div className="card-xdc">
       <div className="flex items-start justify-between mb-3">
-        <div className="w-10 h-10 rounded-xl bg-[rgba(30,144,255,0.1)] flex items-center justify-center text-[#1E90FF]">
+        <div className="w-10 h-10 rounded-xl bg-[rgba(30,144,255,0.1)] flex items-center justify-center text-[var(--accent-blue)]">
           {icon}
         </div>
         {change !== undefined && (

@@ -166,7 +166,7 @@ export default function SocialCard() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1E90FF]/20 to-[#10B981]/10 flex items-center justify-center">
-            <Share2 className="w-5 h-5 text-[#1E90FF]" />
+            <Share2 className="w-5 h-5 text-[var(--accent-blue)]" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-[#F9FAFB]">Social Media Cards</h2>
@@ -183,8 +183,8 @@ export default function SocialCard() {
             onClick={() => setActiveCard(type)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeCard === type
-                ? 'bg-[#1E90FF] text-white'
-                : 'bg-[#111827] text-[#9CA3AF] hover:text-[#F9FAFB] border border-[rgba(255,255,255,0.06)]'
+                ? 'bg-[var(--accent-blue)] text-white'
+                : 'bg-[var(--bg-card)] text-[#9CA3AF] hover:text-[#F9FAFB] border border-[rgba(255,255,255,0.06)]'
             }`}
           >
             {type.charAt(0).toUpperCase() + type.slice(1)} Card
@@ -220,13 +220,13 @@ export default function SocialCard() {
           onClick={handleCopyToClipboard}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.1)] text-[#F9FAFB] hover:bg-[rgba(255,255,255,0.15)] transition-colors"
         >
-          {copied ? <Check className="w-4 h-4 text-[#10B981]" /> : <Copy className="w-4 h-4" />}
+          {copied ? <Check className="w-4 h-4 text-[var(--success)]" /> : <Copy className="w-4 h-4" />}
           {copied ? 'Copied!' : 'Copy Text'}
         </button>
         <button
           onClick={handleDownload}
           disabled={downloading}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(16,185,129,0.15)] text-[#10B981] hover:bg-[rgba(16,185,129,0.25)] transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(16,185,129,0.15)] text-[var(--success)] hover:bg-[rgba(16,185,129,0.25)] transition-colors disabled:opacity-50"
         >
           <Download className={`w-4 h-4 ${downloading ? 'animate-bounce' : ''}`} />
           {downloading ? 'Generating...' : 'Download PNG'}
@@ -234,13 +234,13 @@ export default function SocialCard() {
       </div>
 
       {/* Hashtag Suggestions */}
-      <div className="mt-6 p-4 rounded-xl bg-[#111827] border border-[rgba(255,255,255,0.06)]">
+      <div className="mt-6 p-4 rounded-xl bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)]">
         <div className="text-xs text-[#6B7280] mb-2">Suggested Hashtags</div>
         <div className="flex flex-wrap gap-2">
           {['#XDC', '#XDCNetwork', '#WeAreXDC', '#Blockchain', '#EnterpriseBlockchain', '#Validator', '#DeFi', '#Web3'].map(tag => (
             <span 
               key={tag} 
-              className="px-2 py-1 rounded-full bg-[rgba(30,144,255,0.1)] text-[#1E90FF] text-xs cursor-pointer hover:bg-[rgba(30,144,255,0.2)] transition-colors"
+              className="px-2 py-1 rounded-full bg-[rgba(30,144,255,0.1)] text-[var(--accent-blue)] text-xs cursor-pointer hover:bg-[rgba(30,144,255,0.2)] transition-colors"
               onClick={() => navigator.clipboard.writeText(tag)}
             >
               {tag}
@@ -329,7 +329,7 @@ function GrowthCard({ stats }: { stats: GrowthStats }) {
             <span className="text-sm text-[#6B7280] text-center">{typeof metric.last === 'number' ? metric.last.toLocaleString() : metric.last}</span>
             <span className="text-sm text-[#F9FAFB] text-center font-medium">{typeof metric.current === 'number' ? metric.current.toLocaleString() : metric.current}</span>
             <div className="flex items-center justify-end gap-1">
-              <span className="text-sm font-medium text-[#10B981]">+{metric.growth}%</span>
+              <span className="text-sm font-medium text-[var(--success)]">+{metric.growth}%</span>
               {metric.growth > 30 ? <span>🚀</span> : <span>📈</span>}
             </div>
           </div>
@@ -396,7 +396,7 @@ function MilestoneCard({ data, stats }: { data: MilestoneData; stats: NetworkSta
 
       {/* Hashtags */}
       <div className="text-center mt-4">
-        <span className="text-xs text-[#1E90FF]">#XDC #XDCNetwork #Blockchain #Milestone</span>
+        <span className="text-xs text-[var(--accent-blue)]">#XDC #XDCNetwork #Blockchain #Milestone</span>
       </div>
     </div>
   );
@@ -430,22 +430,22 @@ function ValidatorCard({ data }: { data: ValidatorData }) {
       {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="text-center p-3 rounded-xl bg-[rgba(255,255,255,0.03)]">
-          <div className="text-xl font-bold text-[#10B981]">{data.uptime}%</div>
+          <div className="text-xl font-bold text-[var(--success)]">{data.uptime}%</div>
           <div className="text-xs text-[#6B7280] mt-1">Uptime (30d)</div>
         </div>
         <div className="text-center p-3 rounded-xl bg-[rgba(255,255,255,0.03)]">
-          <div className="text-xl font-bold text-[#1E90FF]">{(data.blocksProduced / 1000).toFixed(1)}K</div>
+          <div className="text-xl font-bold text-[var(--accent-blue)]">{(data.blocksProduced / 1000).toFixed(1)}K</div>
           <div className="text-xs text-[#6B7280] mt-1">Blocks</div>
         </div>
         <div className="text-center p-3 rounded-xl bg-[rgba(255,255,255,0.03)]">
-          <div className="text-xl font-bold text-[#F59E0B]">{(data.rewards / 1000).toFixed(1)}K</div>
+          <div className="text-xl font-bold text-[var(--warning)]">{(data.rewards / 1000).toFixed(1)}K</div>
           <div className="text-xs text-[#6B7280] mt-1">XDC Earned</div>
         </div>
       </div>
 
       {/* Streak */}
       <div className="text-center p-3 rounded-xl bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.3)]">
-        <span className="text-sm text-[#F59E0B]">🔥 {data.streak} Day Streak • Top {data.rank}% Performer</span>
+        <span className="text-sm text-[var(--warning)]">🔥 {data.streak} Day Streak • Top {data.rank}% Performer</span>
       </div>
 
       {/* Call to Action */}

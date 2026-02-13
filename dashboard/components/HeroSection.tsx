@@ -119,7 +119,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
           {data.coinbase && (
             <div className="mt-2 flex items-center gap-2">
               <span className="text-[10px] uppercase tracking-wider text-[#6B7280]">Coinbase</span>
-              <span className="font-mono text-xs text-[#1E90FF] bg-[rgba(30,144,255,0.08)] px-2 py-0.5 rounded" title={data.coinbase}>
+              <span className="font-mono text-xs text-[var(--accent-blue)] bg-[rgba(30,144,255,0.08)] px-2 py-0.5 rounded" title={data.coinbase}>
                 {data.coinbase}
               </span>
             </div>
@@ -129,8 +129,8 @@ export default function HeroSection({ data }: HeroSectionProps) {
           {data.ethstatsName && (
             <div className="mt-1 flex items-center gap-2">
               <span className="text-[10px] uppercase tracking-wider text-[#6B7280]">Ethstats</span>
-              <span className="text-xs text-[#10B981] font-medium bg-[rgba(16,185,129,0.08)] px-2 py-0.5 rounded flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+              <span className="text-xs text-[var(--success)] font-medium bg-[rgba(16,185,129,0.08)] px-2 py-0.5 rounded flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
                 {data.ethstatsName}
               </span>
             </div>
@@ -158,13 +158,13 @@ export default function HeroSection({ data }: HeroSectionProps) {
           <div className="flex items-center justify-between p-4 rounded-xl bg-[rgba(30,144,255,0.05)] border border-[rgba(30,144,255,0.1)]">
             <div>
               <div className="section-header mb-1">Peers Connected</div>
-              <div className="text-3xl font-bold font-mono-nums text-[#1E90FF]">
+              <div className="text-3xl font-bold font-mono-nums text-[var(--accent-blue)]">
                 {data.peers > 0 ? displayPeers.toLocaleString() : '—'}
               </div>
             </div>
             <div className="text-right text-xs">
-              <div className="text-[#10B981]">↓ {data.peersInbound || 0}</div>
-              <div className="text-[#1E90FF]">↑ {data.peersOutbound || 0}</div>
+              <div className="text-[var(--success)]">↓ {data.peersInbound || 0}</div>
+              <div className="text-[var(--accent-blue)]">↑ {data.peersOutbound || 0}</div>
             </div>
           </div>
           

@@ -399,21 +399,21 @@ export default function TroubleshootPanel() {
       case 'critical':
         return { 
           icon: XCircle, 
-          color: 'text-[#EF4444]', 
+          color: 'text-[var(--critical)]', 
           bg: 'bg-[rgba(239,68,68,0.15)]',
           border: 'border-[rgba(239,68,68,0.3)]'
         };
       case 'warning':
         return { 
           icon: AlertTriangle, 
-          color: 'text-[#F59E0B]', 
+          color: 'text-[var(--warning)]', 
           bg: 'bg-[rgba(245,158,11,0.15)]',
           border: 'border-[rgba(245,158,11,0.3)]'
         };
       case 'info':
         return { 
           icon: Info, 
-          color: 'text-[#1E90FF]', 
+          color: 'text-[var(--accent-blue)]', 
           bg: 'bg-[rgba(30,144,255,0.15)]',
           border: 'border-[rgba(30,144,255,0.3)]'
         };
@@ -423,9 +423,9 @@ export default function TroubleshootPanel() {
   const getLogLevelConfig = (level: 'error' | 'warn' | 'info') => {
     switch (level) {
       case 'error':
-        return { color: 'text-[#EF4444]', bg: 'bg-[rgba(239,68,68,0.15)]' };
+        return { color: 'text-[var(--critical)]', bg: 'bg-[rgba(239,68,68,0.15)]' };
       case 'warn':
-        return { color: 'text-[#F59E0B]', bg: 'bg-[rgba(245,158,11,0.15)]' };
+        return { color: 'text-[var(--warning)]', bg: 'bg-[rgba(245,158,11,0.15)]' };
       case 'info':
         return { color: 'text-[#6B7280]', bg: 'bg-[rgba(107,114,128,0.15)]' };
     }
@@ -453,7 +453,7 @@ export default function TroubleshootPanel() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#EF4444]/20 to-[#F59E0B]/10 flex items-center justify-center">
-            <Wrench className="w-5 h-5 text-[#EF4444]" />
+            <Wrench className="w-5 h-5 text-[var(--critical)]" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-[#F9FAFB]">DevOps Troubleshooting</h2>
@@ -465,14 +465,14 @@ export default function TroubleshootPanel() {
         <div className="flex items-center gap-3">
           {alertStats.critical > 0 && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(239,68,68,0.15)] border border-[rgba(239,68,68,0.3)]">
-              <XCircle className="w-4 h-4 text-[#EF4444]" />
-              <span className="text-sm font-medium text-[#EF4444]">{alertStats.critical} Critical</span>
+              <XCircle className="w-4 h-4 text-[var(--critical)]" />
+              <span className="text-sm font-medium text-[var(--critical)]">{alertStats.critical} Critical</span>
             </div>
           )}
           {alertStats.warning > 0 && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(245,158,11,0.15)] border border-[rgba(245,158,11,0.3)]">
-              <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
-              <span className="text-sm font-medium text-[#F59E0B]">{alertStats.warning} Warning</span>
+              <AlertTriangle className="w-4 h-4 text-[var(--warning)]" />
+              <span className="text-sm font-medium text-[var(--warning)]">{alertStats.warning} Warning</span>
             </div>
           )}
         </div>
@@ -491,8 +491,8 @@ export default function TroubleshootPanel() {
             onClick={() => setActiveTab(tab.id as any)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === tab.id
-                ? 'bg-[#1E90FF] text-white'
-                : 'bg-[#111827] text-[#9CA3AF] hover:text-[#F9FAFB] border border-[rgba(255,255,255,0.06)]'
+                ? 'bg-[var(--accent-blue)] text-white'
+                : 'bg-[var(--bg-card)] text-[#9CA3AF] hover:text-[#F9FAFB] border border-[rgba(255,255,255,0.06)]'
             }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -517,7 +517,7 @@ export default function TroubleshootPanel() {
             placeholder="Search alerts, logs, or issues..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#111827] border border-[rgba(255,255,255,0.06)] text-[#F9FAFB] placeholder-[#6B7280] text-sm focus:outline-none focus:border-[#1E90FF]"
+            className="w-full pl-10 pr-4 py-2 rounded-lg bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)] text-[#F9FAFB] placeholder-[#6B7280] text-sm focus:outline-none focus:border-[var(--accent-blue)]"
           />
         </div>
       </div>
@@ -534,7 +534,7 @@ export default function TroubleshootPanel() {
                 onClick={() => setAlertFilter(filter)}
                 className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
                   alertFilter === filter
-                    ? 'bg-[rgba(30,144,255,0.25)] text-[#1E90FF]'
+                    ? 'bg-[rgba(30,144,255,0.25)] text-[var(--accent-blue)]'
                     : 'text-[#6B7280] hover:text-[#F9FAFB]'
                 }`}
               >
@@ -584,7 +584,7 @@ export default function TroubleshootPanel() {
                         {alert.runbookUrl && (
                           <a 
                             href={alert.runbookUrl}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(30,144,255,0.15)] text-[#1E90FF] text-xs hover:bg-[rgba(30,144,255,0.25)] transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(30,144,255,0.15)] text-[var(--accent-blue)] text-xs hover:bg-[rgba(30,144,255,0.25)] transition-colors"
                           >
                             <BookOpen className="w-3.5 h-3.5" />
                             View Runbook
@@ -648,7 +648,7 @@ export default function TroubleshootPanel() {
 
                 {/* Expanded Content */}
                 {isExpanded && (
-                  <div className="p-4 bg-[#111827] border-t border-[rgba(255,255,255,0.06)]">
+                  <div className="p-4 bg-[var(--bg-card)] border-t border-[rgba(255,255,255,0.06)]">
                     <h5 className="text-sm font-medium text-[#F9FAFB] mb-3">Suggested Fixes</h5>
                     <div className="space-y-2">
                       {issue.suggestedFixes.map((fix, i) => (
@@ -659,7 +659,7 @@ export default function TroubleshootPanel() {
                           <div className="flex-1">
                             <p className="text-sm text-[#F9FAFB]">{fix.description}</p>
                             {fix.command && (
-                              <code className="block mt-2 p-2 rounded bg-[#0A0E1A] text-xs text-[#1E90FF] font-mono">
+                              <code className="block mt-2 p-2 rounded bg-[var(--bg-body)] text-xs text-[var(--accent-blue)] font-mono">
                                 {fix.command}
                               </code>
                             )}
@@ -670,13 +670,13 @@ export default function TroubleshootPanel() {
                                 onClick={() => handleCopyCommand(fix.command!, `fix-${issue.id}-${i}`)}
                                 className="p-1.5 rounded hover:bg-[rgba(255,255,255,0.1)] text-[#6B7280] hover:text-[#F9FAFB] transition-colors"
                               >
-                                {copiedCommand === `fix-${issue.id}-${i}` ? <Check className="w-4 h-4 text-[#10B981]" /> : <Copy className="w-4 h-4" />}
+                                {copiedCommand === `fix-${issue.id}-${i}` ? <Check className="w-4 h-4 text-[var(--success)]" /> : <Copy className="w-4 h-4" />}
                               </button>
                             )}
                             {fix.autoFix && (
                               <button 
                                 onClick={() => handleApplyFix(fix)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(16,185,129,0.15)] text-[#10B981] text-xs hover:bg-[rgba(16,185,129,0.25)] transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(16,185,129,0.15)] text-[var(--success)] text-xs hover:bg-[rgba(16,185,129,0.25)] transition-colors"
                               >
                                 <Zap className="w-3.5 h-3.5" />
                                 Auto-Fix
@@ -690,7 +690,7 @@ export default function TroubleshootPanel() {
                     {issue.runbookLink && (
                       <a 
                         href={issue.runbookLink}
-                        className="inline-flex items-center gap-1.5 mt-4 text-sm text-[#1E90FF] hover:underline"
+                        className="inline-flex items-center gap-1.5 mt-4 text-sm text-[var(--accent-blue)] hover:underline"
                       >
                         <BookOpen className="w-4 h-4" />
                         View Full Runbook
@@ -717,7 +717,7 @@ export default function TroubleshootPanel() {
                 onClick={() => setLogFilter(filter)}
                 className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
                   logFilter === filter
-                    ? 'bg-[rgba(30,144,255,0.25)] text-[#1E90FF]'
+                    ? 'bg-[rgba(30,144,255,0.25)] text-[var(--accent-blue)]'
                     : 'text-[#6B7280] hover:text-[#F9FAFB]'
                 }`}
               >
@@ -728,9 +728,9 @@ export default function TroubleshootPanel() {
 
           {/* Log List */}
           <div className="rounded-xl border border-[rgba(255,255,255,0.06)] overflow-hidden">
-            <div className="bg-[#111827] p-3 flex items-center justify-between border-b border-[rgba(255,255,255,0.06)]">
+            <div className="bg-[var(--bg-card)] p-3 flex items-center justify-between border-b border-[rgba(255,255,255,0.06)]">
               <span className="text-xs text-[#6B7280]">Recent Logs (Last 5 minutes)</span>
-              <button className="flex items-center gap-1.5 text-xs text-[#1E90FF] hover:underline">
+              <button className="flex items-center gap-1.5 text-xs text-[var(--accent-blue)] hover:underline">
                 <RefreshCw className="w-3.5 h-3.5" />
                 Refresh
               </button>
@@ -779,7 +779,7 @@ export default function TroubleshootPanel() {
             return (
               <div key={category} className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
-                  <CategoryIcon className="w-4 h-4 text-[#1E90FF]" />
+                  <CategoryIcon className="w-4 h-4 text-[var(--accent-blue)]" />
                   <h3 className="text-sm font-medium text-[#F9FAFB] capitalize">{category}</h3>
                 </div>
                 
@@ -787,7 +787,7 @@ export default function TroubleshootPanel() {
                   {commands.map((cmd) => (
                     <div 
                       key={cmd.id} 
-                      className="p-4 rounded-xl bg-[#111827] border border-[rgba(255,255,255,0.06)] hover:border-[rgba(30,144,255,0.3)] transition-colors"
+                      className="p-4 rounded-xl bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)] hover:border-[rgba(30,144,255,0.3)] transition-colors"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div>
@@ -795,7 +795,7 @@ export default function TroubleshootPanel() {
                           <p className="text-xs text-[#6B7280] mt-0.5">{cmd.description}</p>
                         </div>
                       </div>
-                      <code className="block p-2 rounded bg-[#0A0E1A] text-xs text-[#1E90FF] font-mono mb-3 overflow-x-auto">
+                      <code className="block p-2 rounded bg-[var(--bg-body)] text-xs text-[var(--accent-blue)] font-mono mb-3 overflow-x-auto">
                         {cmd.command}
                       </code>
                       <div className="flex items-center gap-2">
@@ -803,12 +803,12 @@ export default function TroubleshootPanel() {
                           onClick={() => handleCopyCommand(cmd.command, cmd.id)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(255,255,255,0.1)] text-[#F9FAFB] text-xs hover:bg-[rgba(255,255,255,0.15)] transition-colors"
                         >
-                          {copiedCommand === cmd.id ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copiedCommand === cmd.id ? <Check className="w-3.5 h-3.5 text-[var(--success)]" /> : <Copy className="w-3.5 h-3.5" />}
                           {copiedCommand === cmd.id ? 'Copied!' : 'Copy'}
                         </button>
                         <button 
                           onClick={() => handleRunDiagnostic(cmd)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(30,144,255,0.15)] text-[#1E90FF] text-xs hover:bg-[rgba(30,144,255,0.25)] transition-colors"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(30,144,255,0.15)] text-[var(--accent-blue)] text-xs hover:bg-[rgba(30,144,255,0.25)] transition-colors"
                         >
                           <Play className="w-3.5 h-3.5" />
                           Run
@@ -826,7 +826,7 @@ export default function TroubleshootPanel() {
       {/* Empty State */}
       {activeTab === 'alerts' && filteredAlerts.length === 0 && (
         <div className="text-center py-12">
-          <CheckCircle2 className="w-12 h-12 text-[#10B981] mx-auto mb-4" />
+          <CheckCircle2 className="w-12 h-12 text-[var(--success)] mx-auto mb-4" />
           <h3 className="text-lg font-medium text-[#F9FAFB] mb-2">All Clear!</h3>
           <p className="text-[#6B7280]">No active alerts matching your filters.</p>
         </div>

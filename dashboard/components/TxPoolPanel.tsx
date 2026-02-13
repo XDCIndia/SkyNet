@@ -79,7 +79,7 @@ export default function TxPoolPanel({ data }: TxPoolPanelProps) {
       {/* Header */}
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1E90FF]/20 to-[#10B981]/10 flex items-center justify-center">
-          <FileText className="w-5 h-5 text-[#1E90FF]" />
+          <FileText className="w-5 h-5 text-[var(--accent-blue)]" />
         </div>
         <div>
           <h2 className="text-lg font-semibold text-[#F9FAFB]">Transaction Pool</h2>
@@ -116,30 +116,30 @@ export default function TxPoolPanel({ data }: TxPoolPanelProps) {
       <div className="grid grid-cols-3 gap-3 mt-5">
         <div className="p-3 rounded-xl bg-[rgba(16,185,129,0.05)] text-center">
           <div className="flex items-center justify-center gap-1 mb-1">
-            <CheckCircle2 className="w-3 h-3 text-[#10B981]" />
+            <CheckCircle2 className="w-3 h-3 text-[var(--success)]" />
             <span className="section-header">Valid</span>
           </div>
-          <div className="text-lg font-semibold font-mono-nums text-[#10B981]">
+          <div className="text-lg font-semibold font-mono-nums text-[var(--success)]">
             {formatNumber(data.valid)}
           </div>
         </div>
         
         <div className="p-3 rounded-xl bg-[rgba(239,68,68,0.05)] text-center">
           <div className="flex items-center justify-center gap-1 mb-1">
-            <XCircle className="w-3 h-3 text-[#EF4444]" />
+            <XCircle className="w-3 h-3 text-[var(--critical)]" />
             <span className="section-header">Invalid</span>
           </div>
-          <div className="text-lg font-semibold font-mono-nums text-[#EF4444]">
+          <div className="text-lg font-semibold font-mono-nums text-[var(--critical)]">
             {formatNumber(data.invalid)}
           </div>
         </div>
         
         <div className="p-3 rounded-xl bg-[rgba(245,158,11,0.05)] text-center">
           <div className="flex items-center justify-center gap-1 mb-1">
-            <AlertTriangle className="w-3 h-3 text-[#F59E0B]" />
+            <AlertTriangle className="w-3 h-3 text-[var(--warning)]" />
             <span className="section-header">Underpriced</span>
           </div>
-          <div className="text-lg font-semibold font-mono-nums text-[#F59E0B]">
+          <div className="text-lg font-semibold font-mono-nums text-[var(--warning)]">
             {formatNumber(data.underpriced)}
           </div>
         </div>

@@ -90,7 +90,7 @@ export default function StoragePanel({ data }: StoragePanelProps) {
       {/* Header */}
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8B5CF6]/20 to-[#EC4899]/10 flex items-center justify-center">
-          <HardDrive className="w-5 h-5 text-[#8B5CF6]" />
+          <HardDrive className="w-5 h-5 text-[var(--purple)]" />
         </div>
         <div>
           <h2 className="text-lg font-semibold text-[#F9FAFB]">Storage & Database</h2>
@@ -103,7 +103,7 @@ export default function StoragePanel({ data }: StoragePanelProps) {
         <div className="lg:col-span-2 space-y-4">
           <div className="p-4 rounded-xl bg-[rgba(139,92,246,0.05)] border border-[rgba(139,92,246,0.1)]">
             <div className="flex items-center gap-3 mb-3">
-              <Database className="w-5 h-5 text-[#8B5CF6]" />
+              <Database className="w-5 h-5 text-[var(--purple)]" />
               <div>
                 <div className="section-header">Chain Data Size</div>
                 <div className="text-2xl font-bold font-mono-nums text-[#F9FAFB]">
@@ -112,8 +112,8 @@ export default function StoragePanel({ data }: StoragePanelProps) {
               </div>
             </div>            
             <div className="flex items-center gap-2 text-sm">
-              <TrendingUp className="w-4 h-4 text-[#10B981]" />
-              <span className="text-[#10B981]">~1.2 GB/day growth</span>
+              <TrendingUp className="w-4 h-4 text-[var(--success)]" />
+              <span className="text-[var(--success)]">~1.2 GB/day growth</span>
             </div>
           </div>
           
@@ -139,7 +139,7 @@ export default function StoragePanel({ data }: StoragePanelProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 rounded-xl bg-[rgba(255,255,255,0.02)]">
               <div className="flex items-center gap-2 mb-1">
-                <ArrowUpDown className="w-4 h-4 text-[#1E90FF]" />
+                <ArrowUpDown className="w-4 h-4 text-[var(--accent-blue)]" />
                 <span className="section-header">Read Rate</span>
               </div>
               <div className="text-lg font-semibold font-mono-nums text-[#F9FAFB]">
@@ -149,7 +149,7 @@ export default function StoragePanel({ data }: StoragePanelProps) {
             
             <div className="p-3 rounded-xl bg-[rgba(255,255,255,0.02)]">
               <div className="flex items-center gap-2 mb-1">
-                <ArrowUpDown className="w-4 h-4 text-[#10B981]" />
+                <ArrowUpDown className="w-4 h-4 text-[var(--success)]" />
                 <span className="section-header">Write Rate</span>
               </div>
               <div className="text-lg font-semibold font-mono-nums text-[#F9FAFB]">
@@ -167,10 +167,10 @@ export default function StoragePanel({ data }: StoragePanelProps) {
           
           <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.02)]">
             <div className="flex items-center gap-2 mb-2">
-              <Gauge className="w-4 h-4 text-[#F59E0B]" />
+              <Gauge className="w-4 h-4 text-[var(--warning)]" />
               <span className="section-header">Cache Misses</span>
             </div>
-            <div className="text-2xl font-bold font-mono-nums text-[#F59E0B]">
+            <div className="text-2xl font-bold font-mono-nums text-[var(--warning)]">
               {formatNumber(displayCacheMiss)}
             </div>
           </div>
