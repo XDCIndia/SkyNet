@@ -54,6 +54,8 @@ async function getHandler(request: NextRequest) {
         n.role,
         n.is_active,
         n.created_at,
+        n.email,
+        n.telegram,
         m.sync_percent,
         m.peer_count,
         m.is_syncing,
@@ -113,6 +115,13 @@ async function getHandler(request: NextRequest) {
        (statusCounts.offline * 0)) / totalNodes
     );
 
+    // Mask sensitive values: show first 2 and last 2 chars
+    const mask = (val: string | null) => {
+      if (!val) return null;
+      if (val.length <= 4) return '*'.repeat(val.length);
+      return val.slice(0, 2) + '*'.repeat(val.length - 4) + val.slice(-2);
+    };
+
     // Build node list for frontend
     const nodeList = nodeStatusRows.map((n: any) => ({
       id: n.id,
@@ -128,6 +137,8 @@ async function getHandler(request: NextRequest) {
       memoryPercent: n.memory_percent ?? 0,
       diskPercent: n.disk_percent ?? 0,
       lastSeen: n.collected_at || n.created_at,
+      email: mask(n.email),
+      telegram: mask(n.telegram),
     }));
 
     return {

@@ -83,6 +83,8 @@ interface Node {
   };
   client_type?: string;
   node_type?: string;
+  email?: string | null;
+  telegram?: string | null;
   security_score?: number;
   security_issues?: string;
 }
@@ -604,6 +606,14 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
         <div className="text-[10px] text-[var(--text-tertiary)] mb-2 flex items-center gap-1">
           <span>{OSIcon({ osType: node.os_info.type })}</span>
           <span className="truncate">{formatOSInfo(node.os_info)}</span>
+        </div>
+      )}
+      
+      {/* Contact Info (masked) */}
+      {(node.email || node.telegram) && (
+        <div className="text-[10px] text-[var(--text-tertiary)] mb-2 flex flex-wrap gap-2">
+          {node.email && <span>📧 {node.email}</span>}
+          {node.telegram && <span>✈️ {node.telegram}</span>}
         </div>
       )}
       

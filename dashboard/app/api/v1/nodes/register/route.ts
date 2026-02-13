@@ -67,8 +67,8 @@ async function postHandler(request: NextRequest) {
       // Insert node
       const nodeResult = await client.query(
         `INSERT INTO skynet.nodes 
-         (name, host, role, location_city, location_country, tags, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, true)
+         (name, host, role, location_city, location_country, tags, is_active, email, telegram)
+         VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8)
          RETURNING id, name, host, role, created_at`,
         [
           data.name,
@@ -76,7 +76,9 @@ async function postHandler(request: NextRequest) {
           data.role,
           data.locationCity || null,
           data.locationCountry || null,
-          [`registered_by:${data.email}`],
+          [`registered_by:${data.email || 'unknown'}`],
+          data.email || null,
+          data.telegram || null,
         ]
       );
 
