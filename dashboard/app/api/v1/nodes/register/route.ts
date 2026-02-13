@@ -11,7 +11,8 @@ const PublicRegistrationSchema = z.object({
   host: z.string().min(1).max(255),
   rpcUrl: z.string().url().optional(),
   role: z.enum(['masternode', 'fullnode', 'archive', 'rpc']),
-  email: z.string().email(),
+  email: z.string().email().optional().or(z.literal('')),
+  telegram: z.string().max(100).optional().or(z.literal('')),
   locationCity: z.string().max(100).optional(),
   locationCountry: z.string().max(5).optional(),
 });
