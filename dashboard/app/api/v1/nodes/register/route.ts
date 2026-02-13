@@ -1,96 +1,99 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query, withTransaction } from '@/lib/db';
-import { generateApiKey, authenticateRequest, unauthorizedResponse, badRequestResponse } from '@/lib/auth';
+import { withTransaction } from '@/lib/db';
+import { generateApiKey, authenticateRequest, unauthorizedResponse } from '@/lib/auth';
+import { NodeRegistrationSchema, validateBody, ValidationError } from '@/lib/validation';
+import { createErrorResponse, withErrorHandling } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { invalidateByTag } from '@/lib/cache';
 
 /**
  * POST /api/v1/nodes/register
  * Register a new node (called by setup.sh when a new node is deployed)
  * Auth: Bearer API key
- * Body: { name, host, role, rpcUrl, location?, tags?, version }
+ * Body: { name, host, role, rpcUrl, location?, tags? }
  * Response: { nodeId, apiKey }
  */
-export async function POST(request: NextRequest) {
-  try {
-    // Authenticate request
-    const auth = await authenticateRequest(request);
-    if (!auth.valid) {
-      return unauthorizedResponse(auth.error);
-    }
+async function postHandler(request: NextRequest) {
+  // Authenticate request
+  const auth = await authenticateRequest(request);
+  if (!auth.valid) {
+    return unauthorizedResponse(auth.error);
+  }
 
-    const body = await request.json();
-    const {
-      name,
-      host,
-      role,
-      rpcUrl,
-      location,
-      tags,
-      version,
-    } = body;
+  // Validate request body using Zod
+  const body = await validateBody(request, NodeRegistrationSchema);
 
-    // Validation
-    if (!name || !host || !role || !rpcUrl) {
-      return badRequestResponse('Missing required fields: name, host, role, rpcUrl');
-    }
+  const {
+    name,
+    host,
+    role,
+    rpcUrl,
+    locationCity,
+    locationCountry,
+    locationLat,
+    locationLng,
+    tags,
+  } = body;
 
-    const validRoles = ['masternode', 'fullnode', 'archive', 'rpc'];
-    if (!validRoles.includes(role)) {
-      return badRequestResponse(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
-    }
+  // Use transaction to create node and API key
+  const nodeApiKey = generateApiKey();
+  
+  const result = await withTransaction(async (client) => {
+    // Insert node
+    const nodeResult = await client.query(
+      `INSERT INTO skynet.nodes 
+       (name, host, role, location_city, location_country, location_lat, location_lng, tags, rpc_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id`,
+      [name, host, role, locationCity || null, locationCountry || null, locationLat || null, locationLng || null, tags || [], rpcUrl]
+    );
 
-    // Parse location if provided
-    let location_city: string | undefined, location_country: string | undefined, location_lat: number | undefined, location_lng: number | undefined;
-    if (location) {
-      location_city = location.city;
-      location_country = location.country;
-      location_lat = location.lat;
-      location_lng = location.lng;
-    }
+    const nodeId = nodeResult.rows[0].id;
 
-    // Use transaction to create node and API key
-    const nodeApiKey = generateApiKey();
-    
-    const result = await withTransaction(async (client) => {
-      // Insert node
-      const nodeResult = await client.query(
-        `INSERT INTO netown.nodes 
-         (name, host, role, location_city, location_country, location_lat, location_lng, tags)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING id`,
-        [name, host, role, location_city, location_country, location_lat, location_lng, tags || []]
-      );
+    // Create API key for this node
+    await client.query(
+      `INSERT INTO skynet.api_keys 
+       (key, node_id, name, permissions)
+       VALUES ($1, $2, $3, $4)`,
+      [nodeApiKey, nodeId, `${name} node key`, ['heartbeat', 'metrics', 'notifications']]
+    );
 
-      const nodeId = nodeResult.rows[0].id;
+    logger.info('Node registered', { nodeId, name, role });
 
-      // Create API key for this node
-      await client.query(
-        `INSERT INTO netown.api_keys 
-         (key, node_id, name, permissions)
-         VALUES ($1, $2, $3, $4)`,
-        [nodeApiKey, nodeId, `${name} node key`, ['heartbeat', 'metrics', 'notifications']]
-      );
+    return { nodeId, apiKey: nodeApiKey };
+  });
 
-      return { nodeId, apiKey: nodeApiKey };
-    });
+  // Invalidate cache
+  await invalidateByTag('nodes');
 
-    return NextResponse.json({
+  return NextResponse.json({
+    success: true,
+    data: {
       nodeId: result.nodeId,
       apiKey: result.apiKey,
-      message: 'Node registered successfully',
-    }, { status: 201 });
-  } catch (error: any) {
-    console.error('Error registering node:', error);
-    
-    if (error.code === '23505') { // Unique violation
-      return NextResponse.json(
-        { error: 'Node with this name already exists', code: 'DUPLICATE_NAME' },
-        { status: 409 }
-      );
-    }
-    
-    return NextResponse.json(
-      { error: 'Failed to register node', code: 'INTERNAL_ERROR' },
-      { status: 500 }
-    );
-  }
+    },
+    message: 'Node registered successfully',
+  }, { status: 201 });
+}
+
+export const POST = withErrorHandling(postHandler);
+
+/**
+ * GET /api/v1/nodes/register
+ * Get registration info/schema
+ */
+export async function GET() {
+  return NextResponse.json({
+    schema: {
+      name: 'string (1-100 chars, alphanumeric with -_)',
+      host: 'string (valid URL)',
+      role: 'enum: masternode, fullnode, archive, rpc',
+      rpcUrl: 'string (valid URL, optional)',
+      locationCity: 'string (optional)',
+      locationCountry: 'string (optional)',
+      locationLat: 'number -90 to 90 (optional)',
+      locationLng: 'number -180 to 180 (optional)',
+      tags: 'string[] max 10 (optional)',
+    },
+  });
 }

@@ -1,63 +1,89 @@
+/**
+ * XDC SkyNet - Enhanced WebSocket Server
+ * Provides real-time updates with authentication, heartbeat, and reconnection handling
+ */
+
 import WebSocket, { WebSocketServer } from 'ws';
-import { query, NodeMetric, Incident, NetworkHealth, PeerSnapshot } from './db';
+import { queryAll } from './db';
+import { logger } from './logger';
+import { verify, sign } from 'jsonwebtoken';
 
 const WS_PORT = parseInt(process.env.WS_PORT || '3006');
+const JWT_SECRET = process.env.JWT_SECRET || process.env.API_KEYS?.split(',')[0] || 'dev-secret';
+const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+const CLIENT_TIMEOUT = 60000; // 60 seconds without pong = disconnect
+
+// =============================================================================
+// Types
+// =============================================================================
+
+interface AuthenticatedWebSocket extends WebSocket {
+  userId?: string;
+  nodeId?: string;
+  permissions?: string[];
+  isAlive: boolean;
+  subscriptions: Set<string>;
+  lastPong: number;
+}
 
 interface ClientMessage {
   type: string;
   channels?: string[];
   action?: string;
   payload?: Record<string, unknown>;
+  token?: string;
 }
 
 interface BroadcastMessage {
-  type: 'metrics' | 'incidents' | 'peers' | 'health' | 'error' | 'ack';
+  type: 'metrics' | 'incidents' | 'peers' | 'health' | 'error' | 'ack' | 'pong' | 'auth_success' | 'auth_error';
   data: unknown;
   timestamp: string;
 }
 
-// Track subscribed channels per client
-const clientSubscriptions = new Map<WebSocket, Set<string>>();
+// =============================================================================
+// Server State
+// =============================================================================
 
 let wss: WebSocketServer | null = null;
 let broadcastInterval: NodeJS.Timeout | null = null;
+let heartbeatInterval: NodeJS.Timeout | null = null;
 
-async function getLatestMetrics(): Promise<Partial<NodeMetric>[]> {
-  const result = await query(`
+const clients = new Set<AuthenticatedWebSocket>();
+
+// =============================================================================
+// Data Fetchers
+// =============================================================================
+
+async function getLatestMetrics() {
+  const rows = await queryAll(`
     SELECT DISTINCT ON (node_id) 
       node_id, block_height, sync_percent, peer_count, cpu_percent,
       memory_percent, disk_percent, tx_pool_pending, tx_pool_queued,
       gas_price, tps, rpc_latency_ms, is_syncing, client_version, coinbase,
       collected_at
-    FROM netown.node_metrics
+    FROM skynet.node_metrics
     ORDER BY node_id, collected_at DESC
   `);
-  return result.rows;
+  return rows;
 }
 
-async function getActiveIncidents(): Promise<Incident[]> {
-  const result = await query(`
+async function getActiveIncidents() {
+  return queryAll(`
     SELECT i.*, n.name as node_name
-    FROM netown.incidents i
-    JOIN netown.nodes n ON i.node_id = n.id
+    FROM skynet.incidents i
+    JOIN skynet.nodes n ON i.node_id = n.id
     WHERE i.status = 'active'
     ORDER BY i.detected_at DESC
     LIMIT 50
   `);
-  return result.rows;
 }
 
-async function getPeersOverview(): Promise<{
-  totalPeers: number;
-  byCountry: Record<string, number>;
-  byDirection: { inbound: number; outbound: number };
-  uniqueIPs: number;
-}> {
-  const result = await query(`
+async function getPeersOverview() {
+  const rows = await queryAll(`
     WITH latest_peers AS (
       SELECT DISTINCT ON (peer_enode) 
         peer_enode, remote_ip, country, direction
-      FROM netown.peer_snapshots
+      FROM skynet.peer_snapshots
       WHERE collected_at > NOW() - INTERVAL '10 minutes'
       ORDER BY peer_enode, collected_at DESC
     )
@@ -65,44 +91,41 @@ async function getPeersOverview(): Promise<{
       COUNT(*) as total_peers,
       COUNT(DISTINCT remote_ip) as unique_ips,
       COUNT(*) FILTER (WHERE direction = 'inbound') as inbound,
-      COUNT(*) FILTER (WHERE direction = 'outbound') as outbound,
-      country
+      COUNT(*) FILTER (WHERE direction = 'outbound') as outbound
     FROM latest_peers
-    GROUP BY country
   `);
-
-  const byCountry: Record<string, number> = {};
-  let totalPeers = 0;
-  let inbound = 0;
-  let outbound = 0;
-  let uniqueIPs = 0;
-
-  for (const row of result.rows) {
-    if (row.country) {
-      byCountry[row.country] = parseInt(row.count);
-    }
-    totalPeers = Math.max(totalPeers, parseInt(row.total_peers));
-    inbound = Math.max(inbound, parseInt(row.inbound));
-    outbound = Math.max(outbound, parseInt(row.outbound));
-    uniqueIPs = Math.max(uniqueIPs, parseInt(row.unique_ips));
-  }
-
-  return {
-    totalPeers,
-    byCountry,
-    byDirection: { inbound, outbound },
-    uniqueIPs,
-  };
+  return rows[0] || { total_peers: 0, unique_ips: 0, inbound: 0, outbound: 0 };
 }
 
-async function getLatestHealth(): Promise<Partial<NetworkHealth> | null> {
-  const result = await query(`
-    SELECT * FROM netown.network_health
+async function getLatestHealth() {
+  const rows = await queryAll(`
+    SELECT * FROM skynet.network_health
     ORDER BY collected_at DESC
     LIMIT 1
   `);
-  return result.rows[0] || null;
+  return rows[0] || null;
 }
+
+// =============================================================================
+// Authentication
+// =============================================================================
+
+function authenticateClient(token: string): { valid: boolean; userId?: string; nodeId?: string; permissions?: string[] } {
+  try {
+    const decoded = verify(token, JWT_SECRET) as { userId?: string; nodeId?: string; permissions?: string[] };
+    return { valid: true, ...decoded };
+  } catch {
+    return { valid: false };
+  }
+}
+
+export function generateWsToken(userId: string, nodeId?: string, permissions: string[] = ['read']): string {
+  return sign({ userId, nodeId, permissions }, JWT_SECRET, { expiresIn: '1h' });
+}
+
+// =============================================================================
+// Broadcasting
+// =============================================================================
 
 function broadcastToChannel(channel: string, data: unknown): void {
   if (!wss) return;
@@ -115,21 +138,19 @@ function broadcastToChannel(channel: string, data: unknown): void {
 
   const messageStr = JSON.stringify(message);
 
-  wss.clients.forEach((client) => {
+  for (const client of clients) {
     if (client.readyState === WebSocket.OPEN) {
-      const subs = clientSubscriptions.get(client);
-      if (subs?.has(channel) || subs?.has('all')) {
+      if (client.subscriptions.has(channel) || client.subscriptions.has('all')) {
         client.send(messageStr);
       }
     }
-  });
+  }
 }
 
 async function broadcastUpdates(): Promise<void> {
-  if (!wss) return;
+  if (!wss || clients.size === 0) return;
 
   try {
-    // Get all data in parallel
     const [metrics, incidents, peers, health] = await Promise.all([
       getLatestMetrics(),
       getActiveIncidents(),
@@ -137,140 +158,228 @@ async function broadcastUpdates(): Promise<void> {
       getLatestHealth(),
     ]);
 
-    // Broadcast to respective channels
     broadcastToChannel('metrics', { nodes: metrics.length, data: metrics });
     broadcastToChannel('incidents', { count: incidents.length, data: incidents });
     broadcastToChannel('peers', peers);
     broadcastToChannel('health', health);
   } catch (error) {
-    console.error('[WebSocket] Broadcast error:', error);
+    logger.error('[WebSocket] Broadcast error', error as Error);
   }
 }
 
-function handleClientMessage(ws: WebSocket, message: string): void {
+// =============================================================================
+// Heartbeat
+// =============================================================================
+
+function heartbeat(ws: AuthenticatedWebSocket): void {
+  ws.isAlive = true;
+  ws.lastPong = Date.now();
+}
+
+function checkHeartbeats(): void {
+  const now = Date.now();
+  
+  for (const client of clients) {
+    if (!client.isAlive || (now - client.lastPong) > CLIENT_TIMEOUT) {
+      logger.info('[WebSocket] Terminating inactive client');
+      client.terminate();
+      clients.delete(client);
+      continue;
+    }
+    
+    client.isAlive = false;
+    client.ping();
+  }
+}
+
+// =============================================================================
+// Message Handling
+// =============================================================================
+
+function handleClientMessage(ws: AuthenticatedWebSocket, message: string): void {
   try {
     const data: ClientMessage = JSON.parse(message);
     
     switch (data.type) {
-      case 'subscribe': {
-        const subs = clientSubscriptions.get(ws) || new Set();
-        data.channels?.forEach(ch => subs.add(ch));
-        clientSubscriptions.set(ws, subs);
+      case 'auth': {
+        if (!data.token) {
+          sendError(ws, 'Token required for authentication');
+          return;
+        }
+        
+        const auth = authenticateClient(data.token);
+        if (!auth.valid) {
+          ws.send(JSON.stringify({
+            type: 'auth_error',
+            data: { message: 'Invalid token' },
+            timestamp: new Date().toISOString(),
+          }));
+          ws.close(1008, 'Invalid token');
+          return;
+        }
+        
+        ws.userId = auth.userId;
+        ws.nodeId = auth.nodeId;
+        ws.permissions = auth.permissions;
+        
         ws.send(JSON.stringify({
-          type: 'ack',
-          data: { subscribed: Array.from(subs) },
+          type: 'auth_success',
+          data: { userId: auth.userId, permissions: auth.permissions },
           timestamp: new Date().toISOString(),
         }));
         break;
       }
       
-      case 'unsubscribe': {
-        const subs = clientSubscriptions.get(ws);
-        data.channels?.forEach(ch => subs?.delete(ch));
+      case 'subscribe': {
+        data.channels?.forEach(ch => ws.subscriptions.add(ch));
+        sendAck(ws, { subscribed: Array.from(ws.subscriptions) });
         break;
       }
       
-      case 'action': {
-        // Handle actions like ban_peer, add_node
-        console.log('[WebSocket] Action received:', data.action, data.payload);
-        // Actions are handled by REST API, acknowledge here
+      case 'unsubscribe': {
+        data.channels?.forEach(ch => ws.subscriptions.delete(ch));
+        sendAck(ws, { subscribed: Array.from(ws.subscriptions) });
+        break;
+      }
+      
+      case 'ping': {
         ws.send(JSON.stringify({
-          type: 'ack',
-          data: { action: data.action, status: 'queued' },
+          type: 'pong',
+          data: { serverTime: Date.now() },
           timestamp: new Date().toISOString(),
         }));
         break;
       }
       
       default:
-        ws.send(JSON.stringify({
-          type: 'error',
-          data: { message: 'Unknown message type' },
-          timestamp: new Date().toISOString(),
-        }));
+        sendError(ws, 'Unknown message type');
     }
   } catch (error) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      data: { message: 'Invalid message format' },
-      timestamp: new Date().toISOString(),
-    }));
+    sendError(ws, 'Invalid message format');
   }
 }
 
+function sendAck(ws: WebSocket, data: unknown): void {
+  ws.send(JSON.stringify({
+    type: 'ack',
+    data,
+    timestamp: new Date().toISOString(),
+  }));
+}
+
+function sendError(ws: WebSocket, message: string): void {
+  ws.send(JSON.stringify({
+    type: 'error',
+    data: { message },
+    timestamp: new Date().toISOString(),
+  }));
+}
+
+// =============================================================================
+// Server Lifecycle
+// =============================================================================
+
 export function startWebSocketServer(): WebSocketServer {
   if (wss) {
-    console.log('[WebSocket] Server already running');
+    logger.warn('[WebSocket] Server already running');
     return wss;
   }
 
   wss = new WebSocketServer({ port: WS_PORT });
 
-  wss.on('connection', (ws) => {
-    console.log('[WebSocket] Client connected');
+  wss.on('connection', (ws: WebSocket) => {
+    const client = ws as AuthenticatedWebSocket;
+    client.isAlive = true;
+    client.lastPong = Date.now();
+    client.subscriptions = new Set(['metrics', 'incidents', 'peers', 'health']);
     
-    // Default subscription to all channels
-    clientSubscriptions.set(ws, new Set(['metrics', 'incidents', 'peers', 'health']));
+    clients.add(client);
+    logger.info('[WebSocket] Client connected', { total: clients.size });
 
-    ws.on('message', (message) => {
-      handleClientMessage(ws, message.toString());
+    client.on('pong', () => heartbeat(client));
+
+    client.on('message', (message) => {
+      handleClientMessage(client, message.toString());
     });
 
-    ws.on('close', () => {
-      console.log('[WebSocket] Client disconnected');
-      clientSubscriptions.delete(ws);
+    client.on('close', () => {
+      clients.delete(client);
+      logger.info('[WebSocket] Client disconnected', { total: clients.size });
     });
 
-    ws.on('error', (error) => {
-      console.error('[WebSocket] Client error:', error);
-      clientSubscriptions.delete(ws);
+    client.on('error', (error) => {
+      logger.error('[WebSocket] Client error', error);
+      clients.delete(client);
     });
 
     // Send initial data
-    broadcastUpdates().catch(console.error);
+    broadcastUpdates().catch(logger.error);
   });
 
   // Start periodic broadcasts
   broadcastInterval = setInterval(() => {
     broadcastUpdates().catch(console.error);
-  }, 10000); // Every 10 seconds
+  }, 10000);
 
-  console.log(`[WebSocket] Server started on port ${WS_PORT}`);
+  // Start heartbeat checks
+  heartbeatInterval = setInterval(checkHeartbeats, HEARTBEAT_INTERVAL);
+
+  logger.info(`[WebSocket] Server started on port ${WS_PORT}`);
   return wss;
 }
 
-export function stopWebSocketServer(): void {
-  if (broadcastInterval) {
-    clearInterval(broadcastInterval);
-    broadcastInterval = null;
-  }
-  
-  if (wss) {
-    wss.close();
-    wss = null;
-    clientSubscriptions.clear();
-    console.log('[WebSocket] Server stopped');
-  }
+export function stopWebSocketServer(): Promise<void> {
+  return new Promise((resolve) => {
+    if (broadcastInterval) {
+      clearInterval(broadcastInterval);
+      broadcastInterval = null;
+    }
+    
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
+    }
+    
+    if (wss) {
+      // Close all clients
+      for (const client of clients) {
+        client.close(1001, 'Server shutting down');
+      }
+      clients.clear();
+      
+      wss.close(() => {
+        wss = null;
+        logger.info('[WebSocket] Server stopped');
+        resolve();
+      });
+    } else {
+      resolve();
+    }
+  });
 }
 
 export function getWebSocketServer(): WebSocketServer | null {
   return wss;
 }
 
-// For standalone execution
+export function getClientCount(): number {
+  return clients.size;
+}
+
+// =============================================================================
+// Standalone Execution
+// =============================================================================
+
 if (require.main === module) {
   startWebSocketServer();
   
   // Graceful shutdown
-  process.on('SIGTERM', () => {
-    console.log('[WebSocket] SIGTERM received, shutting down...');
-    stopWebSocketServer();
+  const shutdown = async () => {
+    logger.info('[WebSocket] Shutdown signal received');
+    await stopWebSocketServer();
     process.exit(0);
-  });
+  };
   
-  process.on('SIGINT', () => {
-    console.log('[WebSocket] SIGINT received, shutting down...');
-    stopWebSocketServer();
-    process.exit(0);
-  });
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }

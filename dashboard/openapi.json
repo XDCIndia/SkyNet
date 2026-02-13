@@ -1,0 +1,771 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "XDC SkyNet API",
+    "description": "The definitive dashboard and API platform for XDC Network owners and operators",
+    "version": "1.0.0",
+    "contact": {
+      "name": "XDC Network",
+      "url": "https://github.com/AnilChinchawale/XDCSkyNet"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://net.xdc.network/api/v1",
+      "description": "Production server"
+    },
+    {
+      "url": "http://localhost:3005/api/v1",
+      "description": "Local development server"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/nodes/register": {
+      "post": {
+        "summary": "Register a new node",
+        "description": "Register a new node in the fleet. Called during node deployment.",
+        "tags": ["Nodes"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NodeRegistration"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Node registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeRegistrationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/nodes/heartbeat": {
+      "post": {
+        "summary": "Node heartbeat",
+        "description": "Submit node metrics and receive pending commands. Called every 30-60s by nodes.",
+        "tags": ["Nodes"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Heartbeat"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Heartbeat processed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeartbeatResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/nodes": {
+      "get": {
+        "summary": "List all nodes",
+        "description": "Get a paginated list of all registered nodes",
+        "tags": ["Nodes"],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/NodeStatus"
+          },
+          {
+            "$ref": "#/components/parameters/NodeRole"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of nodes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeListResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/nodes/{id}": {
+      "get": {
+        "summary": "Get node details",
+        "description": "Get detailed information about a specific node",
+        "tags": ["Nodes"],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/NodeId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Node details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Node"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a node",
+        "description": "Remove a node from the fleet",
+        "tags": ["Nodes"],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/NodeId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Node deleted successfully"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/nodes/{id}/metrics": {
+      "get": {
+        "summary": "Get node metrics history",
+        "description": "Get historical metrics for a specific node",
+        "tags": ["Metrics"],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/NodeId"
+          },
+          {
+            "$ref": "#/components/parameters/FromDate"
+          },
+          {
+            "$ref": "#/components/parameters/ToDate"
+          },
+          {
+            "$ref": "#/components/parameters/Resolution"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metrics history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsHistoryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alerts": {
+      "get": {
+        "summary": "List alerts/incidents",
+        "description": "Get a list of active or historical alerts",
+        "tags": ["Alerts"],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/IncidentStatus"
+          },
+          {
+            "$ref": "#/components/parameters/Severity"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of alerts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create alert",
+        "description": "Create a new alert or incident",
+        "tags": ["Alerts"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Alert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Alert created"
+          }
+        }
+      }
+    },
+    "/masternodes": {
+      "get": {
+        "summary": "List masternodes",
+        "description": "Get a list of XDC masternodes",
+        "tags": ["Masternodes"],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of masternodes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasternodeListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fleet/status": {
+      "get": {
+        "summary": "Get fleet status",
+        "description": "Get overall fleet health and status summary",
+        "tags": ["Fleet"],
+        "responses": {
+          "200": {
+            "description": "Fleet status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FleetStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "description": "Check API health status",
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "System is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "NodeRegistration": {
+        "type": "object",
+        "required": ["name", "host", "role"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[a-zA-Z0-9-_]+$",
+            "description": "Unique node name"
+          },
+          "host": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 255,
+            "description": "Node host URL"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["masternode", "fullnode", "archive", "rpc"],
+            "description": "Node role in the network"
+          },
+          "rpcUrl": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 255,
+            "description": "RPC endpoint URL"
+          },
+          "locationCity": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "locationCountry": {
+            "type": "string",
+            "maxLength": 5
+          },
+          "locationLat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "locationLng": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "string",
+              "maxLength": 50
+            }
+          }
+        }
+      },
+      "NodeRegistrationResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "nodeId": { "type": "string", "format": "uuid" },
+              "apiKey": { "type": "string" }
+            }
+          },
+          "message": { "type": "string" }
+        }
+      },
+      "Heartbeat": {
+        "type": "object",
+        "required": ["nodeId", "blockHeight"],
+        "properties": {
+          "nodeId": { "type": "string", "format": "uuid" },
+          "blockHeight": { "type": "integer", "minimum": 0 },
+          "syncing": { "type": "boolean", "default": false },
+          "syncProgress": { "type": "number", "minimum": 0, "maximum": 100 },
+          "peerCount": { "type": "integer", "minimum": 0, "default": 0 },
+          "txPoolPending": { "type": "integer", "minimum": 0 },
+          "txPoolQueued": { "type": "integer", "minimum": 0 },
+          "gasPrice": { "type": "string" },
+          "clientVersion": { "type": "string", "maxLength": 200 },
+          "protocolVersion": { "type": "string", "maxLength": 20 },
+          "coinbase": { "type": "string" },
+          "system": {
+            "type": "object",
+            "properties": {
+              "cpuPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+              "memoryPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+              "diskPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+              "diskUsedGb": { "type": "number", "minimum": 0 },
+              "diskTotalGb": { "type": "number", "minimum": 0 },
+              "loadAvg1m": { "type": "number", "minimum": 0 },
+              "loadAvg5m": { "type": "number", "minimum": 0 },
+              "loadAvg15m": { "type": "number", "minimum": 0 }
+            }
+          },
+          "peers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "enode": { "type": "string" },
+                "name": { "type": "string" },
+                "protocols": { "type": "array", "items": { "type": "string" } },
+                "direction": { "type": "string", "enum": ["inbound", "outbound"] }
+              }
+            }
+          }
+        }
+      },
+      "HeartbeatResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "ok": { "type": "boolean" },
+              "commands": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "integer" },
+                    "command": { "type": "string" },
+                    "params": { "type": "object" }
+                  }
+                }
+              }
+            }
+          },
+          "incidentsDetected": { "type": "integer" }
+        }
+      },
+      "Node": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "host": { "type": "string" },
+          "role": { "type": "string", "enum": ["masternode", "fullnode", "archive", "rpc"] },
+          "location_city": { "type": "string" },
+          "location_country": { "type": "string" },
+          "location_lat": { "type": "number" },
+          "location_lng": { "type": "number" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "is_active": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "NodeListResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Node" }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "cursor": { "type": "string" },
+              "hasMore": { "type": "boolean" },
+              "total": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "Alert": {
+        "type": "object",
+        "required": ["type", "severity", "title"],
+        "properties": {
+          "nodeId": { "type": "string", "format": "uuid" },
+          "type": { "type": "string", "maxLength": 50 },
+          "severity": { "type": "string", "enum": ["critical", "warning", "info"] },
+          "title": { "type": "string", "maxLength": 200 },
+          "description": { "type": "string", "maxLength": 2000 },
+          "suggestedFix": { "type": "string", "maxLength": 2000 }
+        }
+      },
+      "AlertListResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                { "$ref": "#/components/schemas/Alert" },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "integer" },
+                    "status": { "type": "string", "enum": ["active", "acknowledged", "resolved"] },
+                    "detected_at": { "type": "string", "format": "date-time" },
+                    "resolved_at": { "type": "string", "format": "date-time" }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "FleetStatus": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "healthScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+              "totalNodes": { "type": "integer" },
+              "healthyNodes": { "type": "integer" },
+              "degradedNodes": { "type": "integer" },
+              "offlineNodes": { "type": "integer" },
+              "avgBlockHeight": { "type": "integer" },
+              "nakamotoCoefficient": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["healthy", "degraded", "unhealthy"] },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "version": { "type": "string" },
+          "services": {
+            "type": "object",
+            "properties": {
+              "database": { "type": "string", "enum": ["connected", "disconnected"] },
+              "redis": { "type": "string", "enum": ["connected", "disconnected", "optional"] }
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "code": { "type": "string" },
+          "details": { "type": "object" },
+          "requestId": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "parameters": {
+      "NodeId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" },
+        "description": "Node UUID"
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "schema": { "type": "string" },
+        "description": "Pagination cursor"
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "schema": { "type": "integer", "default": 50, "maximum": 100 },
+        "description": "Number of items per page"
+      },
+      "NodeStatus": {
+        "name": "status",
+        "in": "query",
+        "schema": { "type": "string", "enum": ["healthy", "degraded", "syncing", "offline"] },
+        "description": "Filter by node status"
+      },
+      "NodeRole": {
+        "name": "role",
+        "in": "query",
+        "schema": { "type": "string", "enum": ["masternode", "fullnode", "archive", "rpc"] },
+        "description": "Filter by node role"
+      },
+      "IncidentStatus": {
+        "name": "status",
+        "in": "query",
+        "schema": { "type": "string", "enum": ["active", "acknowledged", "resolved"] },
+        "description": "Filter by incident status"
+      },
+      "Severity": {
+        "name": "severity",
+        "in": "query",
+        "schema": { "type": "string", "enum": ["critical", "warning", "info"] },
+        "description": "Filter by severity"
+      },
+      "FromDate": {
+        "name": "from",
+        "in": "query",
+        "schema": { "type": "string", "format": "date-time" },
+        "description": "Start date for metrics range"
+      },
+      "ToDate": {
+        "name": "to",
+        "in": "query",
+        "schema": { "type": "string", "format": "date-time" },
+        "description": "End date for metrics range"
+      },
+      "Resolution": {
+        "name": "resolution",
+        "in": "query",
+        "schema": { "type": "string", "enum": ["1m", "5m", "15m", "1h", "1d"], "default": "5m" },
+        "description": "Metrics aggregation resolution"
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request - validation error",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": {
+              "error": "Validation failed",
+              "code": "VALIDATION_ERROR",
+              "details": { "name": ["Required"] },
+              "requestId": "550e8400-e29b-41d4-a716-446655440000",
+              "timestamp": "2026-02-13T10:00:00Z"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized - invalid or missing API key",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": {
+              "error": "Unauthorized",
+              "code": "UNAUTHORIZED",
+              "requestId": "550e8400-e29b-41d4-a716-446655440000",
+              "timestamp": "2026-02-13T10:00:00Z"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden - insufficient permissions",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": {
+              "error": "Insufficient permissions",
+              "code": "FORBIDDEN",
+              "requestId": "550e8400-e29b-41d4-a716-446655440000",
+              "timestamp": "2026-02-13T10:00:00Z"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": {
+              "error": "Node not found",
+              "code": "NOT_FOUND",
+              "requestId": "550e8400-e29b-41d4-a716-446655440000",
+              "timestamp": "2026-02-13T10:00:00Z"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Conflict - resource already exists",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": {
+              "error": "Node with this name already exists",
+              "code": "CONFLICT",
+              "requestId": "550e8400-e29b-41d4-a716-446655440000",
+              "timestamp": "2026-02-13T10:00:00Z"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Rate limit exceeded",
+        "headers": {
+          "Retry-After": {
+            "schema": { "type": "integer" },
+            "description": "Seconds to wait before retrying"
+          },
+          "X-RateLimit-Limit": {
+            "schema": { "type": "integer" },
+            "description": "Request limit per window"
+          },
+          "X-RateLimit-Remaining": {
+            "schema": { "type": "integer" },
+            "description": "Remaining requests in current window"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": {
+              "error": "Too many requests",
+              "code": "RATE_LIMITED",
+              "retryAfter": 60,
+              "requestId": "550e8400-e29b-41d4-a716-446655440000",
+              "timestamp": "2026-02-13T10:00:00Z"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key authentication. Use your API key as the bearer token."
+      }
+    }
+  }
+}

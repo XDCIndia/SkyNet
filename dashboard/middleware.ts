@@ -1,66 +1,229 @@
+/**
+ * XDC SkyNet - Enhanced Middleware
+ * Provides request ID tracing, rate limiting, security headers, and API versioning
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
+import { generateRequestId, getRequestIdFromHeader, runWithContext, getRequestContext } from './lib/request-context';
+import { logger, log } from './lib/logger';
+import {
+  checkRateLimit,
+  createRateLimitHeaders,
+  getRateLimitIdentifier,
+  determineRateLimitTier,
+} from './lib/rate-limiter';
 
-// Simple in-memory rate limiter
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
-const RATE_LIMIT_MAX = 120; // 120 requests per minute per IP
+// =============================================================================
+// Configuration
+// =============================================================================
 
-function getRateLimitKey(req: NextRequest): string {
-  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || req.headers.get('x-real-ip')
-    || 'unknown';
+const API_VERSIONS = ['v1', 'v2'];
+const DEPRECATED_VERSIONS: string[] = [];
+const SUNSET_DATES: Record<string, string> = {};
+
+const CORS_CONFIG = {
+  allowedOrigins: process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['*'],
+  allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Version', 'X-Request-ID'],
+  maxAge: 86400,
+};
+
+// =============================================================================
+// Security Headers
+// =============================================================================
+
+const SECURITY_HEADERS: Record<string, string> = {
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+  'X-DNS-Prefetch-Control': 'on',
+  'X-Download-Options': 'noopen',
+  'X-XSS-Protection': '1; mode=block',
+};
+
+const CSP_HEADER = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' ws: wss:",
+  "media-src 'self'",
+  "object-src 'none'",
+  "frame-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "upgrade-insecure-requests",
+].join('; ');
+
+// =============================================================================
+// API Version Handling
+// =============================================================================
+
+function getApiVersion(req: NextRequest): string {
+  const version = req.headers.get('x-api-version');
+  if (version && API_VERSIONS.includes(version)) {
+    return version;
+  }
+  // Default to v1
+  return 'v1';
 }
 
-function isRateLimited(key: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
+function addVersionHeaders(response: NextResponse, version: string): void {
+  response.headers.set('X-API-Version', version);
 
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return false;
+  if (DEPRECATED_VERSIONS.includes(version)) {
+    response.headers.set('Deprecation', 'true');
+    if (SUNSET_DATES[version]) {
+      response.headers.set('Sunset', SUNSET_DATES[version]);
+    }
   }
-
-  entry.count++;
-  return entry.count > RATE_LIMIT_MAX;
 }
 
-// Periodic cleanup of stale entries (every 5 minutes)
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitMap) {
-    if (now > entry.resetAt) rateLimitMap.delete(key);
+// =============================================================================
+// CORS Handling
+// =============================================================================
+
+function handleCORS(req: NextRequest, response: NextResponse): NextResponse {
+  const origin = req.headers.get('origin');
+
+  // Check if origin is allowed
+  const allowedOrigin = CORS_CONFIG.allowedOrigins.includes('*')
+    ? '*'
+    : CORS_CONFIG.allowedOrigins.find((o) => o === origin) || CORS_CONFIG.allowedOrigins[0];
+
+  response.headers.set('Access-Control-Allow-Origin', allowedOrigin || '');
+  response.headers.set('Access-Control-Allow-Methods', CORS_CONFIG.allowedMethods.join(', '));
+  response.headers.set('Access-Control-Allow-Headers', CORS_CONFIG.allowedHeaders.join(', '));
+  response.headers.set('Access-Control-Max-Age', String(CORS_CONFIG.maxAge));
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return new NextResponse(null, {
+      status: 204,
+      headers: response.headers,
+    });
   }
-}, 300_000);
-
-export function middleware(req: NextRequest) {
-  const ip = getRateLimitKey(req);
-
-  // Rate limiting
-  if (isRateLimited(ip)) {
-    return NextResponse.json(
-      { error: 'Too many requests', code: 'RATE_LIMITED' },
-      { status: 429 }
-    );
-  }
-
-  const response = NextResponse.next();
-
-  // Security headers
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  response.headers.set(
-    'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:;"
-  );
-  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-
-  // Remove X-Powered-By (belt and suspenders with next.config)
-  response.headers.delete('X-Powered-By');
 
   return response;
 }
+
+// =============================================================================
+// Main Middleware
+// =============================================================================
+
+export async function middleware(req: NextRequest) {
+  const startTime = Date.now();
+  const requestId = getRequestIdFromHeader(req) || generateRequestId();
+  const apiVersion = getApiVersion(req);
+
+  // Run request handling in context
+  return runWithContext(
+    {
+      requestId,
+      startTime,
+      path: req.nextUrl.pathname,
+      method: req.method,
+      userAgent: req.headers.get('user-agent') || undefined,
+      ip: req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+          req.headers.get('x-real-ip') ||
+          undefined,
+    },
+    async () => {
+      try {
+        // Log request start
+        logger.debug('Request started', {
+          method: req.method,
+          path: req.nextUrl.pathname,
+          query: req.nextUrl.search,
+          apiVersion,
+        });
+
+        // Check rate limit
+        const apiKey = req.headers.get('authorization')?.replace('Bearer ', '');
+        const rateLimitTier = determineRateLimitTier(
+          req.method,
+          req.nextUrl.pathname,
+          !!apiKey
+        );
+        const rateLimitId = getRateLimitIdentifier(req, apiKey);
+        const rateLimitResult = await checkRateLimit(rateLimitId, rateLimitTier);
+
+        if (rateLimitResult.limited) {
+          const response = NextResponse.json(
+            {
+              error: 'Too many requests',
+              code: 'RATE_LIMITED',
+              retryAfter: rateLimitResult.retryAfter,
+            },
+            { status: 429 }
+          );
+
+          // Add rate limit headers
+          const headers = createRateLimitHeaders(rateLimitResult);
+          Object.entries(headers).forEach(([key, value]) => {
+            response.headers.set(key, value);
+          });
+
+          response.headers.set('x-request-id', requestId);
+
+          log.request(req.method, req.nextUrl.pathname, 429, Date.now() - startTime);
+          return response;
+        }
+
+        // Continue to route handler
+        const response = NextResponse.next();
+
+        // Add security headers
+        Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
+          response.headers.set(key, value);
+        });
+        response.headers.set('Content-Security-Policy', CSP_HEADER);
+
+        // Add request ID
+        response.headers.set('x-request-id', requestId);
+
+        // Add API version headers
+        addVersionHeaders(response, apiVersion);
+
+        // Add rate limit headers
+        const headers = createRateLimitHeaders(rateLimitResult);
+        Object.entries(headers).forEach(([key, value]) => {
+          response.headers.set(key, value);
+        });
+
+        // Remove X-Powered-By
+        response.headers.delete('X-Powered-By');
+
+        return handleCORS(req, response);
+      } catch (error) {
+        logger.error('Middleware error', error as Error, {
+          path: req.nextUrl.pathname,
+          method: req.method,
+        });
+
+        const response = NextResponse.json(
+          {
+            error: 'Internal server error',
+            code: 'INTERNAL_ERROR',
+            requestId,
+          },
+          { status: 500 }
+        );
+
+        response.headers.set('x-request-id', requestId);
+        return response;
+      }
+    }
+  );
+}
+
+// =============================================================================
+// Config
+// =============================================================================
 
 export const config = {
   matcher: [

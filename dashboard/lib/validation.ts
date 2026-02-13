@@ -253,3 +253,9 @@ export type NodeQuery = z.infer<typeof NodeQuerySchema>;
 export type MetricsQuery = z.infer<typeof MetricsQuerySchema>;
 export type IncidentQuery = z.infer<typeof IncidentQuerySchema>;
 export type ApiError = z.infer<typeof ApiErrorSchema>;
+
+// =============================================================================
+// Re-export helpers from errors
+// =============================================================================
+
+export { validateBody, validateQuery, ValidationError } from './errors';

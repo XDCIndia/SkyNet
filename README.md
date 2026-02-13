@@ -254,6 +254,20 @@ npm run lint
 npm run test
 ```
 
+## Docker Deployment
+
+```bash
+# Quick start with Docker Compose
+cp .env.example .env
+# Edit .env with your settings
+
+docker-compose up -d
+
+# Access at http://localhost:3005
+```
+
+See [docker-compose.yml](docker-compose.yml) for full configuration including optional Prometheus/Grafana monitoring.
+
 ## Environment Variables
 
 | Variable | Required | Description |
@@ -263,6 +277,22 @@ npm run test
 | `NEXT_PUBLIC_API_URL` | No | Public API base URL |
 | `WEBSOCKET_URL` | No | WebSocket server URL |
 | `REDIS_URL` | No | Redis URL for distributed rate limiting |
+| `LOG_LEVEL` | No | Logging level (debug/info/warn/error) |
+| `CORS_ALLOWED_ORIGINS` | No | Comma-separated allowed origins |
+
+## API Documentation
+
+Full OpenAPI 3.0 specification available at [dashboard/openapi.json](dashboard/openapi.json).
+
+### Rate Limiting
+
+| Tier | Limit | Window |
+|------|-------|--------|
+| Public | 60 req | 1 min |
+| Authenticated | 120 req | 1 min |
+| Heartbeat | 120 req | 1 min |
+| Write | 30 req | 1 min |
+| Admin | 300 req | 1 min |
 
 ## Contributing
 

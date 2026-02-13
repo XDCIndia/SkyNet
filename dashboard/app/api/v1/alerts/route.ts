@@ -1,130 +1,120 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
-import { authenticateRequest, unauthorizedResponse, isDashboardReadRequest } from '@/lib/auth';
+import { queryAll } from '@/lib/db';
+import { authenticateRequest, unauthorizedResponse, hasPermission } from '@/lib/auth';
+import { withErrorHandling, NotFoundError, ValidationError as ApiValidationError } from '@/lib/errors';
+import { validateBody, AlertSchema, AlertNotifySchema } from '@/lib/validation';
+import { logger } from '@/lib/logger';
+import { invalidateByTag, withCache, CACHE_TTLS, generateCacheKey } from '@/lib/cache';
+import { z } from 'zod';
+
+// Query params schema
+const AlertQuerySchema = z.object({
+  status: z.enum(['active', 'acknowledged', 'resolved']).optional(),
+  severity: z.enum(['critical', 'warning', 'info']).optional(),
+  nodeId: z.string().uuid().optional(),
+  limit: z.coerce.number().min(1).max(100).default(50),
+  cursor: z.string().optional(),
+});
 
 /**
  * GET /api/v1/alerts
- * List all active alerts across fleet
+ * List alerts/incidents with optional filters
  */
-export async function GET(request: NextRequest) {
-  try {
-    // Always require auth - alert configs contain PII (emails, chat IDs)
-    const auth = await authenticateRequest(request);
-    const isDashboard = isDashboardReadRequest(request);
-    if (!isDashboard && !auth.valid) {
-      return unauthorizedResponse(auth.error);
+async function getHandler(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  
+  const params = AlertQuerySchema.parse({
+    status: searchParams.get('status'),
+    severity: searchParams.get('severity'),
+    nodeId: searchParams.get('nodeId'),
+    limit: searchParams.get('limit'),
+    cursor: searchParams.get('cursor'),
+  });
+
+  const cacheKey = generateCacheKey('alerts', 'list', params);
+  
+  const data = await withCache(cacheKey, async () => {
+    const conditions: string[] = [];
+    const values: unknown[] = [];
+    let paramIndex = 1;
+
+    if (params.status) {
+      conditions.push(`i.status = $${paramIndex++}`);
+      values.push(params.status);
     }
 
-    const { searchParams } = new URL(request.url);
-    const activeOnly = searchParams.get('active') !== 'false';
+    if (params.severity) {
+      conditions.push(`i.severity = $${paramIndex++}`);
+      values.push(params.severity);
+    }
 
-    const result = await query(`
-      SELECT 
-        ar.*,
-        n.name as node_name,
-        CASE 
-          WHEN ar.last_triggered_at IS NULL THEN 'never'
-          WHEN ar.last_triggered_at > NOW() - INTERVAL '1 hour' THEN 'recently'
-          ELSE 'ok'
-        END as trigger_status
-      FROM netown.alert_rules ar
-      LEFT JOIN netown.nodes n ON ar.node_id = n.id
-      ${activeOnly ? 'WHERE ar.is_active = true' : ''}
-      ORDER BY 
-        CASE ar.type 
-          WHEN 'node_down' THEN 1
-          WHEN 'sync_stall' THEN 2
-          WHEN 'disk_full' THEN 3
-          WHEN 'peer_drop' THEN 4
-          ELSE 5
-        END,
-        ar.created_at DESC
-    `);
+    if (params.nodeId) {
+      conditions.push(`i.node_id = $${paramIndex++}`);
+      values.push(params.nodeId);
+    }
 
-    return NextResponse.json({
-      alerts: result.rows,
-      total: result.rowCount,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error: any) {
-    console.error('Error fetching alerts:', error);
-    
-    return NextResponse.json(
-      { error: 'Failed to fetch alerts', code: 'INTERNAL_ERROR' },
-      { status: 500 }
-    );
-  }
+    if (params.cursor) {
+      conditions.push(`i.id < $${paramIndex++}`);
+      values.push(parseInt(params.cursor, 10));
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const incidents = await queryAll(`
+      SELECT i.*, n.name as node_name
+      FROM skynet.incidents i
+      LEFT JOIN skynet.nodes n ON i.node_id = n.id
+      ${whereClause}
+      ORDER BY i.detected_at DESC
+      LIMIT $${paramIndex}
+    `, [...values, params.limit + 1]);
+
+    const hasMore = incidents.length > params.limit;
+    const data = hasMore ? incidents.slice(0, -1) : incidents;
+    const nextCursor = hasMore && data.length > 0 ? String(data[data.length - 1].id) : null;
+
+    return { incidents: data, hasMore, nextCursor };
+  }, CACHE_TTLS.incidents);
+
+  return NextResponse.json({
+    success: true,
+    data: data.incidents,
+    meta: {
+      hasMore: data.hasMore,
+      cursor: data.nextCursor,
+    },
+  });
 }
 
 /**
  * POST /api/v1/alerts
- * Create a new alert rule
+ * Create a new alert/incident
  */
-export async function POST(request: NextRequest) {
-  try {
-    // Authenticate request
-    const auth = await authenticateRequest(request);
-    if (!auth.valid) {
-      return unauthorizedResponse(auth.error);
-    }
-
-    const body = await request.json();
-    const {
-      nodeId,
-      type,
-      condition,
-      channels,
-      cooldownMinutes = 30,
-    } = body;
-
-    // Validation
-    if (!type || !condition || !channels) {
-      return NextResponse.json(
-        { error: 'Missing required fields: type, condition, channels', code: 'BAD_REQUEST' },
-        { status: 400 }
-      );
-    }
-
-    // Validate alert type
-    const validTypes = ['node_down', 'sync_stall', 'peer_drop', 'disk_full', 'block_drift', 'custom'];
-    if (!validTypes.includes(type)) {
-      return NextResponse.json(
-        { error: `Invalid type. Must be one of: ${validTypes.join(', ')}`, code: 'BAD_REQUEST' },
-        { status: 400 }
-      );
-    }
-
-    // If nodeId provided, verify node exists
-    if (nodeId) {
-      const nodeCheck = await query(
-        'SELECT id FROM netown.nodes WHERE id = $1',
-        [nodeId]
-      );
-      if (nodeCheck.rowCount === 0) {
-        return NextResponse.json(
-          { error: 'Node not found', code: 'NOT_FOUND' },
-          { status: 404 }
-        );
-      }
-    }
-
-    const result = await query(`
-      INSERT INTO netown.alert_rules 
-        (node_id, type, condition, channels, cooldown_minutes)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *
-    `, [nodeId || null, type, JSON.stringify(condition), JSON.stringify(channels), cooldownMinutes]);
-
-    return NextResponse.json({
-      alert: result.rows[0],
-      message: 'Alert rule created successfully',
-    }, { status: 201 });
-  } catch (error: any) {
-    console.error('Error creating alert:', error);
-    
-    return NextResponse.json(
-      { error: 'Failed to create alert', code: 'INTERNAL_ERROR' },
-      { status: 500 }
-    );
+async function postHandler(request: NextRequest) {
+  const auth = await authenticateRequest(request);
+  if (!auth.valid) {
+    return unauthorizedResponse(auth.error);
   }
+
+  const body = await validateBody(request, AlertSchema);
+  const { nodeId, type, severity, title, description, suggestedFix } = body;
+
+  const result = await queryAll(
+    `INSERT INTO skynet.incidents 
+     (node_id, type, severity, title, description, suggested_fix, auto_detected)
+     VALUES ($1, $2, $3, $4, $5, $6, false)
+     RETURNING *`,
+    [nodeId || null, type, severity, title, description || null, suggestedFix || null]
+  );
+
+  logger.info('Alert created', { alertId: result[0]?.id, type, severity });
+  await invalidateByTag('incidents');
+
+  return NextResponse.json({
+    success: true,
+    data: result[0],
+  }, { status: 201 });
 }
+
+export const GET = withErrorHandling(getHandler);
+export const POST = withErrorHandling(postHandler);
