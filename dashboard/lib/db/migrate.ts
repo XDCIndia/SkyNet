@@ -6,7 +6,7 @@
 import { Pool } from 'pg';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { logger } from '../lib/logger';
+import { logger } from '../logger';
 
 // =============================================================================
 // Types

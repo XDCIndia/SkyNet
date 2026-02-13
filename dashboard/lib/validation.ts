@@ -17,10 +17,12 @@ export const PaginationSchema = z.object({
   direction: z.enum(['asc', 'desc']).default('desc'),
 });
 
-export const DateRangeSchema = z.object({
+export const DateRangeBaseSchema = z.object({
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
-}).refine(
+});
+
+export const DateRangeSchema = DateRangeBaseSchema.refine(
   (data) => !data.from || !data.to || data.from <= data.to,
   { message: 'from date must be before to date' }
 );
@@ -207,7 +209,7 @@ export const MetricsQuerySchema = z.object({
   nodeId: UUIDSchema,
   metric: z.string().max(100).optional(),
   resolution: z.enum(['1m', '5m', '15m', '1h', '1d']).default('5m'),
-}).merge(DateRangeSchema);
+}).merge(DateRangeBaseSchema);
 
 export const IncidentQuerySchema = z.object({
   status: z.enum(['active', 'acknowledged', 'resolved']).optional(),

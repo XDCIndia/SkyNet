@@ -6,12 +6,8 @@
 // Export from legacy client (for backward compatibility)
 export {
   getPool,
-  query,
-  queryOne as queryOneLegacy,
-  queryAll as queryAllLegacy,
   withTransaction as withTransactionLegacy,
   closePool,
-  checkDatabaseHealth as checkDatabaseHealthLegacy,
 } from './client';
 
 // Export from resilient client (new, recommended)
@@ -23,8 +19,9 @@ export {
   checkDatabaseHealth,
   closePool as closePoolResilient,
   getPoolMetrics,
-  DatabaseHealth,
 } from './resilient-client';
+
+export type { DatabaseHealth } from './resilient-client';
 
 // Re-export query as the default (uses resilient client)
 export { queryWithResilience as query } from './resilient-client';

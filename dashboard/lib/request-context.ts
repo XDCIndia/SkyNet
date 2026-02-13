@@ -52,7 +52,7 @@ export function runWithContext<T>(
   context: RequestContext,
   fn: () => T | Promise<T>
 ): Promise<T> {
-  return asyncLocalStorage.run(context, fn);
+  return asyncLocalStorage.run(context, async () => fn());
 }
 
 // =============================================================================

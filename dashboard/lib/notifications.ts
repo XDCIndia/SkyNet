@@ -204,3 +204,91 @@ export function shouldTriggerAlert(
 
   return timeSinceLastTrigger >= cooldownMs;
 }
+
+/**
+ * Send alert notification to a specific channel
+ */
+export async function sendAlertNotification(
+  channel: 'telegram' | 'email' | 'slack' | 'webhook',
+  alert: {
+    id: number;
+    type: string;
+    severity: 'critical' | 'warning' | 'info';
+    title: string;
+    description?: string;
+    nodeName?: string;
+    detectedAt: Date;
+  }
+): Promise<void> {
+  const severityEmoji = {
+    critical: '🚨',
+    warning: '⚠️',
+    info: 'ℹ️',
+  };
+
+  const message = `
+${severityEmoji[alert.severity]} <b>XDC SkyNet Alert</b>
+
+<b>Type:</b> ${alert.type}
+<b>Severity:</b> ${alert.severity.toUpperCase()}
+${alert.nodeName ? `<b>Node:</b> ${alert.nodeName}` : ''}
+<b>Title:</b> ${alert.title}
+
+${alert.description || ''}
+
+Detected: ${new Date(alert.detectedAt).toLocaleString()}
+  `.trim();
+
+  switch (channel) {
+    case 'telegram':
+      await sendTelegramAlert(
+        process.env.TELEGRAM_BOT_TOKEN || '',
+        process.env.TELEGRAM_CHAT_ID || '',
+        message
+      );
+      break;
+
+    case 'email':
+      await sendEmailAlert(
+        process.env.ALERT_EMAIL || '',
+        `XDC SkyNet Alert: ${alert.title}`,
+        message
+      );
+      break;
+
+    case 'slack':
+      // Slack webhook URL should be in env
+      const slackWebhook = process.env.SLACK_WEBHOOK_URL;
+      if (!slackWebhook) {
+        throw new Error('Slack webhook URL not configured');
+      }
+      await sendWebhookAlert(slackWebhook, {
+        text: message.replace(/<[^>]+>/g, ''),
+        blocks: [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `*${severityEmoji[alert.severity]} ${alert.title}*\n${alert.description || ''}`,
+            },
+          },
+        ],
+      });
+      break;
+
+    case 'webhook':
+      const webhookUrl = process.env.ALERT_WEBHOOK_URL;
+      if (!webhookUrl) {
+        throw new Error('Alert webhook URL not configured');
+      }
+      await sendWebhookAlert(webhookUrl, {
+        alert,
+        message,
+        timestamp: new Date().toISOString(),
+      });
+      break;
+
+    default:
+      throw new Error(`Unknown channel: ${channel}`);
+  }
+}

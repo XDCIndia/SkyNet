@@ -20,8 +20,10 @@
   "dependencies": {
     "@amcharts/amcharts5": "^5.15.6",
     "@amcharts/amcharts5-geodata": "^5.1.5",
+    "@types/jsonwebtoken": "^9.0.10",
     "echarts": "^6.0.0",
     "ioredis": "^5.9.3",
+    "jsonwebtoken": "^9.0.3",
     "lru-cache": "^11.2.6",
     "lucide-react": "^0.563.0",
     "next": "14.2.35",

@@ -4,9 +4,9 @@
  */
 
 import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
-import { logger } from './logger';
-import { getCircuitBreaker, CircuitBreaker } from './circuit-breaker';
-import { getRequestId } from './request-context';
+import { logger } from '../logger';
+import { getCircuitBreaker, CircuitBreaker } from '../circuit-breaker';
+import { getCurrentRequestId as getRequestId } from '../request-context';
 
 // =============================================================================
 // Configuration

@@ -11,9 +11,9 @@ import { NextRequest } from 'next/server';
 // =============================================================================
 
 // Mock environment variables
-process.env.DATABASE_URL = 'postgresql://localhost:5432/skynet_test';
-process.env.API_KEYS = 'test_master_key_12345';
-process.env.NODE_ENV = 'test';
+(process.env as any).DATABASE_URL = 'postgresql://localhost:5432/skynet_test';
+(process.env as any).API_KEYS = 'test_master_key_12345';
+(process.env as any).NODE_ENV = 'test';
 
 // =============================================================================
 // Test Utilities

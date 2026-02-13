@@ -3,7 +3,7 @@
  * Provides structured error responses and error types
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 
 // =============================================================================
@@ -248,10 +248,10 @@ export function validateQuery<T>(
 /**
  * Wrap an API route handler with error handling
  */
-export function withErrorHandling<T>(
-  handler: (req: Request, context?: T) => Promise<NextResponse>
-): (req: Request, context?: T) => Promise<NextResponse> {
-  return async (req: Request, context?: T) => {
+export function withErrorHandling<R extends Request = Request, T = unknown>(
+  handler: (req: R, context?: T) => Promise<NextResponse>
+): (req: R, context?: T) => Promise<NextResponse> {
+  return async (req: R, context?: T) => {
     const requestId = crypto.randomUUID();
 
     try {
