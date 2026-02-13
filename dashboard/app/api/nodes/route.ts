@@ -18,9 +18,9 @@ export async function GET() {
         m.is_syncing,
         m.client_version,
         m.collected_at as last_seen
-      FROM netown.nodes n
+      FROM skynet.nodes n
       LEFT JOIN LATERAL (
-        SELECT * FROM netown.node_metrics
+        SELECT * FROM skynet.node_metrics
         WHERE node_id = n.id
         ORDER BY collected_at DESC
         LIMIT 1
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await query(
-      `INSERT INTO netown.nodes 
+      `INSERT INTO skynet.nodes 
        (name, host, role, location_city, location_country, location_lat, location_lng, tags)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
@@ -154,12 +154,12 @@ export async function DELETE(request: NextRequest) {
     let result;
     if (id) {
       result = await query(
-        'DELETE FROM netown.nodes WHERE id = $1 RETURNING *',
+        'DELETE FROM skynet.nodes WHERE id = $1 RETURNING *',
         [id]
       );
     } else {
       result = await query(
-        'DELETE FROM netown.nodes WHERE name = $1 RETURNING *',
+        'DELETE FROM skynet.nodes WHERE name = $1 RETURNING *',
         [name]
       );
     }

@@ -23,7 +23,7 @@ export async function evaluateAndNotify(
     // Find matching active alert rules
     const rulesResult = await query(
       `SELECT id, channels, cooldown_minutes, last_triggered_at
-       FROM netown.alert_rules
+       FROM skynet.alert_rules
        WHERE type = $1 AND is_active = true
        AND (node_id IS NULL OR node_id = $2)`,
       [incidentType, nodeId]
@@ -62,13 +62,13 @@ export async function evaluateAndNotify(
       if (successChannels.length > 0) {
         // Update last_triggered_at
         await query(
-          `UPDATE netown.alert_rules SET last_triggered_at = NOW() WHERE id = $1`,
+          `UPDATE skynet.alert_rules SET last_triggered_at = NOW() WHERE id = $1`,
           [rule.id]
         );
 
         // Log to alert_history
         await query(
-          `INSERT INTO netown.alert_history (rule_id, node_id, incident_id, channels_notified, message, sent_at)
+          `INSERT INTO skynet.alert_history (rule_id, node_id, incident_id, channels_notified, message, sent_at)
            VALUES ($1, $2, $3, $4, $5, NOW())`,
           [rule.id, nodeId, incidentId, successChannels, title]
         );
@@ -88,8 +88,8 @@ export async function checkFleetNodeDown(): Promise<void> {
     // Find nodes that haven't reported and aren't already marked offline
     const staleNodes = await query(
       `SELECT n.id, n.name
-       FROM netown.nodes n
-       LEFT JOIN netown.node_metrics m ON m.node_id = n.id
+       FROM skynet.nodes n
+       LEFT JOIN skynet.node_metrics m ON m.node_id = n.id
        WHERE n.status != 'offline'
        GROUP BY n.id, n.name
        HAVING MAX(m.collected_at) < NOW() - INTERVAL '5 minutes'
@@ -99,7 +99,7 @@ export async function checkFleetNodeDown(): Promise<void> {
     for (const node of staleNodes.rows) {
       // Check if there's already an active node_down incident
       const existing = await query(
-        `SELECT id FROM netown.incidents
+        `SELECT id FROM skynet.incidents
          WHERE node_id = $1 AND type = 'node_down' AND status = 'active'`,
         [node.id]
       );
@@ -107,7 +107,7 @@ export async function checkFleetNodeDown(): Promise<void> {
       if (existing.rowCount === 0) {
         // Create incident
         const incidentResult = await query(
-          `INSERT INTO netown.incidents (node_id, type, severity, title, description, auto_detected)
+          `INSERT INTO skynet.incidents (node_id, type, severity, title, description, auto_detected)
            VALUES ($1, 'node_down', 'critical', $2, $3, true)
            RETURNING id`,
           [

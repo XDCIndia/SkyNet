@@ -34,7 +34,7 @@ export async function GET(
     // Get pending commands
     const result = await query(
       `SELECT id, command, params, status, created_at
-       FROM netown.command_queue
+       FROM skynet.command_queue
        WHERE node_id = $1 AND status = 'pending'
        ORDER BY created_at ASC`,
       [id]
@@ -76,7 +76,7 @@ export async function POST(
 
     // Verify node exists
     const nodeResult = await query(
-      `SELECT id FROM netown.nodes WHERE id = $1`,
+      `SELECT id FROM skynet.nodes WHERE id = $1`,
       [id]
     );
 
@@ -98,7 +98,7 @@ export async function POST(
 
     // Queue the command
     const result = await query(
-      `INSERT INTO netown.command_queue 
+      `INSERT INTO skynet.command_queue 
        (node_id, command, params, status)
        VALUES ($1, $2, $3, 'pending')
        RETURNING *`,

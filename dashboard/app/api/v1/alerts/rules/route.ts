@@ -71,10 +71,10 @@ async function getHandler(request: NextRequest) {
         ) FILTER (WHERE ac.id IS NOT NULL),
         '[]'
       ) as channels
-    FROM netown.alert_rules ar
-    LEFT JOIN netown.nodes n ON ar.node_id = n.id
-    LEFT JOIN netown.alert_rule_channels arc ON ar.id = arc.rule_id
-    LEFT JOIN netown.alert_channels ac ON arc.channel_id = ac.id
+    FROM skynet.alert_rules ar
+    LEFT JOIN skynet.nodes n ON ar.node_id = n.id
+    LEFT JOIN skynet.alert_rule_channels arc ON ar.id = arc.rule_id
+    LEFT JOIN skynet.alert_channels ac ON arc.channel_id = ac.id
     ${whereClause}
     GROUP BY ar.id, n.name
     ORDER BY ar.created_at DESC
@@ -97,7 +97,7 @@ async function postHandler(request: NextRequest) {
   const result = await withTransaction(async (client) => {
     // Insert rule
     const ruleResult = await client.query(
-      `INSERT INTO netown.alert_rules 
+      `INSERT INTO skynet.alert_rules 
        (name, description, node_id, condition_type, threshold_value, duration_minutes, severity, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
@@ -121,7 +121,7 @@ async function postHandler(request: NextRequest) {
         .map((_, i) => `($1, $${i + 2})`)
         .join(', ');
       await client.query(
-        `INSERT INTO netown.alert_rule_channels (rule_id, channel_id) VALUES ${channelValues}`,
+        `INSERT INTO skynet.alert_rule_channels (rule_id, channel_id) VALUES ${channelValues}`,
         [rule.id, ...validated.channelIds]
       );
     }
@@ -196,7 +196,7 @@ async function putHandler(request: NextRequest) {
     values.push(id);
 
     const ruleResult = await client.query(
-      `UPDATE netown.alert_rules SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      `UPDATE skynet.alert_rules SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
       values
     );
 
@@ -207,7 +207,7 @@ async function putHandler(request: NextRequest) {
     // Update channel links if provided
     if (validated.channelIds !== undefined) {
       await client.query(
-        'DELETE FROM netown.alert_rule_channels WHERE rule_id = $1',
+        'DELETE FROM skynet.alert_rule_channels WHERE rule_id = $1',
         [id]
       );
 
@@ -216,7 +216,7 @@ async function putHandler(request: NextRequest) {
           .map((_, i) => `($1, $${i + 2})`)
           .join(', ');
         await client.query(
-          `INSERT INTO netown.alert_rule_channels (rule_id, channel_id) VALUES ${channelValues}`,
+          `INSERT INTO skynet.alert_rule_channels (rule_id, channel_id) VALUES ${channelValues}`,
           [id, ...validated.channelIds]
         );
       }
@@ -247,8 +247,8 @@ async function deleteHandler(request: NextRequest) {
   }
 
   await withTransaction(async (client) => {
-    await client.query('DELETE FROM netown.alert_rule_channels WHERE rule_id = $1', [id]);
-    await client.query('DELETE FROM netown.alert_rules WHERE id = $1', [id]);
+    await client.query('DELETE FROM skynet.alert_rule_channels WHERE rule_id = $1', [id]);
+    await client.query('DELETE FROM skynet.alert_rules WHERE id = $1', [id]);
   });
 
   return NextResponse.json({

@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     // Insert metrics into database
     await query(
-      `INSERT INTO netown.node_metrics 
+      `INSERT INTO skynet.node_metrics 
        (node_id, block_height, sync_percent, peer_count, 
         cpu_percent, memory_percent, disk_percent, disk_used_gb, disk_total_gb,
         tx_pool_pending, tx_pool_queued, gas_price, rpc_latency_ms,

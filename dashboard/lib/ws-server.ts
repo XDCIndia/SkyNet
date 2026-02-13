@@ -61,7 +61,7 @@ async function getLatestMetrics() {
       memory_percent, disk_percent, tx_pool_pending, tx_pool_queued,
       gas_price, tps, rpc_latency_ms, is_syncing, client_version, coinbase,
       collected_at
-    FROM netown.node_metrics
+    FROM skynet.node_metrics
     ORDER BY node_id, collected_at DESC
   `);
   return rows;
@@ -70,8 +70,8 @@ async function getLatestMetrics() {
 async function getActiveIncidents() {
   return queryAll(`
     SELECT i.*, n.name as node_name
-    FROM netown.incidents i
-    JOIN netown.nodes n ON i.node_id = n.id
+    FROM skynet.incidents i
+    JOIN skynet.nodes n ON i.node_id = n.id
     WHERE i.status = 'active'
     ORDER BY i.detected_at DESC
     LIMIT 50
@@ -83,7 +83,7 @@ async function getPeersOverview() {
     WITH latest_peers AS (
       SELECT DISTINCT ON (peer_enode) 
         peer_enode, remote_ip, country, direction
-      FROM netown.peer_snapshots
+      FROM skynet.peer_snapshots
       WHERE collected_at > NOW() - INTERVAL '10 minutes'
       ORDER BY peer_enode, collected_at DESC
     )
@@ -99,7 +99,7 @@ async function getPeersOverview() {
 
 async function getLatestHealth() {
   const rows = await queryAll(`
-    SELECT * FROM netown.network_health
+    SELECT * FROM skynet.network_health
     ORDER BY collected_at DESC
     LIMIT 1
   `);

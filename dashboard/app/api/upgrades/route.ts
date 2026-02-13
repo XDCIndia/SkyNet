@@ -21,10 +21,10 @@ export async function GET(request: NextRequest) {
         u.*,
         ARRAY(
           SELECT json_build_object('id', n.id, 'name', n.name, 'role', n.role)
-          FROM netown.nodes n
+          FROM skynet.nodes n
           WHERE n.id = ANY(u.node_ids)
         ) as node_details
-      FROM netown.upgrade_plans u
+      FROM skynet.upgrade_plans u
       ${whereClause}
       ORDER BY u.created_at DESC
     `, params);
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     // Validate nodeIds
     const nodeCheck = await query(
-      'SELECT id FROM netown.nodes WHERE id = ANY($1)',
+      'SELECT id FROM skynet.nodes WHERE id = ANY($1)',
       [nodeIds]
     );
     
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await query(`
-      INSERT INTO netown.upgrade_plans 
+      INSERT INTO skynet.upgrade_plans 
         (name, target_version, strategy, node_ids, scheduled_at, notes)
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
@@ -155,7 +155,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const result = await query(
-      `UPDATE netown.upgrade_plans SET ${updateFields.join(', ')} WHERE id = $1 RETURNING *`,
+      `UPDATE skynet.upgrade_plans SET ${updateFields.join(', ')} WHERE id = $1 RETURNING *`,
       params
     );
 

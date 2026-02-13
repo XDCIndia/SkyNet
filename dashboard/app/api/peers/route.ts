@@ -122,7 +122,7 @@ export async function GET() {
 
     // Get banned peers from DB
     const bannedResult = await query(`
-      SELECT * FROM netown.banned_peers
+      SELECT * FROM skynet.banned_peers
       ORDER BY banned_at DESC
     `);
 
@@ -133,7 +133,7 @@ export async function GET() {
         COUNT(DISTINCT remote_ip) as unique_ips_24h,
         COUNT(*) FILTER (WHERE direction = 'inbound') as inbound_24h,
         COUNT(*) FILTER (WHERE direction = 'outbound') as outbound_24h
-      FROM netown.peer_snapshots
+      FROM skynet.peer_snapshots
       WHERE collected_at > NOW() - INTERVAL '24 hours'
     `);
 

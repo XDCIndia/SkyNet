@@ -10,12 +10,12 @@ export async function GET() {
     
     // Get nodes being monitored
     const nodesResult = await query(
-      'SELECT COUNT(*) as count FROM netown.nodes WHERE is_active = true'
+      'SELECT COUNT(*) as count FROM skynet.nodes WHERE is_active = true'
     );
     
     // Get last metric collection time
     const lastRunResult = await query(
-      'SELECT MAX(collected_at) as last_run FROM netown.node_metrics'
+      'SELECT MAX(collected_at) as last_run FROM skynet.node_metrics'
     );
 
     return NextResponse.json({

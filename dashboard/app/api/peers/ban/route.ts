@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await query(`
-      INSERT INTO netown.banned_peers (enode, remote_ip, reason, banned_by)
+      INSERT INTO skynet.banned_peers (enode, remote_ip, reason, banned_by)
       VALUES ($1, $2, $3, 'manual')
       ON CONFLICT (enode) DO NOTHING
       RETURNING *
@@ -88,12 +88,12 @@ export async function DELETE(request: NextRequest) {
     let result;
     if (id) {
       result = await query(
-        'DELETE FROM netown.banned_peers WHERE id = $1 RETURNING *',
+        'DELETE FROM skynet.banned_peers WHERE id = $1 RETURNING *',
         [id]
       );
     } else {
       result = await query(
-        'DELETE FROM netown.banned_peers WHERE enode = $1 RETURNING *',
+        'DELETE FROM skynet.banned_peers WHERE enode = $1 RETURNING *',
         [enode]
       );
     }

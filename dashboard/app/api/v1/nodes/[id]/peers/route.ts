@@ -37,7 +37,7 @@ export async function GET(
         country,
         city,
         collected_at
-      FROM netown.peer_snapshots
+      FROM skynet.peer_snapshots
       WHERE node_id = $1
         AND collected_at > NOW() - INTERVAL '5 minutes'
       ORDER BY peer_enode, collected_at DESC

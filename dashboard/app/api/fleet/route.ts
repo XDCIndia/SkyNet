@@ -28,9 +28,9 @@ export async function GET() {
           WHEN m.sync_percent >= 99 AND m.peer_count >= 3 THEN 'online'
           ELSE 'degraded'
         END as status
-      FROM netown.nodes n
+      FROM skynet.nodes n
       LEFT JOIN LATERAL (
-        SELECT * FROM netown.node_metrics
+        SELECT * FROM skynet.node_metrics
         WHERE node_id = n.id
         ORDER BY collected_at DESC
         LIMIT 1
@@ -44,7 +44,7 @@ export async function GET() {
       WITH latest_metrics AS (
         SELECT DISTINCT ON (node_id) 
           node_id, block_height, sync_percent, peer_count, rpc_latency_ms
-        FROM netown.node_metrics
+        FROM skynet.node_metrics
         WHERE collected_at > NOW() - INTERVAL '5 minutes'
         ORDER BY node_id, collected_at DESC
       )
@@ -65,7 +65,7 @@ export async function GET() {
         COUNT(*) FILTER (WHERE status = 'active') as active_count,
         COUNT(*) FILTER (WHERE status = 'active' AND severity = 'critical') as critical_count,
         COUNT(*) FILTER (WHERE status = 'active' AND severity = 'warning') as warning_count
-      FROM netown.incidents
+      FROM skynet.incidents
     `);
 
     const stats = statsResult.rows[0];

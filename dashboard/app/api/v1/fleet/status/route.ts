@@ -25,7 +25,7 @@ async function getHandler(request: NextRequest) {
   const data = await withCache(cacheKey, async () => {
     // Get latest health snapshot
     const healthRows = await queryAll(`
-      SELECT * FROM netown.network_health
+      SELECT * FROM skynet.network_health
       ORDER BY collected_at DESC
       LIMIT 1
     `);
@@ -43,7 +43,7 @@ async function getHandler(request: NextRequest) {
           memory_percent,
           disk_percent,
           collected_at
-        FROM netown.node_metrics
+        FROM skynet.node_metrics
         WHERE collected_at > NOW() - INTERVAL '5 minutes'
         ORDER BY node_id, collected_at DESC
       )
@@ -67,7 +67,7 @@ async function getHandler(request: NextRequest) {
           WHEN m.peer_count < 3 OR m.cpu_percent > 90 OR m.disk_percent > 90 THEN 'degraded'
           ELSE 'healthy'
         END as status
-      FROM netown.nodes n
+      FROM skynet.nodes n
       LEFT JOIN latest_metrics m ON n.id = m.node_id
       WHERE n.is_active = true
     `);
@@ -87,7 +87,7 @@ async function getHandler(request: NextRequest) {
     // Get active incidents count
     const incidentRows = await queryAll(`
       SELECT severity, COUNT(*) as count
-      FROM netown.incidents
+      FROM skynet.incidents
       WHERE status = 'active'
       GROUP BY severity
     `);

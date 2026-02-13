@@ -17,7 +17,7 @@ export async function GET(
 
     // Validate node exists
     const nodeCheck = await query(
-      'SELECT id FROM netown.nodes WHERE id = $1',
+      'SELECT id FROM skynet.nodes WHERE id = $1',
       [id]
     );
     
@@ -74,7 +74,7 @@ export async function GET(
           AVG(rpc_latency_ms)::int as rpc_latency_ms,
           BOOL_OR(is_syncing) as is_syncing,
           COUNT(*) as sample_count
-        FROM netown.node_metrics
+        FROM skynet.node_metrics
         WHERE node_id = $1 ${timeFilter}
         GROUP BY time_bucket
         ORDER BY time_bucket ASC

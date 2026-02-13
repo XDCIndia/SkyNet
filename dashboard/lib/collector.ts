@@ -72,7 +72,7 @@ async function rpcCall(method: string, params: unknown[] = [], url: string = RPC
 }
 
 async function getActiveNodes(): Promise<Node[]> {
-  const result = await query<Node>('SELECT * FROM netown.nodes WHERE is_active = true');
+  const result = await query<Node>('SELECT * FROM skynet.nodes WHERE is_active = true');
   return result.rows;
 }
 
@@ -249,14 +249,14 @@ async function detectIncidents(node: Node, metric: Partial<NodeMetric>): Promise
   // Insert incidents if not already active
   for (const incident of incidents) {
     const existing = await query(
-      `SELECT id FROM netown.incidents 
+      `SELECT id FROM skynet.incidents 
        WHERE node_id = $1 AND type = $2 AND status = 'active'`,
       [node.id, incident.type]
     );
 
     if (existing.rowCount === 0) {
       await query(
-        `INSERT INTO netown.incidents 
+        `INSERT INTO skynet.incidents 
          (node_id, type, severity, title, description, suggested_fix, auto_detected)
          VALUES ($1, $2, $3, $4, $5, $6, true)`,
         [node.id, incident.type, incident.severity, incident.title, incident.description, incident.suggested_fix || null]
@@ -288,7 +288,7 @@ async function insertMetrics(metric: Partial<NodeMetric>): Promise<void> {
   const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
 
   await query(
-    `INSERT INTO netown.node_metrics (${columns.join(', ')}) VALUES (${placeholders})`,
+    `INSERT INTO skynet.node_metrics (${columns.join(', ')}) VALUES (${placeholders})`,
     values
   );
 }
@@ -317,7 +317,7 @@ async function calculateNetworkHealth(): Promise<void> {
     WITH latest_metrics AS (
       SELECT DISTINCT ON (node_id) 
         node_id, block_height, sync_percent, peer_count, rpc_latency_ms
-      FROM netown.node_metrics
+      FROM skynet.node_metrics
       WHERE collected_at > NOW() - INTERVAL '5 minutes'
       ORDER BY node_id, collected_at DESC
     ),
@@ -353,7 +353,7 @@ async function calculateNetworkHealth(): Promise<void> {
     );
 
     await query(`
-      INSERT INTO netown.network_health 
+      INSERT INTO skynet.network_health 
         (health_score, total_nodes, healthy_nodes, degraded_nodes, offline_nodes, 
          total_peers, avg_block_height, max_block_height, avg_sync_percent, avg_rpc_latency_ms)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)

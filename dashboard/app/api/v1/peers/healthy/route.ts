@@ -133,8 +133,8 @@ export async function GET(request: NextRequest) {
         ps.city,
         ps.collected_at,
         n.name as node_name
-      FROM netown.peer_snapshots ps
-      JOIN netown.nodes n ON ps.node_id = n.id
+      FROM skynet.peer_snapshots ps
+      JOIN skynet.nodes n ON ps.node_id = n.id
       WHERE ps.collected_at > NOW() - INTERVAL '5 minutes'
       ORDER BY ps.collected_at DESC`
     );

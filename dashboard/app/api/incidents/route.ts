@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
         i.*,
         n.name as node_name,
         n.host as node_host
-      FROM netown.incidents i
-      JOIN netown.nodes n ON i.node_id = n.id
+      FROM skynet.incidents i
+      JOIN skynet.nodes n ON i.node_id = n.id
       ${whereClause}
       ORDER BY i.detected_at DESC
       ${limitClause}
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     // Check node exists
     const nodeCheck = await query(
-      'SELECT id FROM netown.nodes WHERE id = $1',
+      'SELECT id FROM skynet.nodes WHERE id = $1',
       [nodeId]
     );
     
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await query(`
-      INSERT INTO netown.incidents 
+      INSERT INTO skynet.incidents 
         (node_id, type, severity, title, description, suggested_fix, auto_detected)
       VALUES ($1, $2, $3, $4, $5, $6, false)
       RETURNING *
@@ -166,7 +166,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const result = await query(
-      `UPDATE netown.incidents SET ${updateClause} WHERE id = $1 RETURNING *`,
+      `UPDATE skynet.incidents SET ${updateClause} WHERE id = $1 RETURNING *`,
       params
     );
 

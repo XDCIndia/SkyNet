@@ -12,7 +12,7 @@ export async function GET(
 
     // Get node details
     const nodeResult = await query(
-      'SELECT * FROM netown.nodes WHERE id = $1',
+      'SELECT * FROM skynet.nodes WHERE id = $1',
       [id]
     );
 
@@ -34,13 +34,13 @@ export async function GET(
         AVG(memory_percent)::numeric(5,2) as avg_memory,
         AVG(disk_percent)::numeric(5,2) as avg_disk,
         MAX(collected_at) as last_seen
-      FROM netown.node_metrics
+      FROM skynet.node_metrics
       WHERE node_id = $1 AND collected_at > NOW() - INTERVAL '24 hours'
     `, [id]);
 
     // Get active incidents
     const incidentsResult = await query(`
-      SELECT * FROM netown.incidents
+      SELECT * FROM skynet.incidents
       WHERE node_id = $1 AND status = 'active'
       ORDER BY detected_at DESC
     `, [id]);
@@ -99,7 +99,7 @@ export async function PATCH(
       .join(', ');
 
     const result = await query(
-      `UPDATE netown.nodes SET ${setClause}, updated_at = NOW() WHERE id = $1 RETURNING *`,
+      `UPDATE skynet.nodes SET ${setClause}, updated_at = NOW() WHERE id = $1 RETURNING *`,
       [id, ...Object.values(updates)]
     );
 

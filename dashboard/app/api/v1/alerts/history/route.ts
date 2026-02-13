@@ -67,16 +67,16 @@ async function getHandler(request: NextRequest) {
         n.name as "nodeName",
         ac.name as "channelName",
         ac.channel_type as "channelType"
-      FROM netown.alert_history ah
-      LEFT JOIN netown.nodes n ON ah.node_id = n.id
-      LEFT JOIN netown.alert_channels ac ON ah.channel_id = ac.id
+      FROM skynet.alert_history ah
+      LEFT JOIN skynet.nodes n ON ah.node_id = n.id
+      LEFT JOIN skynet.alert_channels ac ON ah.channel_id = ac.id
       ${whereClause}
       ORDER BY ah.fired_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `, [...values, params.limit, params.offset]),
     queryAll(`
       SELECT COUNT(*) as total
-      FROM netown.alert_history ah
+      FROM skynet.alert_history ah
       ${whereClause}
     `, values),
   ]);

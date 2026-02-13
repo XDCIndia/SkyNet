@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     // Validate node exists
     const nodeResult = await query(
-      'SELECT * FROM netown.nodes WHERE id = $1',
+      'SELECT * FROM skynet.nodes WHERE id = $1',
       [nodeId]
     );
 
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
         // Try to get disk usage from metrics
         const diskResult = await query(`
           SELECT disk_percent, disk_used_gb, disk_total_gb
-          FROM netown.node_metrics
+          FROM skynet.node_metrics
           WHERE node_id = $1
           ORDER BY collected_at DESC
           LIMIT 1
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
       case 'memory_profile': {
         const memResult = await query(`
           SELECT memory_percent
-          FROM netown.node_metrics
+          FROM skynet.node_metrics
           WHERE node_id = $1
           ORDER BY collected_at DESC
           LIMIT 1

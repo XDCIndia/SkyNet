@@ -51,8 +51,8 @@ export async function GET(
         m.client_version,
         m.coinbase,
         m.collected_at
-      FROM netown.nodes n
-      JOIN netown.node_metrics m ON m.node_id = n.id
+      FROM skynet.nodes n
+      JOIN skynet.node_metrics m ON m.node_id = n.id
       WHERE LOWER(m.coinbase) = $1
       ORDER BY n.id, m.collected_at DESC
     `, [addr]);
@@ -74,7 +74,7 @@ export async function GET(
     // Get recent incidents
     const incidents = await query(`
       SELECT type, severity, title, detected_at, status
-      FROM netown.incidents
+      FROM skynet.incidents
       WHERE node_id = $1
       ORDER BY detected_at DESC
       LIMIT 5

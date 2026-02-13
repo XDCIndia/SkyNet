@@ -62,8 +62,8 @@ async function getHandler(request: NextRequest) {
 
     const incidents = await queryAll(`
       SELECT i.*, n.name as node_name
-      FROM netown.incidents i
-      LEFT JOIN netown.nodes n ON i.node_id = n.id
+      FROM skynet.incidents i
+      LEFT JOIN skynet.nodes n ON i.node_id = n.id
       ${whereClause}
       ORDER BY i.detected_at DESC
       LIMIT $${paramIndex}
@@ -100,7 +100,7 @@ async function postHandler(request: NextRequest) {
   const { nodeId, type, severity, title, description, suggestedFix } = body;
 
   const result = await queryAll(
-    `INSERT INTO netown.incidents 
+    `INSERT INTO skynet.incidents 
      (node_id, type, severity, title, description, suggested_fix, auto_detected)
      VALUES ($1, $2, $3, $4, $5, $6, false)
      RETURNING *`,

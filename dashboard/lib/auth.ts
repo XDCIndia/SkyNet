@@ -53,7 +53,7 @@ export async function authenticateRequest(req: NextRequest): Promise<AuthResult>
     const { getPool } = await import('./db');
     const pool = getPool();
     const result = await pool.query(
-      `SELECT node_id, permissions FROM netown.api_keys 
+      `SELECT node_id, permissions FROM skynet.api_keys 
        WHERE key = $1 AND is_active = true`,
       [token]
     );
@@ -64,7 +64,7 @@ export async function authenticateRequest(req: NextRequest): Promise<AuthResult>
 
     // Update last_used_at
     await pool.query(
-      `UPDATE netown.api_keys SET last_used_at = NOW() WHERE key = $1`,
+      `UPDATE skynet.api_keys SET last_used_at = NOW() WHERE key = $1`,
       [token]
     );
 

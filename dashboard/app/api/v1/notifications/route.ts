@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     // Create incident
     const result = await query(
-      `INSERT INTO netown.incidents 
+      `INSERT INTO skynet.incidents 
        (node_id, type, severity, title, description, status, auto_detected)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,

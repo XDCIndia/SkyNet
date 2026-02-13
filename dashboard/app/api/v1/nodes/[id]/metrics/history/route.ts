@@ -40,7 +40,7 @@ export async function GET(
         avg(cpu_percent)::numeric(5,2) as cpu_percent,
         avg(memory_percent)::numeric(5,2) as memory_percent,
         avg(disk_percent)::numeric(5,2) as disk_percent
-      FROM netown.node_metrics
+      FROM skynet.node_metrics
       WHERE node_id = $1
         AND collected_at > NOW() - INTERVAL '${hours} hours'
       GROUP BY 1

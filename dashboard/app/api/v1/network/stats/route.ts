@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 
     // Get active nodes count from database
     const nodesResult = await query(
-      `SELECT COUNT(*) as count FROM netown.nodes WHERE is_active = true`
+      `SELECT COUNT(*) as count FROM skynet.nodes WHERE is_active = true`
     );
     const activeNodes = parseInt(nodesResult.rows[0]?.count || '0');
 

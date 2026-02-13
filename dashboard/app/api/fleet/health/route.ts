@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
         avg_sync_percent,
         avg_rpc_latency_ms,
         collected_at
-      FROM netown.network_health
+      FROM skynet.network_health
       WHERE collected_at > NOW() - INTERVAL '${validHours} hours'
       ORDER BY collected_at ASC
     `);

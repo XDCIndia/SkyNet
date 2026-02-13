@@ -79,7 +79,7 @@ async function getChannelsForRule(ruleId?: string): Promise<AlertChannel[]> {
     // Return all active channels if no rule specified
     const channels = await queryAll(`
       SELECT id, name, channel_type as "channelType", config
-      FROM netown.alert_channels
+      FROM skynet.alert_channels
       WHERE is_active = true
     `);
     return channels;
@@ -87,8 +87,8 @@ async function getChannelsForRule(ruleId?: string): Promise<AlertChannel[]> {
 
   const channels = await queryAll(`
     SELECT ac.id, ac.name, ac.channel_type as "channelType", ac.config
-    FROM netown.alert_channels ac
-    JOIN netown.alert_rule_channels arc ON ac.id = arc.channel_id
+    FROM skynet.alert_channels ac
+    JOIN skynet.alert_rule_channels arc ON ac.id = arc.channel_id
     WHERE arc.rule_id = $1 AND ac.is_active = true
   `, [ruleId]);
 
@@ -261,7 +261,7 @@ export async function recordAlertHistory(
   channelId?: string
 ): Promise<void> {
   await queryOne(
-    `INSERT INTO netown.alert_history 
+    `INSERT INTO skynet.alert_history 
      (rule_id, node_id, channel_id, severity, title, message, metadata)
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [
@@ -283,8 +283,8 @@ export async function recordAlertHistory(
 export async function evaluateAlertRules(): Promise<void> {
   const rules = await queryAll(`
     SELECT ar.*, n.name as node_name
-    FROM netown.alert_rules ar
-    LEFT JOIN netown.nodes n ON ar.node_id = n.id
+    FROM skynet.alert_rules ar
+    LEFT JOIN skynet.nodes n ON ar.node_id = n.id
     WHERE ar.is_active = true
   `);
 
@@ -300,11 +300,11 @@ export async function evaluateAlertRules(): Promise<void> {
 async function evaluateRule(rule: any): Promise<void> {
   // Get latest metrics for the node(s)
   const metricsQuery = rule.node_id
-    ? `SELECT * FROM netown.node_metrics 
+    ? `SELECT * FROM skynet.node_metrics 
        WHERE node_id = $1 
        ORDER BY collected_at DESC LIMIT 1`
     : `SELECT DISTINCT ON (node_id) *
-       FROM netown.node_metrics
+       FROM skynet.node_metrics
        ORDER BY node_id, collected_at DESC`;
 
   const metrics = await queryAll(metricsQuery, rule.node_id ? [rule.node_id] : []);

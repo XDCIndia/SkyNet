@@ -79,7 +79,7 @@ async function getHandler(request: NextRequest) {
       is_active as "isActive",
       created_at as "createdAt",
       updated_at as "updatedAt"
-    FROM netown.alert_channels
+    FROM skynet.alert_channels
     ${whereClause}
     ORDER BY created_at DESC
   `, values);
@@ -121,7 +121,7 @@ async function postHandler(request: NextRequest) {
   const validated = AlertChannelSchema.parse(body);
 
   const result = await queryOne(
-    `INSERT INTO netown.alert_channels 
+    `INSERT INTO skynet.alert_channels 
      (name, channel_type, config, is_active)
      VALUES ($1, $2, $3, $4)
      RETURNING id, name, channel_type as "channelType", config, is_active as "isActive", created_at as "createdAt"`,
@@ -179,7 +179,7 @@ async function putHandler(request: NextRequest) {
   values.push(id);
 
   const result = await queryOne(
-    `UPDATE netown.alert_channels SET ${fields.join(', ')} WHERE id = $${paramIndex} 
+    `UPDATE skynet.alert_channels SET ${fields.join(', ')} WHERE id = $${paramIndex} 
      RETURNING id, name, channel_type as "channelType", config, is_active as "isActive", updated_at as "updatedAt"`,
     values
   );
@@ -217,9 +217,9 @@ async function deleteHandler(request: NextRequest) {
 
   await withTransaction(async (client) => {
     // Remove from junction table first
-    await client.query('DELETE FROM netown.alert_rule_channels WHERE channel_id = $1', [id]);
+    await client.query('DELETE FROM skynet.alert_rule_channels WHERE channel_id = $1', [id]);
     // Delete channel
-    await client.query('DELETE FROM netown.alert_channels WHERE id = $1', [id]);
+    await client.query('DELETE FROM skynet.alert_channels WHERE id = $1', [id]);
   });
 
   return NextResponse.json({

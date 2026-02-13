@@ -99,7 +99,7 @@ async function postHandler(request: NextRequest) {
   // Get previous metrics for comparison (for incident detection)
   const prevMetrics = await queryAll(
     `SELECT block_height, peer_count, disk_percent, collected_at
-     FROM netown.node_metrics 
+     FROM skynet.node_metrics 
      WHERE node_id = $1 
      ORDER BY collected_at DESC 
      LIMIT 3`,
@@ -109,7 +109,7 @@ async function postHandler(request: NextRequest) {
   // Get fleet max block height for drift detection
   const fleetMaxResult = await queryAll(
     `SELECT COALESCE(MAX(block_height), 0) as max_height
-     FROM netown.node_metrics
+     FROM skynet.node_metrics
      WHERE collected_at > NOW() - INTERVAL '5 minutes'`
   );
   const fleetMaxHeight = parseInt(fleetMaxResult[0]?.max_height || '0');
@@ -118,7 +118,7 @@ async function postHandler(request: NextRequest) {
   await withTransaction(async (client) => {
     // Insert node metrics with new fields
     await client.query(
-      `INSERT INTO netown.node_metrics 
+      `INSERT INTO skynet.node_metrics 
        (node_id, block_height, sync_percent, peer_count, 
         cpu_percent, memory_percent, disk_percent, disk_used_gb, disk_total_gb,
         tx_pool_pending, tx_pool_queued, gas_price, rpc_latency_ms,
@@ -156,7 +156,7 @@ async function postHandler(request: NextRequest) {
         const remotePort = enodeMatch?.[2] ? parseInt(enodeMatch[2]) : null;
 
         await client.query(
-          `INSERT INTO netown.peer_snapshots 
+          `INSERT INTO skynet.peer_snapshots 
            (node_id, peer_enode, peer_name, remote_ip, remote_port, 
             client_version, protocols, direction, collected_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
@@ -177,7 +177,7 @@ async function postHandler(request: NextRequest) {
 
     // Update nodes table with latest info
     await client.query(
-      `UPDATE netown.nodes 
+      `UPDATE skynet.nodes 
        SET updated_at = NOW(),
            role = COALESCE($2, role),
            security_score = COALESCE($3, security_score)
@@ -194,7 +194,7 @@ async function postHandler(request: NextRequest) {
     const allSameHeight = prevMetrics.every(m => m.block_height === blockHeight);
     if (allSameHeight && blockHeight > 0) {
       const existing = await queryAll(
-        `SELECT id FROM netown.incidents 
+        `SELECT id FROM skynet.incidents 
          WHERE node_id = $1 AND type = 'sync_stall' AND status = 'active'`,
         [nodeId]
       );
@@ -212,7 +212,7 @@ async function postHandler(request: NextRequest) {
   // 2. Peer Drop Detection
   if (peerCount !== undefined && peerCount < 3) {
     const existing = await queryAll(
-      `SELECT id FROM netown.incidents 
+      `SELECT id FROM skynet.incidents 
        WHERE node_id = $1 AND type = 'peer_drop' AND status = 'active'`,
       [nodeId]
     );
@@ -229,7 +229,7 @@ async function postHandler(request: NextRequest) {
   // 3. Disk Pressure Detection
   if (body.system?.diskPercent !== undefined && body.system.diskPercent > 85) {
     const existing = await queryAll(
-      `SELECT id FROM netown.incidents 
+      `SELECT id FROM skynet.incidents 
        WHERE node_id = $1 AND type = 'disk_pressure' AND status = 'active'`,
       [nodeId]
     );
@@ -248,7 +248,7 @@ async function postHandler(request: NextRequest) {
     const drift = fleetMaxHeight - blockHeight;
     if (drift > 100) {
       const existing = await queryAll(
-        `SELECT id FROM netown.incidents 
+        `SELECT id FROM skynet.incidents 
          WHERE node_id = $1 AND type = 'block_drift' AND status = 'active'`,
         [nodeId]
       );
@@ -269,7 +269,7 @@ async function postHandler(request: NextRequest) {
     const prevHeight = prevMetrics[0]?.block_height;
     if (prevHeight && blockHeight > prevHeight) {
       await queryAll(
-        `UPDATE netown.incidents 
+        `UPDATE skynet.incidents 
          SET status = 'resolved', resolved_at = NOW(), 
              description = description || E'\n\nAuto-resolved: block height increased to ' || $2
          WHERE node_id = $1 AND type = 'sync_stall' AND status = 'active'`,
@@ -281,7 +281,7 @@ async function postHandler(request: NextRequest) {
   // Resolve peer_drop if peers >= 3
   if (peerCount !== undefined && peerCount >= 3) {
     await queryAll(
-      `UPDATE netown.incidents 
+      `UPDATE skynet.incidents 
        SET status = 'resolved', resolved_at = NOW(),
            description = description || E'\n\nAuto-resolved: peer count recovered to ' || $2
        WHERE node_id = $1 AND type = 'peer_drop' AND status = 'active'`,
@@ -292,7 +292,7 @@ async function postHandler(request: NextRequest) {
   // Resolve disk_pressure if disk < 80%
   if (body.system?.diskPercent !== undefined && body.system.diskPercent < 80) {
     await queryAll(
-      `UPDATE netown.incidents 
+      `UPDATE skynet.incidents 
        SET status = 'resolved', resolved_at = NOW(),
            description = description || E'\n\nAuto-resolved: disk usage dropped to ' || $2 || '%'
        WHERE node_id = $1 AND type = 'disk_pressure' AND status = 'active'`,
@@ -303,7 +303,7 @@ async function postHandler(request: NextRequest) {
   // Create detected incidents
   for (const incident of detectedIncidents) {
     const incidentResult = await queryAll(
-      `INSERT INTO netown.incidents 
+      `INSERT INTO skynet.incidents 
        (node_id, type, severity, title, description, auto_detected)
        VALUES ($1, $2, $3, $4, $5, true)
        RETURNING id`,
@@ -337,7 +337,7 @@ async function postHandler(request: NextRequest) {
   // Check for pending commands
   const commandsResult = await queryAll(
     `SELECT id, command, params, created_at 
-     FROM netown.command_queue 
+     FROM skynet.command_queue 
      WHERE node_id = $1 AND status = 'pending'
      ORDER BY created_at ASC`,
     [nodeId]
@@ -347,7 +347,7 @@ async function postHandler(request: NextRequest) {
   const commandIds = commandsResult.map(r => r.id);
   if (commandIds.length > 0) {
     await queryAll(
-      `UPDATE netown.command_queue 
+      `UPDATE skynet.command_queue 
        SET status = 'sent', sent_at = NOW() 
        WHERE id = ANY($1)`,
       [commandIds]

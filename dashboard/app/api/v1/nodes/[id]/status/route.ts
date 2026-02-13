@@ -39,7 +39,7 @@ export async function GET(
         id, name, host, role, is_active, created_at, updated_at,
         location_city, location_country, location_lat, location_lng,
         tags, ipv4, ipv6, os_info, client_type, node_type
-       FROM netown.nodes 
+       FROM skynet.nodes 
        WHERE id = $1`,
       [id]
     );
@@ -59,7 +59,7 @@ export async function GET(
         disk_used_gb, disk_total_gb, rpc_latency_ms, collected_at,
         ipv4, ipv6, os_type, os_release, os_arch, kernel_version,
         client_type, node_type, security_score, security_issues
-       FROM netown.node_metrics 
+       FROM skynet.node_metrics 
        WHERE node_id = $1 
        ORDER BY collected_at DESC 
        LIMIT 1`,
@@ -69,7 +69,7 @@ export async function GET(
     // Get recent incidents
     const incidentsResult = await query(
       `SELECT id, type, severity, title, status, detected_at, resolved_at
-       FROM netown.incidents 
+       FROM skynet.incidents 
        WHERE node_id = $1 AND status != 'resolved'
        ORDER BY detected_at DESC
        LIMIT 5`,
@@ -79,7 +79,7 @@ export async function GET(
     // Get active peers count
     const peersResult = await query(
       `SELECT COUNT(*) as active_peers
-       FROM netown.peer_snapshots 
+       FROM skynet.peer_snapshots 
        WHERE node_id = $1 
        AND collected_at > NOW() - INTERVAL '5 minutes'`,
       [id]
@@ -88,7 +88,7 @@ export async function GET(
     // Get pending commands count
     const commandsResult = await query(
       `SELECT COUNT(*) as pending_commands
-       FROM netown.command_queue 
+       FROM skynet.command_queue 
        WHERE node_id = $1 AND status = 'pending'`,
       [id]
     );

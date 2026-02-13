@@ -56,7 +56,7 @@ async function postHandler(request: NextRequest) {
     const result = await withTransaction(async (client) => {
       // Check if name already exists
       const existingNode = await client.query(
-        'SELECT id FROM netown.nodes WHERE name = $1',
+        'SELECT id FROM skynet.nodes WHERE name = $1',
         [data.name]
       );
 
@@ -66,7 +66,7 @@ async function postHandler(request: NextRequest) {
 
       // Insert node
       const nodeResult = await client.query(
-        `INSERT INTO netown.nodes 
+        `INSERT INTO skynet.nodes 
          (name, host, role, location_city, location_country, tags, is_active)
          VALUES ($1, $2, $3, $4, $5, $6, true)
          RETURNING id, name, host, role, created_at`,
@@ -84,7 +84,7 @@ async function postHandler(request: NextRequest) {
 
       // Create API key for this node
       await client.query(
-        `INSERT INTO netown.api_keys 
+        `INSERT INTO skynet.api_keys 
          (key, node_id, name, permissions)
          VALUES ($1, $2, $3, $4)`,
         [

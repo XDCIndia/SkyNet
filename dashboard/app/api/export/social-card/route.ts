@@ -6,7 +6,7 @@ export async function GET() {
   try {
     // Get latest network health
     const healthResult = await query(`
-      SELECT * FROM netown.network_health
+      SELECT * FROM skynet.network_health
       ORDER BY collected_at DESC
       LIMIT 1
     `);
@@ -18,13 +18,13 @@ export async function GET() {
         MAX(block_height)::bigint as max_block_height,
         SUM(peer_count) as total_peers,
         COUNT(DISTINCT node_id) as active_nodes
-      FROM netown.node_metrics
+      FROM skynet.node_metrics
       WHERE collected_at > NOW() - INTERVAL '5 minutes'
     `);
 
     // Get active incidents
     const incidentsResult = await query(`
-      SELECT COUNT(*) as count FROM netown.incidents WHERE status = 'active'
+      SELECT COUNT(*) as count FROM skynet.incidents WHERE status = 'active'
     `);
 
     const health = healthResult.rows[0];

@@ -44,7 +44,7 @@ async function getHandler(request: NextRequest) {
           time_bucket($2, collected_at) as time,
           node_id as "nodeId",
           COUNT(*) FILTER (WHERE is_syncing = false AND collected_at > NOW() - INTERVAL '2 minutes')::float / NULLIF(COUNT(*), 0) * 100 as uptime_pct
-        FROM netown.node_metrics
+        FROM skynet.node_metrics
         WHERE collected_at > NOW() - $1::interval
         ${params.nodeId ? 'AND node_id = $3' : ''}
         GROUP BY time_bucket($2, collected_at), node_id
@@ -62,7 +62,7 @@ async function getHandler(request: NextRequest) {
           ROUND(AVG(peer_count)::numeric, 2) as avg_peers,
           MIN(peer_count) as min_peers,
           MAX(peer_count) as max_peers
-        FROM netown.node_metrics
+        FROM skynet.node_metrics
         WHERE collected_at > NOW() - $1::interval
         ${params.nodeId ? 'AND node_id = $3' : ''}
         GROUP BY time_bucket($2, collected_at), node_id
@@ -80,7 +80,7 @@ async function getHandler(request: NextRequest) {
           MIN(block_height) as min_block,
           MAX(block_height) as max_block,
           MAX(block_height) - MIN(block_height) as blocks_synced
-        FROM netown.node_metrics
+        FROM skynet.node_metrics
         WHERE collected_at > NOW() - $1::interval
         ${params.nodeId ? 'AND node_id = $3' : ''}
         GROUP BY time_bucket($2, collected_at), node_id
@@ -98,7 +98,7 @@ async function getHandler(request: NextRequest) {
           ROUND(AVG(rpc_latency_ms)::numeric, 2) as avg_latency,
           MIN(rpc_latency_ms) as min_latency,
           MAX(rpc_latency_ms) as max_latency
-        FROM netown.node_metrics
+        FROM skynet.node_metrics
         WHERE collected_at > NOW() - $1::interval
         ${params.nodeId ? 'AND node_id = $3' : ''}
         GROUP BY time_bucket($2, collected_at), node_id
@@ -116,7 +116,7 @@ async function getHandler(request: NextRequest) {
           ROUND(AVG(cpu_percent)::numeric, 2) as avg_cpu,
           MIN(cpu_percent) as min_cpu,
           MAX(cpu_percent) as max_cpu
-        FROM netown.node_metrics
+        FROM skynet.node_metrics
         WHERE collected_at > NOW() - $1::interval AND cpu_percent IS NOT NULL
         ${params.nodeId ? 'AND node_id = $3' : ''}
         GROUP BY time_bucket($2, collected_at), node_id
@@ -134,7 +134,7 @@ async function getHandler(request: NextRequest) {
           ROUND(AVG(memory_percent)::numeric, 2) as avg_memory,
           MIN(memory_percent) as min_memory,
           MAX(memory_percent) as max_memory
-        FROM netown.node_metrics
+        FROM skynet.node_metrics
         WHERE collected_at > NOW() - $1::interval AND memory_percent IS NOT NULL
         ${params.nodeId ? 'AND node_id = $3' : ''}
         GROUP BY time_bucket($2, collected_at), node_id
@@ -152,7 +152,7 @@ async function getHandler(request: NextRequest) {
           ROUND(AVG(disk_percent)::numeric, 2) as avg_disk,
           MIN(disk_percent) as min_disk,
           MAX(disk_percent) as max_disk
-        FROM netown.node_metrics
+        FROM skynet.node_metrics
         WHERE collected_at > NOW() - $1::interval AND disk_percent IS NOT NULL
         ${params.nodeId ? 'AND node_id = $3' : ''}
         GROUP BY time_bucket($2, collected_at), node_id
@@ -178,7 +178,7 @@ async function getHandler(request: NextRequest) {
       MIN(collected_at) as earliest,
       MAX(collected_at) as latest,
       COUNT(*) as total_metrics
-    FROM netown.node_metrics
+    FROM skynet.node_metrics
     WHERE collected_at > NOW() - $1::interval
     ${params.nodeId ? 'AND node_id = $2' : ''}
   `;
