@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withTransaction, queryAll } from '@/lib/db';
 import { authenticateRequest, unauthorizedResponse, hasPermission } from '@/lib/auth';
-import { evaluateAndNotify, checkFleetNodeDown } from '@/lib/alert-engine';
+import { checkFleetNodeDown } from '@/lib/alert-engine';
+import { deliverAlert, deliverResolution } from '@/lib/alert-delivery';
 import { HeartbeatSchema, validateBody, UUIDSchema } from '@/lib/validation';
 import { withErrorHandling, ValidationError } from '@/lib/errors';
 import { logger } from '@/lib/logger';

@@ -86,11 +86,12 @@ export async function evaluateAndNotify(
 export async function checkFleetNodeDown(): Promise<void> {
   try {
     // Find nodes that haven't reported and aren't already marked offline
+    // Status is computed from metrics, not stored in nodes table
     const staleNodes = await query(
       `SELECT n.id, n.name
        FROM skynet.nodes n
        LEFT JOIN skynet.node_metrics m ON m.node_id = n.id
-       WHERE n.status != 'offline'
+       WHERE n.is_active = true
        GROUP BY n.id, n.name
        HAVING MAX(m.collected_at) < NOW() - INTERVAL '5 minutes'
           OR MAX(m.collected_at) IS NULL`

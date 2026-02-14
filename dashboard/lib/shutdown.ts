@@ -3,7 +3,7 @@
  * Ensures clean shutdown of all services
  */
 
-import { closePool } from './db/client';
+import { closePool, closePoolResilient } from './db';
 import { closeRedis } from './redis';
 import { stopWebSocketServer } from './ws-server';
 import { logger } from './logger';
@@ -67,8 +67,9 @@ async function gracefulShutdown(signal: string): Promise<void> {
     await closeRedis();
 
     // Close database pool
-    logger.info('Closing database pool...');
+    logger.info('Closing database pools...');
     await closePool();
+    await closePoolResilient();
 
     clearTimeout(forceShutdownTimer);
     logger.info('Graceful shutdown completed');
