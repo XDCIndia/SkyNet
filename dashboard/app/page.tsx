@@ -104,7 +104,7 @@ interface HealthyPeersSummary {
   healthyPeers: number;
 }
 
-type FilterType = 'all' | 'healthy' | 'syncing' | 'behind' | 'offline' | 'inactive';
+type FilterType = 'all' | 'healthy' | 'syncing' | 'behind';
 type ViewMode = 'grid' | 'table';
 type SortField = keyof Node | 'security_score';
 type SortDirection = 'asc' | 'desc';
@@ -308,15 +308,14 @@ function formatTimeAgo(timestamp: string): string {
   return `${seconds}s ago`;
 }
 
-// Check if a node is inactive (offline and no heartbeat in >24h)
-const INACTIVE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
+// Check if a node should be filtered out (no heartbeat in >24h)
+const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-function isNodeInactive(node: Node): boolean {
-  if (node.status !== 'offline') return false;
-  if (!node.lastSeen) return true; // No heartbeat at all = inactive
+function isNodeStale(node: Node): boolean {
+  if (!node.lastSeen) return true; // No heartbeat at all = stale
   const lastHeartbeat = new Date(node.lastSeen).getTime();
   const now = Date.now();
-  return now - lastHeartbeat > INACTIVE_THRESHOLD_MS;
+  return now - lastHeartbeat > STALE_THRESHOLD_MS;
 }
 
 // Format OS info for display
@@ -1121,8 +1120,6 @@ function FilterBar({
     { key: 'healthy', label: 'Healthy' },
     { key: 'syncing', label: 'Syncing' },
     { key: 'behind', label: 'Behind' },
-    { key: 'offline', label: 'Offline' },
-    { key: 'inactive', label: 'Inactive' },
   ];
   
   return (
@@ -1404,15 +1401,12 @@ export default function Home() {
     return result;
   }, [nodes, filter, debouncedSearch, sortField, sortDirection]);
 
-  // Calculate filter counts (based on active nodes only for relevant filters)
+  // Calculate filter counts (stale nodes already filtered out at fetch time)
   const filterCounts: Record<FilterType, number> = {
-    all: activeNodes.length,
-    healthy: activeNodes.filter(n => n.status === 'healthy').length,
-    syncing: activeNodes.filter(n => n.status === 'syncing').length,
-    behind: activeNodes.filter(n => n.blocksBehind > 0).length,
-    // Offline count excludes inactive nodes
-    offline: activeNodes.filter(n => n.status === 'offline').length,
-    inactive: inactiveNodes.length,
+    all: nodes.length,
+    healthy: nodes.filter(n => n.status === 'healthy').length,
+    syncing: nodes.filter(n => n.status === 'syncing').length,
+    behind: nodes.filter(n => n.blocksBehind > 0).length,
   };
 
   const handleSort = (field: SortField) => {
@@ -1486,10 +1480,7 @@ export default function Home() {
                 <Server className="w-5 h-5 text-[var(--accent-blue)]" />
                 <h2 className="text-lg font-semibold text-[var(--text-primary)]">Nodes</h2>
                 <span className="px-2 py-0.5 bg-[var(--bg-hover)] text-[var(--text-tertiary)] rounded text-xs">
-                  {filteredNodes.length} of {filter === 'inactive' ? inactiveNodes.length : activeNodes.length}
-                  {inactiveNodes.length > 0 && filter !== 'inactive' && (
-                    <span className="ml-1 text-[var(--critical)]">({inactiveNodes.length} inactive hidden)</span>
-                  )}
+                  {filteredNodes.length} of {nodes.length}
                 </span>
               </div>
               
