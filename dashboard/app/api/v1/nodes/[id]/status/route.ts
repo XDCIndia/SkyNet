@@ -59,7 +59,7 @@ export async function GET(
         disk_used_gb, disk_total_gb, rpc_latency_ms, collected_at,
         ipv4, ipv6, os_type, os_release, os_arch, kernel_version,
         client_type, node_type, security_score, security_issues,
-        chain_data_size, database_size, storage_type, storage_model, iops_estimate, sentries
+        chain_data_size, database_size, storage_type, storage_model, iops_estimate, mount_point, mount_percent, sentries
        FROM skynet.node_metrics 
        WHERE node_id = $1 
        ORDER BY collected_at DESC 
@@ -164,6 +164,8 @@ export async function GET(
           storageType: latestMetrics.storage_type,
           storageModel: latestMetrics.storage_model,
           iopsEstimate: latestMetrics.iops_estimate,
+          mountPoint: latestMetrics.mount_point,
+          mountPercent: latestMetrics.mount_percent,
         } : null,
         os: latestMetrics ? {
           type: latestMetrics.os_type,

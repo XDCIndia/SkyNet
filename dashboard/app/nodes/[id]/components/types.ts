@@ -61,6 +61,8 @@ export interface NodeStatus {
     storageType?: string;
     storageModel?: string;
     iopsEstimate?: number;
+    mountPoint?: string;
+    mountPercent?: number;
   };
   os?: {
     type?: string;

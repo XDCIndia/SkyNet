@@ -163,6 +163,30 @@ export default function StoragePanel({ status, metrics }: StoragePanelProps) {
             </div>
           )}
           
+          {/* Mount Point Info */}
+          {status.storage?.mountPoint && (
+            <div className="p-3 rounded-xl bg-[rgba(139,92,246,0.03)] border border-[rgba(139,92,246,0.08)]">
+              <div className="section-header mb-2">Data Mount</div>
+              <div className="text-xs space-y-1">
+                <div><span className="text-[var(--text-tertiary)]">Mount:</span> <span className="text-[var(--text-primary)] font-mono">{status.storage.mountPoint}</span></div>
+                {(status.storage.mountPercent || 0) > 0 && (
+                  <div className="mt-2">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-[var(--text-tertiary)]">Disk usage</span>
+                      <span className={`font-medium ${(status.storage.mountPercent || 0) > 90 ? 'text-[var(--critical)]' : (status.storage.mountPercent || 0) > 75 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}`}>
+                        {status.storage.mountPercent}%
+                      </span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-[rgba(255,255,255,0.06)]">
+                      <div className={`h-full rounded-full ${(status.storage.mountPercent || 0) > 90 ? 'bg-[var(--critical)]' : (status.storage.mountPercent || 0) > 75 ? 'bg-[var(--warning)]' : 'bg-[var(--purple)]'}`}
+                        style={{ width: `${Math.min(100, status.storage.mountPercent || 0)}%` }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
           {/* Storage History Sparkline */}
           {storageHistory.length >= 2 && (
             <div className="mt-4">

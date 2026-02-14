@@ -55,6 +55,8 @@ const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
   // Storage metrics
   chainDataSize: z.number().min(0).optional(),
   databaseSize: z.number().min(0).optional(),
+  mountPoint: z.string().max(255).optional(),
+  mountPercent: z.coerce.number().int().min(0).max(100).optional(),
   // Erigon dual sentry monitoring (Issue #14)
   sentries: z.array(SentrySchema).optional(),
 });
@@ -119,6 +121,8 @@ async function postHandler(request: NextRequest) {
     timestamp,
     chainDataSize,
     databaseSize,
+    mountPoint,
+    mountPercent,
     sentries,
   } = body;
 
@@ -158,11 +162,11 @@ async function postHandler(request: NextRequest) {
         tx_pool_pending, tx_pool_queued, gas_price, rpc_latency_ms,
         is_syncing, client_version, client_type, node_type, coinbase, 
         chain_data_size, database_size, 
-        storage_type, storage_model, iops_estimate,
+        storage_type, storage_model, iops_estimate, mount_point, mount_percent,
         os_type, os_release, os_arch, kernel_version,
         ipv4, ipv6, security_score, security_issues,
         sentries, collected_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35)`,
       [
         nodeId,
         blockHeight ?? null,
@@ -191,6 +195,8 @@ async function postHandler(request: NextRequest) {
         body.system?.storageType ?? null,
         body.system?.storageModel ?? null,
         body.system?.iopsEstimate ?? null,
+        mountPoint ?? null,
+        mountPercent ?? null,
         os?.type ?? null,
         os?.release ?? null,
         os?.arch ?? null,
