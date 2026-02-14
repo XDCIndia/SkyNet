@@ -67,14 +67,28 @@ const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
  * Response: { ok: true, commands?: [...] }
  */
 async function postHandler(request: NextRequest) {
-  // Authenticate request
+  // Authenticate request — allow unauthenticated if nodeId matches a registered node
   const auth = await authenticateRequest(request);
   if (!auth.valid) {
-    return unauthorizedResponse(auth.error);
-  }
-
-  // Check permission
-  if (!hasPermission(auth, 'heartbeat')) {
+    // Try to extract nodeId from body for keyless heartbeat
+    let bodyPeek;
+    try {
+      bodyPeek = await request.clone().json();
+    } catch { bodyPeek = null; }
+    if (bodyPeek?.nodeId) {
+      const nodeCheck = await queryAll(
+        'SELECT id FROM skynet.nodes WHERE id = $1 AND is_active = true',
+        [bodyPeek.nodeId]
+      );
+      if (nodeCheck.length === 0) {
+        return unauthorizedResponse('Invalid nodeId or node not registered');
+      }
+      // Allow keyless heartbeat for registered nodes
+      logger.info('Keyless heartbeat accepted', { nodeId: bodyPeek.nodeId });
+    } else {
+      return unauthorizedResponse(auth.error);
+    }
+  } else if (!hasPermission(auth, 'heartbeat')) {
     return NextResponse.json(
       { error: 'Insufficient permissions for heartbeat', code: 'FORBIDDEN' },
       { status: 403 }
