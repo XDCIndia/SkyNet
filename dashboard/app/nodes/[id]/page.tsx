@@ -1286,12 +1286,12 @@ export default function NodeDetailPage() {
         </div>
 
         {/* Metrics Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
           {/* Block Height */}
-          <div className="card-xdc">
+          <div className="card-xdc p-3 sm:p-4">
             <div className="text-xs text-[#64748B] mb-1">Block Height</div>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-mono-nums">{status.blockHeight?.toLocaleString() || '—'}</span>
+              <span className="text-xl sm:text-2xl font-bold font-mono-nums">{status.blockHeight?.toLocaleString() || '—'}</span>
               {blockHeightTrend && (
                 blockHeightTrend === 'up' ? <ArrowUp className="w-4 h-4 text-[#10B981]" /> :
                 blockHeightTrend === 'down' ? <ArrowDown className="w-4 h-4 text-[#EF4444]" /> : null
@@ -1307,7 +1307,7 @@ export default function NodeDetailPage() {
           </div>
 
           {/* Sync Progress */}
-          <div className="card-xdc">
+          <div className="card-xdc p-3 sm:p-4">
             <div className="text-xs text-[#64748B] mb-1">Sync Status</div>
             {status.isSyncing ? (
               <div className="flex flex-col items-center">
@@ -1326,10 +1326,10 @@ export default function NodeDetailPage() {
           </div>
 
           {/* Peer Count */}
-          <div className="card-xdc">
+          <div className="card-xdc p-3 sm:p-4">
             <div className="text-xs text-[#64748B] mb-1">Peers</div>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-mono-nums">{status.peerCount || 0}</span>
+              <span className="text-xl sm:text-2xl font-bold font-mono-nums">{status.peerCount || 0}</span>
               {peerTrend && (
                 peerTrend === 'up' ? <ArrowUp className="w-4 h-4 text-[#10B981]" /> :
                 peerTrend === 'down' ? <ArrowDown className="w-4 h-4 text-[#EF4444]" /> : null
@@ -1341,9 +1341,9 @@ export default function NodeDetailPage() {
           </div>
 
           {/* TX Pool */}
-          <div className="card-xdc">
+          <div className="card-xdc p-3 sm:p-4">
             <div className="text-xs text-[#64748B] mb-1">TX Pool</div>
-            <div className="text-2xl font-bold font-mono-nums">
+            <div className="text-xl sm:text-2xl font-bold font-mono-nums">
               {(status.txPoolPending || 0) + (status.txPoolQueued || 0)}
             </div>
             <div className="flex gap-2 mt-1 text-xs">
@@ -1354,18 +1354,18 @@ export default function NodeDetailPage() {
           </div>
 
           {/* Gas Price */}
-          <div className="card-xdc">
+          <div className="card-xdc p-3 sm:p-4">
             <div className="text-xs text-[#64748B] mb-1">Gas Price</div>
-            <div className="text-2xl font-bold font-mono-nums">
+            <div className="text-xl sm:text-2xl font-bold font-mono-nums">
               {status.gasPrice ? (BigInt(status.gasPrice) / BigInt(1e9)).toString() : '—'}
             </div>
             <div className="text-xs text-[#64748B] mt-1">Gwei</div>
           </div>
 
           {/* RPC Latency */}
-          <div className="card-xdc">
+          <div className="card-xdc p-3 sm:p-4">
             <div className="text-xs text-[#64748B] mb-1">RPC Latency</div>
-            <div className="text-2xl font-bold font-mono-nums">
+            <div className="text-xl sm:text-2xl font-bold font-mono-nums">
               {status.rpcLatencyMs || '—'}
             </div>
             <div className="text-xs text-[#64748B] mt-1">ms</div>
@@ -1638,15 +1638,15 @@ export default function NodeDetailPage() {
             <div className="flex items-center gap-3">
               <Activity className="w-5 h-5 text-[#1E90FF]" />
               <h2 className="text-lg font-semibold">Metrics History</h2>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
+            </div>            
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
               {/* Time range selector */}
-              <div className="flex gap-1 mr-4">
+              <div className="flex gap-1">
                 {[1, 6, 24].map((hours) => (
                   <button
                     key={hours}
                     onClick={() => setTimeRange(hours)}
-                    className={`px-3 py-1 rounded text-xs transition-colors ${
+                    className={`px-3 py-1.5 rounded text-xs transition-colors min-h-[44px] sm:min-h-0 ${
                       timeRange === hours
                         ? 'bg-[#1E90FF]/20 text-[#1E90FF]'
                         : 'bg-white/5 text-[#64748B] hover:bg-white/10'
@@ -1657,26 +1657,27 @@ export default function NodeDetailPage() {
                 ))}
               </div>
               
-              {/* Series toggles */}
-              {['block_height', 'peer_count', 'cpu_percent', 'memory_percent', 'disk_percent', 'sync_percent', 'rpc_latency_ms'].map((series) => (
-                <button
-                  key={series}
-                  onClick={() => {
-                    setSelectedSeries(prev => 
-                      prev.includes(series) 
-                        ? prev.filter(s => s !== series)
-                        : [...prev, series]
-                    );
-                  }}
-                  className={`px-3 py-1 rounded text-xs transition-colors ${
-                    selectedSeries.includes(series)
-                      ? 'bg-[#1E90FF]/20 text-[#1E90FF]'
-                      : 'bg-white/5 text-[#64748B]'
-                  }`}
-                >
-                  {series.replace('_', ' ')}
-                </button>
-              ))}
+              {/* Series toggles - scrollable on mobile */}
+              <div className="flex gap-1 overflow-x-auto pb-1 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+                {['block_height', 'peer_count', 'cpu_percent', 'memory_percent', 'disk_percent', 'sync_percent', 'rpc_latency_ms'].map((series) => (
+                  <button
+                    key={series}
+                    onClick={() => {
+                      setSelectedSeries(prev => 
+                        prev.includes(series) 
+                          ? prev.filter(s => s !== series)
+                          : [...prev, series]
+                      );
+                    }}
+                    className={`px-3 py-1.5 rounded text-xs transition-colors whitespace-nowrap flex-shrink-0 min-h-[44px] sm:min-h-0 ${
+                      selectedSeries.includes(series)
+                        ? 'bg-[#1E90FF]/20 text-[#1E90FF]'
+                        : 'bg-white/5 text-[#64748B]'
+                    }`}
+                  >
+                    {series.replace('_', ' ')}
+                  </button>
+                ))}
               
               {/* Storage series (only show if data exists) */}
               {metrics.length > 0 && metrics.some(m => m.chain_data_size || m.database_size) && (
