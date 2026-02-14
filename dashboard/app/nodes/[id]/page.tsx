@@ -1221,8 +1221,8 @@ export default function NodeDetailPage() {
                 </div>
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-[#F1F5F9]">{parsedVersion.client} {parsedVersion.version}</div>
-                  <div className="text-xs text-[#64748B] font-mono">{parsedVersion.platform}</div>
-                  <div className="text-xs text-[#64748B] font-mono">{parsedVersion.goVersion}</div>
+                  {parsedVersion.platform !== 'Unknown' && <div className="text-xs text-[#64748B] font-mono">{parsedVersion.platform}</div>}
+                  {parsedVersion.goVersion !== 'Unknown' && <div className="text-xs text-[#64748B] font-mono">{parsedVersion.goVersion}</div>}
                 </div>
               </div>
             )}
@@ -1271,18 +1271,23 @@ export default function NodeDetailPage() {
             <h2 className="text-lg font-semibold">Security Assessment</h2>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Security Score Gauge */}
-            <div className="flex justify-center lg:justify-start">
-              <SecurityGauge score={securityScore} />
+          {securityScore > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="flex justify-center lg:justify-start">
+                <SecurityGauge score={securityScore} />
+              </div>
+              <div className="lg:col-span-2">
+                <h3 className="text-sm font-medium text-[#64748B] mb-3">Recommendations</h3>
+                <SecuritySuggestions issues={securityIssues} />
+              </div>
             </div>
-            
-            {/* Security Suggestions */}
-            <div className="lg:col-span-2">
-              <h3 className="text-sm font-medium text-[#64748B] mb-3">Recommendations</h3>
-              <SecuritySuggestions issues={securityIssues} />
+          ) : (
+            <div className="flex flex-col items-center py-8 text-center">
+              <Shield className="w-10 h-10 text-[#64748B] mb-3" />
+              <p className="text-sm text-[#64748B]">Security audit not yet performed</p>
+              <p className="text-xs text-[#475569] mt-1">Run <code className="bg-white/5 px-1.5 py-0.5 rounded">xdc security</code> on the node to generate a report</p>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Metrics Grid */}
@@ -1405,26 +1410,24 @@ export default function NodeDetailPage() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {status.storage?.chainDataSize && (
+              {status.storage?.chainDataSize != null && (
                 <div className="bg-white/5 rounded-lg p-4">
                   <div className="text-[10px] uppercase text-[#64748B] mb-1">Chain Data Size</div>
                   <div className="text-2xl font-bold font-mono text-[#F59E0B]">
-                    {formatBytes(status.storage.chainDataSize)}
-                  </div>
-                  <div className="text-xs text-[#64748B] mt-1">
-                    {status.storage.chainDataSize.toLocaleString()} bytes
+                    {status.storage.chainDataSize >= 1024 
+                      ? `${(status.storage.chainDataSize / 1024).toFixed(2)} TB`
+                      : `${status.storage.chainDataSize.toFixed(1)} GB`}
                   </div>
                 </div>
               )}
               
-              {status.storage?.databaseSize && (
+              {status.storage?.databaseSize != null && (
                 <div className="bg-white/5 rounded-lg p-4">
                   <div className="text-[10px] uppercase text-[#64748B] mb-1">Database Size</div>
                   <div className="text-2xl font-bold font-mono text-[#EC4899]">
-                    {formatBytes(status.storage.databaseSize)}
-                  </div>
-                  <div className="text-xs text-[#64748B] mt-1">
-                    {status.storage.databaseSize.toLocaleString()} bytes
+                    {status.storage.databaseSize >= 1024
+                      ? `${(status.storage.databaseSize / 1024).toFixed(2)} TB`
+                      : `${status.storage.databaseSize.toFixed(1)} GB`}
                   </div>
                 </div>
               )}
@@ -1611,7 +1614,8 @@ export default function NodeDetailPage() {
               <div className="bg-[#0A0E1A] rounded-lg p-3 font-mono text-xs h-[300px] overflow-y-auto">
                 {logs.length === 0 ? (
                   <div className="text-center text-[#64748B] py-8">
-                    Click "Fetch Latest 100" to load logs
+                    <p>Log streaming requires a log aggregation agent on the node.</p>
+                    <p className="mt-2 text-[10px]">Use <code className="bg-white/10 px-1 rounded">xdc logs -f</code> on the node directly, or configure Loki/ELK for remote log access.</p>
                   </div>
                 ) : (
                   filteredLogs.map((log, i) => (
