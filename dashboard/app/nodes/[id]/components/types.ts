@@ -32,6 +32,7 @@ export interface NodeDetail {
 
 export interface NodeStatus {
   blockHeight: number;
+  networkHeight: number;
   isSyncing: boolean;
   syncPercent: number;
   peerCount: number;

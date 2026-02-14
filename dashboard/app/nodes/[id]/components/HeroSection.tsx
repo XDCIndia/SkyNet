@@ -193,9 +193,10 @@ export default function HeroSection({ node, status, metrics }: HeroSectionProps)
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         {/* Left: Block Height */}
         <div className="lg:col-span-5 flex flex-col justify-center">
-          <div className="section-header mb-2">Current Block Height
+          <div className="section-header mb-2">
+            <span>Current Block Height</span>
             {status.networkHeight > 0 && status.blockHeight < status.networkHeight && (
-              <span className="text-xs font-normal text-[var(--text-tertiary)] ml-2">/ {formatNumber(status.networkHeight)} network</span>
+              <span className="text-xs font-normal text-[var(--text-tertiary)] ml-2">{'/ '}{formatNumber(status.networkHeight)} network</span>
             )}
           </div>
           <div className="flex items-baseline gap-3">
