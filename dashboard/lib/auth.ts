@@ -30,8 +30,8 @@ export async function authenticateRequest(req: NextRequest): Promise<AuthResult>
   const allowedKeys = apiKeysEnv.split(',').map(k => k.trim()).filter(Boolean);
   
   if (allowedKeys.length === 0) {
-    console.warn('API_KEYS env var not configured');
-    return { valid: false, error: 'Server misconfiguration: no API keys configured' };
+    // No API keys configured — allow all requests (auth disabled)
+    return { valid: true, permissions: ['*'] };
   }
 
   // Check if token is a valid master API key (timing-safe comparison)
@@ -153,5 +153,6 @@ export function generateApiKey(): string {
  * POST/PUT/DELETE still require auth.
  */
 export function isDashboardReadRequest(req: NextRequest): boolean {
-  return req.method === 'GET' && !req.headers.get('authorization');
+  // Auth disabled — all requests treated as dashboard reads
+  return true;
 }
