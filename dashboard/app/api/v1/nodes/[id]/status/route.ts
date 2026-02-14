@@ -50,7 +50,7 @@ export async function GET(
 
     const node = nodeResult.rows[0];
 
-    // Get latest metrics with new fields
+    // Get latest metrics with new fields (including sentries for Issue #14)
     const metricsResult = await query(
       `SELECT 
         block_height, is_syncing, sync_percent, peer_count,
@@ -59,7 +59,7 @@ export async function GET(
         disk_used_gb, disk_total_gb, rpc_latency_ms, collected_at,
         ipv4, ipv6, os_type, os_release, os_arch, kernel_version,
         client_type, node_type, security_score, security_issues,
-        chain_data_size, database_size
+        chain_data_size, database_size, sentries
        FROM skynet.node_metrics 
        WHERE node_id = $1 
        ORDER BY collected_at DESC 
@@ -161,6 +161,8 @@ export async function GET(
         },
         rpcLatencyMs: latestMetrics?.rpc_latency_ms,
         lastSeen: latestMetrics?.collected_at,
+        // Erigon dual sentry monitoring (Issue #14)
+        sentries: latestMetrics?.sentries,
       },
       incidents: {
         active: incidentsResult.rows,

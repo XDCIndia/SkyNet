@@ -23,6 +23,10 @@ import {
   Github,
   GitPullRequest,
   Check,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  Calendar
 } from 'lucide-react';
 
 type IssueSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
@@ -61,6 +65,8 @@ interface Issue {
   first_seen: string;
   last_seen: string;
   resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
   node_ip: string | null;
   client_type: string | null;
   client_version: string | null;
@@ -73,6 +79,19 @@ interface Summary {
   high: number;
   resolved: number;
   total: number;
+}
+
+interface ResolutionStats {
+  avgResolutionTime: string;
+  openCount: number;
+  resolvedCount: number;
+  bySeverity: Record<IssueSeverity, { open: number; resolved: number }>;
+}
+
+interface TrendData {
+  date: string;
+  opened: number;
+  resolved: number;
 }
 
 const severityConfig: Record<IssueSeverity, { icon: React.ReactNode; color: string; bg: string; border: string }> = {
@@ -169,6 +188,197 @@ function formatDuration(from: string, to?: string): string {
   return `${minutes}m`;
 }
 
+// Issue Timeline Component
+function IssueTimeline({ issue }: { issue: Issue }) {
+  const events = [
+    { label: 'Created', time: issue.created_at, icon: <Clock className="w-4 h-4" />, color: 'text-[#64748B]' },
+    { label: 'First Seen', time: issue.first_seen, icon: <AlertCircle className="w-4 h-4" />, color: 'text-[#F59E0B]' },
+    ...(issue.last_seen !== issue.first_seen ? [{ label: 'Last Seen', time: issue.last_seen, icon: <Activity className="w-4 h-4" />, color: 'text-[#1E90FF]' }] : []),
+    ...(issue.resolved_at ? [{ label: 'Resolved', time: issue.resolved_at, icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-[#10B981]' }] : []),
+  ];
+
+  return (
+    <div className="flex items-center gap-2 mt-3 overflow-x-auto">
+      {events.map((event, i) => (
+        <>
+          <div key={event.label} className="flex items-center gap-2 flex-shrink-0">
+            <div className={`p-1.5 rounded ${event.color} bg-white/5`}>
+              {event.icon}
+            </div>
+            <div className="text-xs">
+              <div className="text-[var(--text-tertiary)]">{event.label}</div>
+              <div className={event.color}>{formatTimeAgo(event.time)}</div>
+            </div>
+          </div>
+          {i < events.length - 1 && (
+            <div className="w-6 h-px bg-white/10 flex-shrink-0" />
+          )}
+        </>
+      ))}
+    </div>
+  );
+}
+
+// Trends Chart Component
+function TrendsChart({ data }: { data: TrendData[] }) {
+  if (data.length === 0) return null;
+
+  const maxValue = Math.max(...data.map(d => Math.max(d.opened, d.resolved)), 1);
+  const width = 600;
+  const height = 200;
+  const padding = { top: 20, right: 30, bottom: 40, left: 40 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+
+  const getX = (i: number) => padding.left + (i / (data.length - 1 || 1)) * chartWidth;
+  const getY = (val: number) => padding.top + chartHeight - (val / maxValue) * chartHeight;
+
+  const openedPoints = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(d.opened)}`).join(' ');
+  const resolvedPoints = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(d.resolved)}`).join(' ');
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full min-w-[400px]">
+        {/* Grid lines */}
+        {[0, 0.25, 0.5, 0.75, 1].map(t => (
+          <line
+            key={t}
+            x1={padding.left}
+            y1={padding.top + t * chartHeight}
+            x2={width - padding.right}
+            y2={padding.top + t * chartHeight}
+            stroke="rgba(255,255,255,0.05)"
+            strokeWidth="1"
+          />
+        ))}
+
+        {/* Opened line */}
+        <path d={openedPoints} fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" />
+        
+        {/* Resolved line */}
+        <path d={resolvedPoints} fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeDasharray="4,4" />
+
+        {/* Data points */}
+        {data.map((d, i) => (
+          <>
+            <circle key={`opened-${i}`} cx={getX(i)} cy={getY(d.opened)} r="4" fill="#EF4444" />
+            <circle key={`resolved-${i}`} cx={getX(i)} cy={getY(d.resolved)} r="4" fill="#10B981" />
+          </>
+        ))}
+
+        {/* X-axis labels */}
+        {data.map((d, i) => (
+          <text
+            key={i}
+            x={getX(i)}
+            y={height - 10}
+            textAnchor="middle"
+            fill="#64748B"
+            fontSize="10"
+          >
+            {new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+          </text>
+        ))}
+
+        {/* Y-axis label */}
+        <text x="20" y={height / 2} textAnchor="middle" fill="#64748B" fontSize="10" transform={`rotate(-90, 20, ${height / 2})`}>
+          Issues
+        </text>
+      </svg>
+
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-6 mt-2">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-0.5 bg-[#EF4444] rounded" />
+          <span className="text-xs text-[var(--text-tertiary)]">Opened</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-0.5 bg-[#10B981] rounded border-dashed" style={{ borderTop: '2px dashed #10B981' }} />
+          <span className="text-xs text-[var(--text-tertiary)]">Resolved</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Resolution Stats Cards
+function ResolutionStats({ stats }: { stats: ResolutionStats }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="bg-[#111827]/50 border border-white/10 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Clock className="w-4 h-4 text-[#1E90FF]" />
+          <span className="text-xs text-[#64748B]">Avg Resolution</span>
+        </div>
+        <div className="text-2xl font-bold text-[#F1F5F9]">{stats.avgResolutionTime}</div>
+      </div>
+
+      <div className="bg-[#111827]/50 border border-white/10 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <AlertCircle className="w-4 h-4 text-[#EF4444]" />
+          <span className="text-xs text-[#64748B]">Open</span>
+        </div>
+        <div className="text-2xl font-bold text-[#EF4444]">{stats.openCount}</div>
+      </div>
+
+      <div className="bg-[#111827]/50 border border-white/10 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
+          <span className="text-xs text-[#64748B]">Resolved</span>
+        </div>
+        <div className="text-2xl font-bold text-[#10B981]">{stats.resolvedCount}</div>
+      </div>
+
+      <div className="bg-[#111827]/50 border border-white/10 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Activity className="w-4 h-4 text-[#F59E0B]" />
+          <span className="text-xs text-[#64748B]">Resolution Rate</span>
+        </div>
+        <div className="text-2xl font-bold text-[#F59E0B]">
+          {stats.resolvedCount + stats.openCount > 0 
+            ? Math.round((stats.resolvedCount / (stats.resolvedCount + stats.openCount)) * 100) 
+            : 0}%
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Severity Breakdown
+function SeverityBreakdown({ bySeverity }: { bySeverity: ResolutionStats['bySeverity'] }) {
+  const severities: IssueSeverity[] = ['critical', 'high', 'medium', 'low', 'info'];
+  
+  return (
+    <div className="bg-[#111827]/50 border border-white/10 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-4">
+        <TrendingUp className="w-4 h-4 text-[#64748B]" />
+        <span className="text-sm font-medium text-[#F1F5F9]">By Severity</span>
+      </div>
+      
+      <div className="space-y-3">
+        {severities.map(sev => {
+          const data = bySeverity[sev] || { open: 0, resolved: 0 };
+          const total = data.open + data.resolved;
+          if (total === 0) return null;
+          
+          return (
+            <div key={sev} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${severityConfig[sev].color.replace('text-', 'bg-')}`} />
+                <span className="text-sm text-[#F1F5F9] capitalize">{sev}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-[#EF4444]">{data.open} open</span>
+                <span className="text-xs text-[#10B981]">{data.resolved} resolved</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function IssueCard({ 
   issue, 
   onResolve, 
@@ -233,6 +443,9 @@ function IssueCard({
                   {formatDuration(issue.first_seen, issue.resolved_at || undefined)}
                 </span>
               </div>
+
+              {/* Timeline */}
+              <IssueTimeline issue={issue} />
             </div>
           </div>
 
@@ -421,15 +634,6 @@ function IssueCard({
                 </a>
               )}
             </div>
-
-            {/* Metadata */}
-            <div className="pt-2 border-t border-white/10 flex items-center gap-4 text-xs text-[#64748B]">
-              <span>First seen: {new Date(issue.first_seen).toLocaleString()}</span>
-              <span>Last seen: {new Date(issue.last_seen).toLocaleString()}</span>
-              {issue.resolved_at && (
-                <span className="text-[#10B981]">Resolved: {new Date(issue.resolved_at).toLocaleString()}</span>
-              )}
-            </div>
           </div>
         </div>
       )}
@@ -440,6 +644,8 @@ function IssueCard({
 export default function IssuesPage() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [summary, setSummary] = useState<Summary>({ open: 0, critical: 0, high: 0, resolved: 0, total: 0 });
+  const [resolutionStats, setResolutionStats] = useState<ResolutionStats | null>(null);
+  const [trends, setTrends] = useState<TrendData[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<IssueStatus | 'all'>('open');
   const [severityFilter, setSeverityFilter] = useState<IssueSeverity | 'all'>('all');
@@ -458,6 +664,20 @@ export default function IssuesPage() {
         const data = await res.json();
         setIssues(data.data);
         setSummary(data.summary);
+        
+        // Fetch resolution stats
+        const statsRes = await fetch('/api/v1/issues/resolution-stats', { cache: 'no-store' });
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          setResolutionStats(statsData.data);
+        }
+        
+        // Fetch trends
+        const trendsRes = await fetch('/api/v1/issues/trends?days=7', { cache: 'no-store' });
+        if (trendsRes.ok) {
+          const trendsData = await trendsRes.json();
+          setTrends(trendsData.data);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch issues:', err);
@@ -515,6 +735,22 @@ export default function IssuesPage() {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
+        </div>
+
+        {/* Resolution Stats */}
+        {resolutionStats && <ResolutionStats stats={resolutionStats} />}
+
+        {/* Trends Chart & Severity Breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-[#111827]/50 border border-white/10 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="w-5 h-5 text-[#1E90FF]" />
+              <span className="text-lg font-semibold text-[#F1F5F9]">Issue Trends (7 Days)</span>
+            </div>
+            <TrendsChart data={trends} />
+          </div>
+          
+          {resolutionStats && <SeverityBreakdown bySeverity={resolutionStats.bySeverity} />}
         </div>
 
         {/* Stats Cards */}

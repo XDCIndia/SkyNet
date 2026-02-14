@@ -21,7 +21,8 @@ import {
   MemoryStick,
   Activity,
   X,
-  Wifi
+  Wifi,
+  Layers
 } from 'lucide-react';
 
 type NodeStatus = 'online' | 'degraded' | 'offline';
@@ -46,6 +47,9 @@ interface FleetNode {
   client_version: string;
   last_seen: string;
   status: NodeStatus;
+  // Erigon dual sentry monitoring (Issue #14)
+  client_type?: string;
+  sentries?: { port: number; protocol: string; peers: number }[];
 }
 
 interface Incident {
@@ -473,6 +477,21 @@ export default function FleetPage() {
                               <span className={(node.disk_percent || 0) > 85 ? 'text-[#F59E0B]' : ''}>{Math.round(node.disk_percent || 0)}%</span>
                             </div>
                           </td>
+                          {/* Erigon Sentry Indicator (Issue #14) */}
+                          {node.client_type?.toLowerCase() === 'erigon' && node.sentries && (
+                            <td className="py-3 px-3">
+                              <div className="flex items-center gap-1" title={`Sentries: ${node.sentries.map(s => `${s.protocol}:${s.peers}`).join(', ')}`}>
+                                <Layers className="w-3 h-3 text-orange-400" />
+                                {node.sentries.every(s => s.peers > 0) ? (
+                                  <span className="w-2 h-2 rounded-full bg-[#10B981]" />
+                                ) : node.sentries.some(s => s.peers > 0) ? (
+                                  <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
+                                ) : (
+                                  <span className="w-2 h-2 rounded-full bg-[#EF4444] animate-pulse" />
+                                )}
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       </>
                     ))

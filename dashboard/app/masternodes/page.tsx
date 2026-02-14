@@ -15,7 +15,11 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronRight,
-  Activity
+  Activity,
+  ChevronLeft,
+  ChevronLast,
+  ChevronFirst,
+  RefreshCw
 } from 'lucide-react';
 
 interface MasternodeInfo {
@@ -24,8 +28,10 @@ interface MasternodeInfo {
   status: 'active' | 'standby' | 'penalized';
   owner?: string;
   stake?: string;
+  stakeRaw?: string;
   voterCount?: number;
   ethstatsName?: string;
+  rank?: number;
 }
 
 interface MasternodeStats {
@@ -43,6 +49,13 @@ interface MasternodeStats {
     stake: string;
     percentage: string;
   }[];
+}
+
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 }
 
 function StatusBadge({ status }: { status: 'active' | 'standby' | 'penalized' }) {
@@ -144,27 +157,143 @@ function StakeDistributionChart({ validators }: { validators: { address: string;
   );
 }
 
+// Pagination Component
+function Pagination({ 
+  pagination, 
+  onPageChange 
+}: { 
+  pagination: PaginationInfo; 
+  onPageChange: (page: number) => void;
+}) {
+  const { page, totalPages } = pagination;
+  
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisible = 5;
+    
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (page <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (page >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = page - 1; i <= page + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-6">
+      <button
+        onClick={() => onPageChange(1)}
+        disabled={page === 1}
+        className="p-2 hover:bg-white/5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
+        title="First page"
+      >
+        <ChevronFirst className="w-4 h-4" />
+      </button>
+      <button
+        onClick={() => onPageChange(page - 1)}
+        disabled={page === 1}
+        className="p-2 hover:bg-white/5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
+        title="Previous page"
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+      
+      <div className="flex items-center gap-1">
+        {getPageNumbers().map((p, i) => (
+          p === '...' ? (
+            <span key={`ellipsis-${i}`} className="px-2 text-[var(--text-tertiary)]">...</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPageChange(p as number)}
+              className={`min-w-[36px] h-9 px-3 rounded-lg text-sm font-medium transition-colors ${
+                page === p 
+                  ? 'bg-[var(--accent-blue)] text-white' 
+                  : 'hover:bg-white/5 text-[var(--text-secondary)]'
+              }`}
+            >
+              {p}
+            </button>
+          )
+        ))}
+      </div>
+      
+      <button
+        onClick={() => onPageChange(page + 1)}
+        disabled={page === totalPages}
+        className="p-2 hover:bg-white/5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
+        title="Next page"
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
+      <button
+        onClick={() => onPageChange(totalPages)}
+        disabled={page === totalPages}
+        className="p-2 hover:bg-white/5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
+        title="Last page"
+      >
+        <ChevronLast className="w-4 h-4" />
+      </button>
+      
+      <span className="ml-4 text-sm text-[var(--text-tertiary)]">
+        Page {page} of {totalPages}
+      </span>
+    </div>
+  );
+}
+
 export default function MasternodesPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'active' | 'standby' | 'penalized'>('active');
+  const [filter, setFilter] = useState<'active' | 'standby' | 'penalized' | 'all'>('active');
   const [stats, setStats] = useState<MasternodeStats | null>(null);
   const [masternodes, setMasternodes] = useState<MasternodeInfo[]>([]);
   const [standbynodes, setStandbynodes] = useState<MasternodeInfo[]>([]);
   const [penalized, setPenalized] = useState<MasternodeInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState<'stake' | 'voters' | 'address'>('stake');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sortField, setSortField] = useState<'stake' | 'rank' | 'address'>('rank');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   
-  const fetchData = useCallback(async () => {
+  // Pagination state
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 1,
+  });
+
+  const fetchData = useCallback(async (page = pagination.page, search = searchTerm, statusFilter = filter) => {
     try {
       setLoading(true);
       
-      // Fetch stats and masternode data in parallel
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: pagination.limit.toString(),
+        filter: statusFilter === 'all' ? 'all' : statusFilter,
+      });
+      
+      if (search) {
+        params.append('search', search);
+      }
+      
       const [statsRes, nodesRes] = await Promise.all([
         fetch('/api/v1/masternodes/stats'),
-        fetch('/api/v1/masternodes'),
+        fetch(`/api/v1/masternodes?${params}`),
       ]);
       
       if (statsRes.ok) {
@@ -180,6 +309,9 @@ export default function MasternodesPage() {
           setMasternodes(nodesData.data.masternodes);
           setStandbynodes(nodesData.data.standbynodes);
           setPenalized(nodesData.data.penalized);
+          if (nodesData.data.pagination) {
+            setPagination(nodesData.data.pagination);
+          }
         }
       }
     } catch (err) {
@@ -187,46 +319,43 @@ export default function MasternodesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pagination.limit]);
   
+  // Initial fetch and auto-refresh every 60 seconds
   useEffect(() => {
-    fetchData();
-    // Auto-refresh every 60 seconds
-    const interval = setInterval(fetchData, 60000);
+    fetchData(1, searchTerm, filter);
+    const interval = setInterval(() => fetchData(pagination.page, searchTerm, filter), 60000);
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, pagination.page, searchTerm, filter]);
   
   const currentNodes = useMemo(() => {
-    switch (activeTab) {
-      case 'active': return masternodes;
-      case 'standby': return standbynodes;
-      case 'penalized': return penalized;
-      default: return [];
-    }
-  }, [activeTab, masternodes, standbynodes, penalized]);
-  
-  const filteredAndSortedNodes = useMemo(() => {
-    let filtered = [...currentNodes];
-    
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(n => 
-        n.xdcAddress.toLowerCase().includes(term) ||
-        n.address.toLowerCase().includes(term) ||
-        n.owner?.toLowerCase().includes(term)
-      );
+    let nodes: MasternodeInfo[] = [];
+    switch (filter) {
+      case 'active':
+        nodes = masternodes;
+        break;
+      case 'standby':
+        nodes = standbynodes;
+        break;
+      case 'penalized':
+        nodes = penalized;
+        break;
+      case 'all':
+        nodes = [...masternodes, ...standbynodes, ...penalized];
+        break;
     }
     
     // Sort
-    filtered.sort((a, b) => {
+    return [...nodes].sort((a, b) => {
       let comparison = 0;
       switch (sortField) {
         case 'stake':
-          comparison = (parseFloat(a.stake?.replace(/,/g, '') || '0') - parseFloat(b.stake?.replace(/,/g, '') || '0'));
+          const aStake = parseFloat(a.stake?.replace(/,/g, '') || '0');
+          const bStake = parseFloat(b.stake?.replace(/,/g, '') || '0');
+          comparison = aStake - bStake;
           break;
-        case 'voters':
-          comparison = (a.voterCount || 0) - (b.voterCount || 0);
+        case 'rank':
+          comparison = (a.rank || 0) - (b.rank || 0);
           break;
         case 'address':
           comparison = a.xdcAddress.localeCompare(b.xdcAddress);
@@ -234,11 +363,9 @@ export default function MasternodesPage() {
       }
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-    
-    return filtered;
-  }, [currentNodes, searchTerm, sortField, sortDirection]);
+  }, [filter, masternodes, standbynodes, penalized, sortField, sortDirection]);
   
-  const handleSort = (field: 'stake' | 'voters' | 'address') => {
+  const handleSort = (field: 'stake' | 'rank' | 'address') => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -254,6 +381,33 @@ export default function MasternodesPage() {
   const handleNavigateToDetail = (xdcAddress: string) => {
     router.push(`/masternodes/${xdcAddress}`);
   };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setPagination(prev => ({ ...prev, page: 1 }));
+    // Debounce search
+    const timeout = setTimeout(() => {
+      fetchData(1, value, filter);
+    }, 300);
+    return () => clearTimeout(timeout);
+  };
+
+  const handleFilterChange = (newFilter: 'active' | 'standby' | 'penalized' | 'all') => {
+    setFilter(newFilter);
+    setPagination(prev => ({ ...prev, page: 1 }));
+    fetchData(1, searchTerm, newFilter);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, page: newPage }));
+    fetchData(newPage, searchTerm, filter);
+    // Scroll to top of table
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleRefresh = () => {
+    fetchData(pagination.page, searchTerm, filter);
+  };
   
   return (
     <DashboardLayout>
@@ -262,12 +416,22 @@ export default function MasternodesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Masternodes</h1>
-            <p className="text-[var(--text-tertiary)] mt-1">XDC Validator network overview</p>
+            <p className="text-[var(--text-tertiary)] mt-1">XDC Validator network overview — Live from XDCValidator Contract</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-[var(--text-tertiary)]">Epoch {stats?.epoch || '--'}</span>
-            <span className="text-[var(--text-tertiary)]">·</span>
-            <span className="text-sm text-[var(--text-tertiary)]">Block {(stats?.blockNumber || 0).toLocaleString()}</span>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+            <div className="flex items-center gap-2 text-sm text-[var(--text-tertiary)]">
+              <span>Epoch {stats?.epoch || '--'}</span>
+              <span className="text-[var(--text-tertiary)]">·</span>
+              <span>Block {(stats?.blockNumber || 0).toLocaleString()}</span>
+            </div>
           </div>
         </div>
         
@@ -307,19 +471,22 @@ export default function MasternodesPage() {
           <div className="card-xdc lg:col-span-2">
             {/* Tabs */}
             <div className="flex items-center gap-2 mb-6 border-b border-white/10">
-              {(['active', 'standby', 'penalized'] as const).map(tab => (
+              {(['active', 'standby', 'penalized', 'all'] as const).map(tab => (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() => handleFilterChange(tab)}
                   className={`px-4 py-2 text-sm font-medium transition-colors relative ${
-                    activeTab === tab ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                    filter === tab ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                   <span className="ml-2 text-xs opacity-60">
-                    {tab === 'active' ? stats?.totalActive : tab === 'standby' ? stats?.totalStandby : stats?.totalPenalized}
+                    {tab === 'active' ? stats?.totalActive : 
+                     tab === 'standby' ? stats?.totalStandby : 
+                     tab === 'penalized' ? stats?.totalPenalized :
+                     (stats?.totalActive || 0) + (stats?.totalStandby || 0) + (stats?.totalPenalized || 0)}
                   </span>
-                  {activeTab === tab && (
+                  {filter === tab && (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--accent-blue)]" />
                   )}
                 </button>
@@ -331,9 +498,9 @@ export default function MasternodesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
               <input
                 type="text"
-                placeholder="Search by address..."
+                placeholder="Search by address (xdc... or 0x...)..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm focus:outline-none focus:border-[var(--accent-blue)]"
               />
             </div>
@@ -344,7 +511,15 @@ export default function MasternodesPage() {
                 <thead>
                   <tr className="border-b border-white/10">
                     <th className="text-left py-3 px-3 text-xs font-medium text-[var(--text-tertiary)] w-8"></th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[var(--text-tertiary)]">#</th>
+                    <th 
+                      className="text-left py-3 px-3 text-xs font-medium text-[var(--text-tertiary)] cursor-pointer hover:text-[var(--text-primary)]"
+                      onClick={() => handleSort('rank')}
+                    >
+                      <div className="flex items-center gap-1">
+                        #
+                        <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </th>
                     <th className="text-left py-3 px-3 text-xs font-medium text-[var(--text-tertiary)]">Address</th>
                     <th className="text-left py-3 px-3 text-xs font-medium text-[var(--text-tertiary)]">Owner</th>
                     <th 
@@ -363,14 +538,20 @@ export default function MasternodesPage() {
                 <tbody className="divide-y divide-white/5">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-[var(--text-tertiary)]">Loading...</td>
+                      <td colSpan={7} className="py-8 text-center text-[var(--text-tertiary)]">
+                        <RefreshCw className="w-6 h-6 mx-auto animate-spin mb-2" />
+                        Loading...
+                      </td>
                     </tr>
-                  ) : filteredAndSortedNodes.length === 0 ? (
+                  ) : currentNodes.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-[var(--text-tertiary)]">No masternodes found</td>
+                      <td colSpan={7} className="py-8 text-center text-[var(--text-tertiary)]">
+                        No masternodes found
+                        {searchTerm && <div className="text-xs mt-1">Try a different search term</div>}
+                      </td>
                     </tr>
                   ) : (
-                    filteredAndSortedNodes.map((node, index) => (
+                    currentNodes.map((node) => (
                       <>
                         <tr
                           key={node.address}
@@ -385,7 +566,7 @@ export default function MasternodesPage() {
                             )}
                           </td>
                           <td className="py-3 px-3 text-[var(--text-tertiary)]">
-                            {activeTab === 'standby' ? index + 1 : index + 1}
+                            {node.rank || '-'}
                           </td>
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-2">
@@ -438,6 +619,10 @@ export default function MasternodesPage() {
                                     <CopyButton text={toXdcAddress(node.owner)} />
                                   </div>
                                 )}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-[var(--text-tertiary)]">Raw Stake:</span>
+                                  <span className="font-mono text-sm">{node.stakeRaw || '0'} wei</span>
+                                </div>
                                 <button
                                   onClick={() => handleNavigateToDetail(node.xdcAddress)}
                                   className="mt-2 text-sm text-[var(--accent-blue)] hover:underline"
@@ -453,6 +638,19 @@ export default function MasternodesPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+            
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <Pagination 
+                pagination={pagination} 
+                onPageChange={handlePageChange}
+              />
+            )}
+            
+            {/* Results summary */}
+            <div className="mt-4 text-xs text-[var(--text-tertiary)] text-center">
+              Showing {Math.min((pagination.page - 1) * pagination.limit + 1, pagination.total)} - {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} masternodes
             </div>
           </div>
           
