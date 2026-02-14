@@ -593,22 +593,22 @@ export default function FleetOverview() {
         </div>
 
         {/* Stats Summary with Incidents */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(16,185,129,0.15)] border border-[rgba(16,185,129,0.3)]">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-[rgba(16,185,129,0.15)] border border-[rgba(16,185,129,0.3)]">
             <CheckCircle2 className="w-4 h-4 text-[var(--success)]" />
-            <span className="text-sm font-medium text-[var(--success)]">{stats.healthy} Healthy</span>
+            <span className="text-xs sm:text-sm font-medium text-[var(--success)]"><span className="sm:hidden">{stats.healthy}</span><span className="hidden sm:inline">{stats.healthy} Healthy</span></span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(245,158,11,0.15)] border border-[rgba(245,158,11,0.3)]">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-[rgba(245,158,11,0.15)] border border-[rgba(245,158,11,0.3)]">
             <AlertTriangle className="w-4 h-4 text-[var(--warning)]" />
-            <span className="text-sm font-medium text-[var(--warning)]">{stats.warning} Warning</span>
+            <span className="text-xs sm:text-sm font-medium text-[var(--warning)]"><span className="sm:hidden">{stats.warning}</span><span className="hidden sm:inline">{stats.warning} Warning</span></span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(239,68,68,0.15)] border border-[rgba(239,68,68,0.3)]">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-[rgba(239,68,68,0.15)] border border-[rgba(239,68,68,0.3)]">
             <AlertTriangle className="w-4 h-4 text-[var(--critical)]" />
-            <span className="text-sm font-medium text-[var(--critical)]">{stats.critical} Critical</span>
+            <span className="text-xs sm:text-sm font-medium text-[var(--critical)]"><span className="sm:hidden">{stats.critical}</span><span className="hidden sm:inline">{stats.critical} Critical</span></span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(107,114,128,0.15)] border border-[rgba(107,114,128,0.3)]">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-[rgba(107,114,128,0.15)] border border-[rgba(107,114,128,0.3)]">
             <Square className="w-4 h-4 text-[#6B7280]" />
-            <span className="text-sm font-medium text-[#6B7280]">{stats.offline} Offline</span>
+            <span className="text-xs sm:text-sm font-medium text-[#6B7280]"><span className="sm:hidden">{stats.offline}</span><span className="hidden sm:inline">{stats.offline} Offline</span></span>
           </div>
         </div>
       </div>
@@ -646,7 +646,7 @@ export default function FleetOverview() {
               Updated {formatTimeAgo(networkHealth.timestamp)}
             </span>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             <div className="text-center">
               <div className="text-xs text-[#6B7280] mb-1">Avg Block</div>
               <div className="text-lg font-bold font-mono text-[#1E90FF]">{networkHealth.avgBlockHeight.toLocaleString()}</div>
@@ -676,17 +676,17 @@ export default function FleetOverview() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4 mb-6 p-4 rounded-xl bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)]">
+      <div className="flex flex-col gap-3 mb-6 p-3 sm:p-4 rounded-xl bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)]">
         <div className="flex items-center gap-2 text-[#6B7280]">
           <Filter className="w-4 h-4" />
           <span className="text-sm">Filters:</span>
         </div>
         
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
           <select
             value={filterRegion}
             onChange={(e) => setFilterRegion(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-[var(--bg-body)] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] focus:outline-none focus:border-[var(--accent-blue)]"
+            className="w-full sm:w-auto px-3 py-2 sm:py-1.5 rounded-lg bg-[var(--bg-body)] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] focus:outline-none focus:border-[var(--accent-blue)] min-h-[44px]"
           >
             <option value="all">All Regions</option>
             {regions.filter(r => r !== 'all').map(r => (
@@ -697,7 +697,7 @@ export default function FleetOverview() {
           <select
             value={filterRole}
             onChange={(e) => setFilterRole(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-[var(--bg-body)] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] focus:outline-none focus:border-[var(--accent-blue)]"
+            className="w-full sm:w-auto px-3 py-2 sm:py-1.5 rounded-lg bg-[var(--bg-body)] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] focus:outline-none focus:border-[var(--accent-blue)] min-h-[44px]"
           >
             <option value="all">All Roles</option>
             {roles.filter(r => r !== 'all').map(r => (
@@ -708,7 +708,7 @@ export default function FleetOverview() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-[var(--bg-body)] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] focus:outline-none focus:border-[var(--accent-blue)]"
+            className="w-full sm:w-auto px-3 py-2 sm:py-1.5 rounded-lg bg-[var(--bg-body)] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] focus:outline-none focus:border-[var(--accent-blue)] min-h-[44px]"
           >
             <option value="all">All Statuses</option>
             {statuses.filter(s => s !== 'all').map(s => (
@@ -721,11 +721,10 @@ export default function FleetOverview() {
             placeholder="Filter by tag..."
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-[var(--bg-body)] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] placeholder-[#6B7280] focus:outline-none focus:border-[var(--accent-blue)]"
+            className="w-full sm:w-auto px-3 py-2 sm:py-1.5 rounded-lg bg-[var(--bg-body)] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] placeholder-[#6B7280] focus:outline-none focus:border-[var(--accent-blue)] min-h-[44px]"
           />
-        </div>
-        
-        <div className="flex items-center gap-2 ml-auto">
+          
+          <div className="flex items-center gap-2 ml-auto">
           <button
             onClick={() => fetchNodes()}
             className="p-2 rounded-lg transition-colors text-[#6B7280] hover:text-[#F9FAFB] hover:bg-[rgba(255,255,255,0.05)]"
@@ -779,7 +778,7 @@ export default function FleetOverview() {
 
       {/* Grid View */}
       {viewMode === 'grid' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
           {filteredNodes.map((node) => {
             const statusStyle = getStatusColor(node.status);
             const StatusIcon = statusStyle.icon;
@@ -794,7 +793,7 @@ export default function FleetOverview() {
             return (
               <div 
                 key={node.id}
-                className={`relative p-4 rounded-xl border transition-all cursor-pointer ${
+                className={`relative p-3 sm:p-4 rounded-xl border transition-all cursor-pointer ${
                   isSelected 
                     ? 'bg-[rgba(30,144,255,0.15)] border-[var(--accent-blue)]' 
                     : 'bg-[var(--bg-card)] border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)]'
