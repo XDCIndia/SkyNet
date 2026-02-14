@@ -104,7 +104,7 @@ interface HealthyPeersSummary {
   healthyPeers: number;
 }
 
-type FilterType = 'all' | 'healthy' | 'syncing' | 'behind' | 'offline';
+type FilterType = 'all' | 'healthy' | 'syncing' | 'behind' | 'offline' | 'inactive';
 type ViewMode = 'grid' | 'table';
 type SortField = keyof Node | 'security_score';
 type SortDirection = 'asc' | 'desc';
@@ -302,10 +302,21 @@ function formatTimeAgo(timestamp: string): string {
   const seconds = Math.floor(diff / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
-  
+
   if (hours > 0) return `${hours}h ago`;
   if (minutes > 0) return `${minutes}m ago`;
   return `${seconds}s ago`;
+}
+
+// Check if a node is inactive (offline and no heartbeat in >24h)
+const INACTIVE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function isNodeInactive(node: Node): boolean {
+  if (node.status !== 'offline') return false;
+  if (!node.lastSeen) return true; // No heartbeat at all = inactive
+  const lastHeartbeat = new Date(node.lastSeen).getTime();
+  const now = Date.now();
+  return now - lastHeartbeat > INACTIVE_THRESHOLD_MS;
 }
 
 // Format OS info for display
@@ -1111,6 +1122,7 @@ function FilterBar({
     { key: 'syncing', label: 'Syncing' },
     { key: 'behind', label: 'Behind' },
     { key: 'offline', label: 'Offline' },
+    { key: 'inactive', label: 'Inactive' },
   ];
   
   return (
@@ -1256,18 +1268,31 @@ export default function Home() {
         const json = await fleetRes.json();
         const d = json.data || json;
         const counts = d.nodeCounts || d.nodes || {};
+        
+        // Get nodes array from API
+        const nodeArr: Node[] = Array.isArray(d.nodes) ? d.nodes : [];
+        
+        // Split into active and inactive for accurate stats
+        const inactiveList = nodeArr.filter(isNodeInactive);
+        const activeList = nodeArr.filter(n => !isNodeInactive(n));
+        
+        // Count active nodes by status
+        const activeHealthy = activeList.filter(n => n.status === 'healthy').length;
+        const activeSyncing = activeList.filter(n => n.status === 'syncing').length;
+        const activeOffline = activeList.filter(n => n.status === 'offline').length;
+        const activeDegraded = activeList.filter(n => n.status === 'degraded').length;
+        
         setFleet({
-          totalNodes: d.totalNodes || 0,
-          healthyNodes: counts.healthy || 0,
-          degradedNodes: counts.degraded || 0,
-          offlineNodes: counts.offline || 0,
-          syncingNodes: counts.syncing || 0,
+          totalNodes: activeList.length, // Only count active nodes
+          healthyNodes: activeHealthy,
+          degradedNodes: activeDegraded,
+          offlineNodes: activeOffline, // Only count active offline nodes (not inactive)
+          syncingNodes: activeSyncing,
           healthScore: d.healthScore || 0,
           totalPeers: 0,
           mainnetHead: d.maxBlockHeight || 0,
         });
-        // nodes array from API (or empty)
-        const nodeArr = Array.isArray(d.nodes) ? d.nodes : [];
+        
         setNodes(nodeArr);
         const inc = d.incidents;
         setIncidents(inc?.active || (Array.isArray(inc) ? inc : []));
@@ -1321,9 +1346,27 @@ export default function Home() {
     }
   }, [nodes.length]);
 
+  // Split nodes into active and inactive
+  const { activeNodes, inactiveNodes } = useMemo(() => {
+    const active: Node[] = [];
+    const inactive: Node[] = [];
+    
+    for (const node of nodes) {
+      if (isNodeInactive(node)) {
+        inactive.push(node);
+      } else {
+        active.push(node);
+      }
+    }
+    
+    return { activeNodes: active, inactiveNodes: inactive };
+  }, [nodes]);
+
   // Filter and sort nodes
   const filteredNodes = useMemo(() => {
     let result = nodes.filter(node => {
+      const nodeIsInactive = isNodeInactive(node);
+      
       // Status filter
       switch (filter) {
         case 'healthy':
@@ -1336,7 +1379,16 @@ export default function Home() {
           if (node.blocksBehind <= 0) return false;
           break;
         case 'offline':
-          if (node.status !== 'offline') return false;
+          // Offline filter shows only offline nodes that are NOT inactive
+          if (node.status !== 'offline' || nodeIsInactive) return false;
+          break;
+        case 'inactive':
+          // Inactive filter shows only inactive nodes
+          if (!nodeIsInactive) return false;
+          break;
+        case 'all':
+          // All filter shows only active nodes (not inactive)
+          if (nodeIsInactive) return false;
           break;
       }
       
@@ -1386,13 +1438,15 @@ export default function Home() {
     return result;
   }, [nodes, filter, debouncedSearch, sortField, sortDirection]);
 
-  // Calculate filter counts
+  // Calculate filter counts (based on active nodes only for relevant filters)
   const filterCounts: Record<FilterType, number> = {
-    all: nodes.length,
-    healthy: nodes.filter(n => n.status === 'healthy').length,
-    syncing: nodes.filter(n => n.status === 'syncing').length,
-    behind: nodes.filter(n => n.blocksBehind > 0).length,
-    offline: nodes.filter(n => n.status === 'offline').length,
+    all: activeNodes.length,
+    healthy: activeNodes.filter(n => n.status === 'healthy').length,
+    syncing: activeNodes.filter(n => n.status === 'syncing').length,
+    behind: activeNodes.filter(n => n.blocksBehind > 0).length,
+    // Offline count excludes inactive nodes
+    offline: activeNodes.filter(n => n.status === 'offline').length,
+    inactive: inactiveNodes.length,
   };
 
   const handleSort = (field: SortField) => {
@@ -1466,7 +1520,10 @@ export default function Home() {
                 <Server className="w-5 h-5 text-[var(--accent-blue)]" />
                 <h2 className="text-lg font-semibold text-[var(--text-primary)]">Nodes</h2>
                 <span className="px-2 py-0.5 bg-[var(--bg-hover)] text-[var(--text-tertiary)] rounded text-xs">
-                  {filteredNodes.length} of {nodes.length}
+                  {filteredNodes.length} of {filter === 'inactive' ? inactiveNodes.length : activeNodes.length}
+                  {inactiveNodes.length > 0 && filter !== 'inactive' && (
+                    <span className="ml-1 text-[var(--critical)]">({inactiveNodes.length} inactive hidden)</span>
+                  )}
                 </span>
               </div>
               
