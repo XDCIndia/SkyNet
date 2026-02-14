@@ -214,13 +214,30 @@ async function postHandler(request: NextRequest) {
     );
   });
 
-  // === AUTO-INCIDENT DETECTION ===
-  const detectedIncidents: Array<{ type: string; severity: 'critical' | 'warning' | 'info'; title: string; description: string }> = [];
+  // === AUTO-INCIDENT DETECTION (Issue #10) ===
+  const detectedIncidents: Array<{
+    type: string;
+    severity: 'critical' | 'warning' | 'info';
+    title: string;
+    description: string;
+  }> = [];
 
-  // 1. Sync Stall Detection
-  if (blockHeight !== undefined && blockHeight !== null && prevMetrics.length >= 2) {
-    const allSameHeight = prevMetrics.every(m => m.block_height === blockHeight);
-    if (allSameHeight && blockHeight > 0) {
+  // Get previous metrics from 4+ minutes ago for sync stall detection (5 min window)
+  const prevMetrics5mResult = await queryAll(
+    `SELECT block_height, peer_count, disk_percent, collected_at
+     FROM skynet.node_metrics 
+     WHERE node_id = $1 AND collected_at < NOW() - INTERVAL '4 minutes'
+     ORDER BY collected_at DESC 
+     LIMIT 1`,
+    [nodeId]
+  );
+  const prevMetrics5m = prevMetrics5mResult[0];
+
+  // Use existing fleetMaxHeight from earlier query (2 min window for drift detection)
+
+  // 1. Sync Stall Detection - same block_height as 5 min ago
+  if (blockHeight !== undefined && blockHeight !== null && prevMetrics5m) {
+    if (prevMetrics5m.block_height === blockHeight && blockHeight > 0) {
       const existing = await queryAll(
         `SELECT id FROM skynet.incidents 
          WHERE node_id = $1 AND type = 'sync_stall' AND status = 'active'`,
@@ -231,13 +248,13 @@ async function postHandler(request: NextRequest) {
           type: 'sync_stall',
           severity: 'warning',
           title: 'Block sync stalled',
-          description: `Block height (${blockHeight}) unchanged for 3+ heartbeats`,
+          description: `Block height (${blockHeight.toLocaleString()}) unchanged for 5+ minutes`,
         });
       }
     }
   }
 
-  // 2. Peer Drop Detection
+  // 2. Peer Drop Detection - peer_count < 3
   if (peerCount !== undefined && peerCount < 3) {
     const existing = await queryAll(
       `SELECT id FROM skynet.incidents 
@@ -254,7 +271,7 @@ async function postHandler(request: NextRequest) {
     }
   }
 
-  // 3. Disk Pressure Detection
+  // 3. Disk Pressure Detection - disk_percent > 85%
   if (body.system?.diskPercent !== undefined && body.system.diskPercent > 85) {
     const existing = await queryAll(
       `SELECT id FROM skynet.incidents 
@@ -266,15 +283,15 @@ async function postHandler(request: NextRequest) {
         type: 'disk_pressure',
         severity: body.system.diskPercent > 95 ? 'critical' : 'warning',
         title: 'High disk usage',
-        description: `Disk usage at ${body.system.diskPercent.toFixed(1)}%`,
+        description: `Disk usage at ${body.system.diskPercent.toFixed(1)}% (threshold: 85%)`,
       });
     }
   }
 
-  // 4. Block Drift Detection
+  // 4. Block Drift Detection - > 1000 blocks behind fleet max
   if (blockHeight !== undefined && fleetMaxHeight > 0 && blockHeight > 0) {
     const drift = fleetMaxHeight - blockHeight;
-    if (drift > 100) {
+    if (drift > 1000) {
       const existing = await queryAll(
         `SELECT id FROM skynet.incidents 
          WHERE node_id = $1 AND type = 'block_drift' AND status = 'active'`,
@@ -283,53 +300,131 @@ async function postHandler(request: NextRequest) {
       if (existing.length === 0) {
         detectedIncidents.push({
           type: 'block_drift',
-          severity: drift > 1000 ? 'critical' : 'warning',
+          severity: drift > 5000 ? 'critical' : 'warning',
           title: 'Block height drift detected',
-          description: `Node is ${drift} blocks behind fleet leader`,
+          description: `Node is ${drift} blocks behind fleet leader (${fleetMaxHeight.toLocaleString()})`,
         });
       }
     }
   }
 
-  // Auto-resolve incidents when conditions improve
-  // Resolve sync_stall if block height increased
-  if (blockHeight !== undefined && prevMetrics.length > 0) {
-    const prevHeight = prevMetrics[0]?.block_height;
-    if (prevHeight && blockHeight > prevHeight) {
-      await queryAll(
-        `UPDATE skynet.incidents 
-         SET status = 'resolved', resolved_at = NOW(), 
-             description = description || E'\n\nAuto-resolved: block height increased to ' || $2
+  // Auto-resolve incidents when conditions clear
+  const resolvedIncidents: Array<{ type: string; details: string }> = [];
+
+  // Resolve sync_stall if block height increased from 5min ago
+  if (blockHeight !== undefined && prevMetrics5m?.block_height) {
+    if (blockHeight > prevMetrics5m.block_height) {
+      const activeSyncStall = await queryAll(
+        `SELECT id FROM skynet.incidents 
          WHERE node_id = $1 AND type = 'sync_stall' AND status = 'active'`,
-        [nodeId, blockHeight]
+        [nodeId]
       );
+      if (activeSyncStall.length > 0) {
+        await queryAll(
+          `UPDATE skynet.incidents 
+           SET status = 'resolved', resolved_at = NOW(), 
+               description = description || E'\n\nAuto-resolved: block height increased from ' || $2 || ' to ' || $3
+           WHERE node_id = $1 AND type = 'sync_stall' AND status = 'active'`,
+          [nodeId, prevMetrics5m.block_height, blockHeight]
+        );
+        resolvedIncidents.push({
+          type: 'sync_stall',
+          details: `Block height recovered: ${prevMetrics5m.block_height} → ${blockHeight}`,
+        });
+      }
     }
   }
 
   // Resolve peer_drop if peers >= 3
   if (peerCount !== undefined && peerCount >= 3) {
-    await queryAll(
-      `UPDATE skynet.incidents 
-       SET status = 'resolved', resolved_at = NOW(),
-           description = description || E'\n\nAuto-resolved: peer count recovered to ' || $2
+    const activePeerDrop = await queryAll(
+      `SELECT id FROM skynet.incidents 
        WHERE node_id = $1 AND type = 'peer_drop' AND status = 'active'`,
-      [nodeId, peerCount]
+      [nodeId]
     );
+    if (activePeerDrop.length > 0) {
+      await queryAll(
+        `UPDATE skynet.incidents 
+         SET status = 'resolved', resolved_at = NOW(),
+             description = description || E'\n\nAuto-resolved: peer count recovered to ' || $2
+         WHERE node_id = $1 AND type = 'peer_drop' AND status = 'active'`,
+        [nodeId, peerCount]
+      );
+      resolvedIncidents.push({
+        type: 'peer_drop',
+        details: `Peer count recovered to ${peerCount}`,
+      });
+    }
   }
 
   // Resolve disk_pressure if disk < 80%
   if (body.system?.diskPercent !== undefined && body.system.diskPercent < 80) {
-    await queryAll(
-      `UPDATE skynet.incidents 
-       SET status = 'resolved', resolved_at = NOW(),
-           description = description || E'\n\nAuto-resolved: disk usage dropped to ' || $2 || '%'
+    const activeDiskPressure = await queryAll(
+      `SELECT id FROM skynet.incidents 
        WHERE node_id = $1 AND type = 'disk_pressure' AND status = 'active'`,
-      [nodeId, body.system.diskPercent.toFixed(1)]
+      [nodeId]
     );
+    if (activeDiskPressure.length > 0) {
+      await queryAll(
+        `UPDATE skynet.incidents 
+         SET status = 'resolved', resolved_at = NOW(),
+             description = description || E'\n\nAuto-resolved: disk usage dropped to ' || $2 || '%'
+         WHERE node_id = $1 AND type = 'disk_pressure' AND status = 'active'`,
+        [nodeId, body.system.diskPercent.toFixed(1)]
+      );
+      resolvedIncidents.push({
+        type: 'disk_pressure',
+        details: `Disk usage dropped to ${body.system.diskPercent.toFixed(1)}%`,
+      });
+    }
   }
 
-  // Create detected incidents
+  // Resolve block_drift if caught up (< 100 blocks behind)
+  if (blockHeight !== undefined && fleetMaxHeight > 0) {
+    const drift = fleetMaxHeight - blockHeight;
+    if (drift <= 100) {
+      const activeDrift = await queryAll(
+        `SELECT id FROM skynet.incidents 
+         WHERE node_id = $1 AND type = 'block_drift' AND status = 'active'`,
+        [nodeId]
+      );
+      if (activeDrift.length > 0) {
+        await queryAll(
+          `UPDATE skynet.incidents 
+           SET status = 'resolved', resolved_at = NOW(),
+               description = description || E'\n\nAuto-resolved: node caught up, drift now ' || $2 || ' blocks'
+           WHERE node_id = $1 AND type = 'block_drift' AND status = 'active'`,
+          [nodeId, drift]
+        );
+        resolvedIncidents.push({
+          type: 'block_drift',
+          details: `Node caught up, drift now ${drift} blocks`,
+        });
+      }
+    }
+  }
+
+  // Get node info for alerts
+  const nodeInfoResult = await queryAll(
+    `SELECT id, name, ipv4, role FROM skynet.nodes WHERE id = $1`,
+    [nodeId]
+  );
+  const nodeInfo = nodeInfoResult[0] || { id: nodeId, name: nodeId };
+
+  // Create detected incidents and send alerts
   for (const incident of detectedIncidents) {
+    // Check again if active incident exists (race condition protection)
+    const existing = await queryAll(
+      `SELECT id FROM skynet.incidents 
+       WHERE node_id = $1 AND type = $2 AND status = 'active'`,
+      [nodeId, incident.type]
+    );
+    
+    if (existing.length > 0) {
+      continue; // Skip if incident already exists
+    }
+
+    // Insert incident
     const incidentResult = await queryAll(
       `INSERT INTO skynet.incidents 
        (node_id, type, severity, title, description, auto_detected)
@@ -340,16 +435,59 @@ async function postHandler(request: NextRequest) {
 
     const incidentId = incidentResult[0]?.id;
 
-    // Fire alert notifications (non-blocking)
-    if (incidentId) {
-      evaluateAndNotify(
-        incidentId,
-        nodeId,
-        incident.type,
-        incident.severity,
-        incident.title,
-        incident.description
-      ).catch(err => logger.error('Alert notification failed', err));
+    // Send alert for critical/warning severity
+    if (incidentId && (incident.severity === 'critical' || incident.severity === 'warning')) {
+      deliverAlert(
+        {
+          id: incidentId,
+          node_id: nodeId,
+          type: incident.type,
+          severity: incident.severity,
+          title: incident.title,
+          description: incident.description,
+          detected_at: new Date().toISOString(),
+          status: 'active',
+        },
+        nodeInfo,
+        {
+          blockHeight,
+          peerCount,
+          cpuPercent: body.system?.cpuPercent,
+          diskPercent: body.system?.diskPercent,
+          fleetMaxHeight,
+        }
+      ).catch(err => logger.error('Alert delivery failed', err));
+    }
+  }
+
+  // Send resolution notifications for resolved incidents
+  for (const resolved of resolvedIncidents) {
+    // Get the resolved incident details
+    const resolvedResult = await queryAll(
+      `SELECT id, type, severity, title, description, detected_at
+       FROM skynet.incidents 
+       WHERE node_id = $1 AND type = $2 AND status = 'resolved'
+       ORDER BY resolved_at DESC
+       LIMIT 1`,
+      [nodeId, resolved.type]
+    );
+    
+    if (resolvedResult.length > 0) {
+      const incident = resolvedResult[0];
+      deliverResolution(
+        {
+          id: incident.id,
+          node_id: nodeId,
+          type: incident.type,
+          severity: incident.severity,
+          title: incident.title,
+          description: incident.description,
+          detected_at: incident.detected_at,
+          status: 'resolved',
+        },
+        nodeInfo,
+        resolved.details
+      ).catch(err => logger.error('Resolution notification failed', err));
     }
   }
 
