@@ -4,13 +4,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateRequestId, getRequestIdFromHeader, runWithContext, getRequestContext } from './lib/request-context';
-import { logger, log } from './lib/logger';
+import { generateRequestId, getRequestIdFromHeader, runWithContext } from './lib/request-context';
+import { logger } from './lib/logger';
 import {
   checkRateLimit,
   createRateLimitHeaders,
   getRateLimitIdentifier,
   determineRateLimitTier,
+  getClientIP,
+  getHeartbeatIdentifier,
 } from './lib/rate-limiter';
 
 // =============================================================================
@@ -24,7 +26,13 @@ const SUNSET_DATES: Record<string, string> = {};
 const CORS_CONFIG = {
   allowedOrigins: process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['*'],
   allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Version', 'X-Request-ID'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-API-Version',
+    'X-Request-ID',
+    'X-Node-ID',
+  ],
   maxAge: 86400,
 };
 
@@ -112,6 +120,48 @@ function handleCORS(req: NextRequest, response: NextResponse): NextResponse {
 }
 
 // =============================================================================
+// Rate Limiting
+// =============================================================================
+
+/**
+ * Apply rate limiting to API requests
+ * Returns null if allowed, or a response if rate limited
+ */
+function applyRateLimit(
+  req: NextRequest,
+  path: string
+): { limited: boolean; result?: ReturnType<typeof checkRateLimit> } {
+  // Only apply to /api/v1/* routes
+  if (!path.startsWith('/api/v1/')) {
+    return { limited: false };
+  }
+
+  // Extract API key from Authorization header
+  const authHeader = req.headers.get('authorization');
+  const apiKey = authHeader?.replace('Bearer ', '') || null;
+
+  // Determine rate limit tier
+  const tier = determineRateLimitTier(req.method, path, apiKey);
+
+  // Get appropriate identifier
+  let identifier: string;
+  if (tier === 'heartbeat') {
+    // For heartbeat, try to get node ID, fall back to IP
+    identifier = getHeartbeatIdentifier(req) || getClientIP(req);
+  } else {
+    identifier = getRateLimitIdentifier(req, apiKey);
+  }
+
+  // Check rate limit
+  const result = checkRateLimit(identifier, tier);
+
+  return {
+    limited: result.limited,
+    result,
+  };
+}
+
+// =============================================================================
 // Main Middleware
 // =============================================================================
 
@@ -119,32 +169,59 @@ export async function middleware(req: NextRequest) {
   const startTime = Date.now();
   const requestId = getRequestIdFromHeader(req) || generateRequestId();
   const apiVersion = getApiVersion(req);
+  const path = req.nextUrl.pathname;
 
   // Run request handling in context
   return runWithContext(
     {
       requestId,
       startTime,
-      path: req.nextUrl.pathname,
+      path,
       method: req.method,
       userAgent: req.headers.get('user-agent') || undefined,
-      ip: req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-          req.headers.get('x-real-ip') ||
-          undefined,
+      ip: getClientIP(req),
     },
     async () => {
       try {
         // Log request start
         logger.debug('Request started', {
           method: req.method,
-          path: req.nextUrl.pathname,
+          path,
           query: req.nextUrl.search,
           apiVersion,
         });
 
-        // Rate limiting disabled for now
-        // TODO: Re-enable when production traffic warrants it
-        const apiKey = req.headers.get('authorization')?.replace('Bearer ', '');
+        // Apply rate limiting for API routes
+        const rateLimitCheck = applyRateLimit(req, path);
+
+        // If rate limited, return 429 response
+        if (rateLimitCheck.limited && rateLimitCheck.result) {
+          const result = rateLimitCheck.result;
+          logger.warn('Rate limit exceeded', {
+            path,
+            method: req.method,
+            ip: getClientIP(req),
+          });
+
+          const response = NextResponse.json(
+            {
+              error: 'Too Many Requests',
+              code: 'RATE_LIMIT_EXCEEDED',
+              message: `Rate limit exceeded. Try again in ${result.retryAfter} seconds.`,
+              requestId,
+            },
+            { status: 429 }
+          );
+
+          // Add rate limit headers
+          const headers = createRateLimitHeaders(result);
+          Object.entries(headers).forEach(([key, value]) => {
+            response.headers.set(key, value);
+          });
+
+          response.headers.set('x-request-id', requestId);
+          return handleCORS(req, response);
+        }
 
         // Continue to route handler
         const response = NextResponse.next();
@@ -161,13 +238,21 @@ export async function middleware(req: NextRequest) {
         // Add API version headers
         addVersionHeaders(response, apiVersion);
 
+        // Add rate limit headers if this was an API request
+        if (rateLimitCheck.result) {
+          const headers = createRateLimitHeaders(rateLimitCheck.result);
+          Object.entries(headers).forEach(([key, value]) => {
+            response.headers.set(key, value);
+          });
+        }
+
         // Remove X-Powered-By
         response.headers.delete('X-Powered-By');
 
         return handleCORS(req, response);
       } catch (error) {
         logger.error('Middleware error', error as Error, {
-          path: req.nextUrl.pathname,
+          path,
           method: req.method,
         });
 

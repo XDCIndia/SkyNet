@@ -1,59 +1,17 @@
 /**
- * XDC SkyNet - Advanced Rate Limiting
- * Uses LRU cache for Edge-compatible rate limiting
- * Note: Redis support removed for Edge runtime compatibility
+ * XDC SkyNet - Pure TypeScript In-Memory Rate Limiter
+ * Sliding window rate limiting without external dependencies
+ * Compatible with Edge Runtime (no Node.js-only modules)
  */
 
-import { LRUCache } from 'lru-cache';
-
 // =============================================================================
-// Rate Limit Tiers
+// Types
 // =============================================================================
 
 export interface RateLimitConfig {
   windowMs: number;
   maxRequests: number;
-  burstAllowance?: number;
 }
-
-export const RATE_LIMIT_TIERS = {
-  // Public read endpoints
-  public: {
-    windowMs: 60_000,
-    maxRequests: 60,
-    burstAllowance: 10,
-  },
-  // Authenticated read endpoints
-  authenticated: {
-    windowMs: 60_000,
-    maxRequests: 120,
-    burstAllowance: 20,
-  },
-  // Write endpoints (POST/PUT/DELETE)
-  write: {
-    windowMs: 60_000,
-    maxRequests: 30,
-    burstAllowance: 5,
-  },
-  // Heartbeat endpoint (frequent calls expected)
-  heartbeat: {
-    windowMs: 60_000,
-    maxRequests: 120,
-    burstAllowance: 10,
-  },
-  // Admin endpoints
-  admin: {
-    windowMs: 60_000,
-    maxRequests: 300,
-    burstAllowance: 50,
-  },
-} as const;
-
-export type RateLimitTier = keyof typeof RATE_LIMIT_TIERS;
-
-// =============================================================================
-// Rate Limit Result
-// =============================================================================
 
 export interface RateLimitResult {
   limited: boolean;
@@ -63,51 +21,132 @@ export interface RateLimitResult {
   retryAfter?: number;
 }
 
-// =============================================================================
-// LRU Fallback Cache
-// =============================================================================
-
-interface LimiterEntry {
-  count: number;
-  resetAt: number;
+interface RateLimitEntry {
+  requests: number[]; // Timestamps of requests in the current window
 }
 
-const lruCache = new LRUCache<string, LimiterEntry>({
-  max: 10000,
-  ttl: 120_000, // 2 minutes max TTL
-  allowStale: false,
-  updateAgeOnGet: true,
-});
-
 // =============================================================================
-// LRU Rate Limiting (Sliding Window)
+// Rate Limit Tiers Configuration
 // =============================================================================
 
-function checkLruRateLimit(
+export const RATE_LIMIT_TIERS = {
+  // Public/unauthenticated: 60 req/min per IP
+  public: {
+    windowMs: 60_000,
+    maxRequests: 60,
+  },
+  // Authenticated (API key): 600 req/min per key
+  authenticated: {
+    windowMs: 60_000,
+    maxRequests: 600,
+  },
+  // Heartbeat endpoint: 120 req/min per node
+  heartbeat: {
+    windowMs: 60_000,
+    maxRequests: 120,
+  },
+} as const;
+
+export type RateLimitTier = keyof typeof RATE_LIMIT_TIERS;
+
+// =============================================================================
+// In-Memory Store
+// =============================================================================
+
+// Map of key -> entry for rate limiting
+const rateLimitStore = new Map<string, RateLimitEntry>();
+
+// Track when we last cleaned up expired entries
+let lastCleanupTime = Date.now();
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+// =============================================================================
+// Cleanup Logic
+// =============================================================================
+
+/**
+ * Clean up expired entries to prevent memory leaks
+ * Runs every 5 minutes
+ */
+function maybeCleanup(): void {
+  const now = Date.now();
+  
+  if (now - lastCleanupTime < CLEANUP_INTERVAL_MS) {
+    return; // Not time yet
+  }
+  
+  lastCleanupTime = now;
+  
+  // Remove entries with all requests outside the window
+  Array.from(rateLimitStore.entries()).forEach(([key, entry]) => {
+    const validRequests = entry.requests.filter(
+      timestamp => now - timestamp < 60_000
+    );
+    
+    if (validRequests.length === 0) {
+      rateLimitStore.delete(key);
+    } else {
+      entry.requests = validRequests;
+    }
+  });
+}
+
+// =============================================================================
+// Sliding Window Rate Limit Logic
+// =============================================================================
+
+/**
+ * Check if a request should be rate limited using sliding window algorithm
+ */
+function checkSlidingWindow(
   key: string,
   config: RateLimitConfig
 ): RateLimitResult {
   const now = Date.now();
-  const windowKey = `ratelimit:${key}`;
+  const windowStart = now - config.windowMs;
   
-  let entry = lruCache.get(windowKey);
+  // Get or create entry
+  let entry = rateLimitStore.get(key);
   
-  if (!entry || now > entry.resetAt) {
-    entry = { count: 0, resetAt: now + config.windowMs };
+  if (!entry) {
+    entry = { requests: [] };
+    rateLimitStore.set(key, entry);
   }
   
-  entry.count++;
-  lruCache.set(windowKey, entry);
+  // Remove requests outside the current window (sliding window)
+  entry.requests = entry.requests.filter(timestamp => timestamp > windowStart);
   
-  const remaining = Math.max(0, config.maxRequests - entry.count);
-  const limited = entry.count > config.maxRequests;
+  // Check if limit exceeded
+  if (entry.requests.length >= config.maxRequests) {
+    // Find the oldest request to determine when the window will slide
+    const oldestRequest = Math.min(...entry.requests);
+    const retryAfter = Math.ceil((oldestRequest + config.windowMs - now) / 1000);
+    const resetAt = oldestRequest + config.windowMs;
+    
+    return {
+      limited: true,
+      remaining: 0,
+      resetAt,
+      totalLimit: config.maxRequests,
+      retryAfter: Math.max(1, retryAfter),
+    };
+  }
+  
+  // Add current request timestamp
+  entry.requests.push(now);
+  
+  // Calculate reset time (when the oldest request will expire)
+  const resetAt = entry.requests.length > 0 
+    ? Math.min(...entry.requests) + config.windowMs 
+    : now + config.windowMs;
+  
+  const remaining = config.maxRequests - entry.requests.length;
   
   return {
-    limited,
+    limited: false,
     remaining,
-    resetAt: entry.resetAt,
+    resetAt,
     totalLimit: config.maxRequests,
-    retryAfter: limited ? Math.ceil((entry.resetAt - now) / 1000) : undefined,
   };
 }
 
@@ -115,21 +154,29 @@ function checkLruRateLimit(
 // Main Rate Limit Function
 // =============================================================================
 
-export async function checkRateLimit(
+/**
+ * Check rate limit for a given identifier and tier
+ */
+export function checkRateLimit(
   identifier: string,
   tier: RateLimitTier = 'public'
-): Promise<RateLimitResult> {
+): RateLimitResult {
+  // Run cleanup periodically (every 5 minutes)
+  maybeCleanup();
+  
   const config = RATE_LIMIT_TIERS[tier];
   const key = `${tier}:${identifier}`;
   
-  // Use LRU cache (Edge-compatible)
-  return checkLruRateLimit(key, config);
+  return checkSlidingWindow(key, config);
 }
 
 // =============================================================================
 // Rate Limit Headers
 // =============================================================================
 
+/**
+ * Create rate limit headers for responses
+ */
 export function createRateLimitHeaders(result: RateLimitResult): Record<string, string> {
   const headers: Record<string, string> = {
     'X-RateLimit-Limit': String(result.totalLimit),
@@ -148,9 +195,22 @@ export function createRateLimitHeaders(result: RateLimitResult): Record<string, 
 // IP/Key Extraction Helpers
 // =============================================================================
 
+/**
+ * Get the client IP address from request headers
+ */
+export function getClientIP(req: Request): string {
+  const forwarded = req.headers.get('x-forwarded-for');
+  const realIp = req.headers.get('x-real-ip');
+  const ip = forwarded?.split(',')[0]?.trim() || realIp || 'unknown';
+  return ip;
+}
+
+/**
+ * Get rate limit identifier based on API key or IP
+ */
 export function getRateLimitIdentifier(
   req: Request,
-  apiKey?: string
+  apiKey?: string | null
 ): string {
   if (apiKey) {
     // Use API key hash for identified users
@@ -158,52 +218,74 @@ export function getRateLimitIdentifier(
   }
   
   // Fall back to IP address
-  const forwarded = req.headers.get('x-forwarded-for');
-  const realIp = req.headers.get('x-real-ip');
-  const ip = forwarded?.split(',')[0]?.trim() || realIp || 'unknown';
-  
-  return `ip:${ip}`;
+  return `ip:${getClientIP(req)}`;
 }
 
+/**
+ * Simple string hash function (FNV-1a inspired)
+ */
 function hashString(str: string): string {
-  let hash = 0;
+  let hash = 2166136261;
   for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
+    hash ^= str.charCodeAt(i);
+    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
   }
-  return Math.abs(hash).toString(36);
+  return Math.abs(hash >>> 0).toString(36);
 }
 
 // =============================================================================
 // Tier Determination
 // =============================================================================
 
+/**
+ * Determine rate limit tier based on request path and authentication
+ */
 export function determineRateLimitTier(
   method: string,
   path: string,
-  isAuthenticated: boolean
+  apiKey?: string | null
 ): RateLimitTier {
-  // Heartbeat endpoint
-  if (path.includes('/heartbeat')) {
+  // Heartbeat endpoint - 120 req/min per node
+  if (path.includes('/nodes/heartbeat')) {
     return 'heartbeat';
   }
   
-  // Admin endpoints
-  if (path.includes('/admin') || path.includes('/upgrades')) {
-    return 'admin';
-  }
-  
-  // Write operations
-  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method.toUpperCase())) {
-    return 'write';
-  }
-  
-  // Authenticated reads
-  if (isAuthenticated) {
+  // Authenticated requests - 600 req/min per key
+  if (apiKey) {
     return 'authenticated';
   }
   
-  // Public reads
+  // Public/unauthenticated - 60 req/min per IP
   return 'public';
+}
+
+/**
+ * Extract node ID from request for heartbeat rate limiting
+ * For heartbeat endpoints, we rate limit per node, not per IP
+ */
+export function getHeartbeatIdentifier(req: Request): string | null {
+  // Try to get node ID from headers first
+  const nodeIdHeader = req.headers.get('x-node-id');
+  if (nodeIdHeader) {
+    return nodeIdHeader;
+  }
+  
+  // Fall back to IP if no node ID available
+  return getClientIP(req);
+}
+
+// =============================================================================
+// Stats (for monitoring/debugging)
+// =============================================================================
+
+export function getRateLimitStats(): {
+  totalKeys: number;
+  storeSize: number;
+  lastCleanup: number;
+} {
+  return {
+    totalKeys: rateLimitStore.size,
+    storeSize: JSON.stringify(Array.from(rateLimitStore.entries())).length,
+    lastCleanup: lastCleanupTime,
+  };
 }
