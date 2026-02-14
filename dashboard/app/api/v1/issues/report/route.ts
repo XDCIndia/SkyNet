@@ -169,11 +169,28 @@ function createGitHubIssue(
   labels: string[]
 ): string | null {
   try {
-    const labelFlag = labels.map(l => `-l "${l}"`).join(' ');
-    const result = execSync(
-      `gh issue create --repo ${repo} --title "${title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"')}" ${labelFlag}`,
-      { timeout: 30000 }
-    ).toString().trim();
+    const fs = require('fs');
+    const tmpBody = `/tmp/gh-issue-${Date.now()}.md`;
+    fs.writeFileSync(tmpBody, body);
+    
+    // Try with labels first, fall back to no labels if they don't exist
+    const safeTitle = title.replace(/"/g, '\\"').replace(/`/g, '\\`').slice(0, 200);
+    let result: string;
+    try {
+      const labelFlag = labels.map(l => `-l "${l}"`).join(' ');
+      result = execSync(
+        `gh issue create --repo ${repo} --title "${safeTitle}" --body-file "${tmpBody}" ${labelFlag}`,
+        { timeout: 30000 }
+      ).toString().trim();
+    } catch {
+      // Retry without labels
+      result = execSync(
+        `gh issue create --repo ${repo} --title "${safeTitle}" --body-file "${tmpBody}"`,
+        { timeout: 30000 }
+      ).toString().trim();
+    }
+    
+    try { fs.unlinkSync(tmpBody); } catch {}
     return result;
   } catch (e) {
     logger.error('Failed to create GitHub issue:', e);
