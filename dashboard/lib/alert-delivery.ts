@@ -255,11 +255,12 @@ async function logAlertHistory(
   message?: string
 ): Promise<void> {
   try {
+    // The table schema uses channels_notified as text[] and message as text
     await query(
       `INSERT INTO skynet.alert_history 
-       (incident_id, node_id, channel_type, success, message, sent_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())`,
-      [incidentId, nodeId, channelType, success, message || null]
+       (incident_id, node_id, channels_notified, message, sent_at)
+       VALUES ($1, $2, $3, $4, NOW())`,
+      [incidentId, nodeId, [channelType], message || null]
     );
   } catch (err) {
     console.error('Failed to log alert history:', err);
