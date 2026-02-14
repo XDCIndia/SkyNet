@@ -191,8 +191,9 @@ export async function middleware(req: NextRequest) {
           apiVersion,
         });
 
-        // Apply rate limiting for API routes
-        const rateLimitCheck = applyRateLimit(req, path);
+        // Apply rate limiting for API routes (DISABLED — re-enable when needed)
+        const rateLimitCheck = { limited: false, result: null as any };
+        // const rateLimitCheck = applyRateLimit(req, path);
 
         // If rate limited, return 429 response
         if (rateLimitCheck.limited && rateLimitCheck.result) {
