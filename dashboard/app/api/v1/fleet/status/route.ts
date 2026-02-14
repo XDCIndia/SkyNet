@@ -36,6 +36,7 @@ async function getHandler(request: NextRequest) {
       WITH latest_metrics AS (
         SELECT DISTINCT ON (node_id)
           node_id,
+          block_height,
           sync_percent,
           peer_count,
           is_syncing,
@@ -56,6 +57,7 @@ async function getHandler(request: NextRequest) {
         n.created_at,
         n.email,
         n.telegram,
+        m.block_height,
         m.sync_percent,
         m.peer_count,
         m.is_syncing,
@@ -131,6 +133,7 @@ async function getHandler(request: NextRequest) {
       isActive: n.is_active,
       createdAt: n.created_at,
       status: n.status,
+      blockHeight: Number(n.block_height) || 0,
       syncPercent: n.sync_percent ?? 0,
       peerCount: n.peer_count ?? 0,
       cpuPercent: n.cpu_percent ?? 0,
