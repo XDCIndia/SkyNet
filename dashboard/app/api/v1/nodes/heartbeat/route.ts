@@ -151,7 +151,11 @@ async function postHandler(request: NextRequest) {
       [
         nodeId,
         blockHeight ?? null,
-        syncProgress ?? null,
+        // Recalculate sync percent using fleet max height for accuracy
+        // Node-reported syncProgress is unreliable when syncing from scratch
+        (fleetMaxHeight > 0 && blockHeight != null)
+          ? Math.min(100, Math.round((blockHeight / fleetMaxHeight) * 10000) / 100)
+          : syncProgress ?? null,
         peerCount ?? null,
         body.system?.cpuPercent ?? null,
         body.system?.memoryPercent ?? null,

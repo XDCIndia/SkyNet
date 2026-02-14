@@ -96,6 +96,20 @@ export async function GET(
 
     const latestMetrics = metricsResult.rows[0] || null;
 
+    // Get network height (max block from all healthy nodes in last 5 min)
+    const networkHeightResult = await query(
+      `SELECT COALESCE(MAX(block_height), 0) as network_height
+       FROM skynet.node_metrics
+       WHERE collected_at > NOW() - INTERVAL '5 minutes'`
+    );
+    const networkHeight = parseInt(networkHeightResult.rows[0]?.network_height || '0');
+
+    // Recalculate accurate sync percent
+    const nodeBlock = latestMetrics?.block_height || 0;
+    const accurateSyncPercent = networkHeight > 0
+      ? Math.min(100, Math.round((nodeBlock / networkHeight) * 10000) / 100)
+      : latestMetrics?.sync_percent ?? 0;
+
     return NextResponse.json({
       node: {
         id: node.id,
@@ -124,8 +138,9 @@ export async function GET(
       },
       status: {
         blockHeight: latestMetrics?.block_height,
-        isSyncing: latestMetrics?.is_syncing,
-        syncPercent: latestMetrics?.sync_percent,
+        networkHeight,
+        isSyncing: accurateSyncPercent < 99.9,
+        syncPercent: accurateSyncPercent,
         peerCount: latestMetrics?.peer_count,
         activePeers: parseInt(peersResult.rows[0]?.active_peers || '0'),
         txPoolPending: latestMetrics?.tx_pool_pending,

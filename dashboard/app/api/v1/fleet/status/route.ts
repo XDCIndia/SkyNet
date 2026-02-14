@@ -133,8 +133,16 @@ async function getHandler(request: NextRequest) {
       return val.slice(0, 2) + '*'.repeat(val.length - 4) + val.slice(-2);
     };
 
+    // Get network height for accurate sync percent
+    const maxBlock = Math.max(...nodeStatusRows.map((n: any) => Number(n.block_height) || 0), 1);
+
     // Build node list for frontend
-    const nodeList = nodeStatusRows.map((n: any) => ({
+    const nodeList = nodeStatusRows.map((n: any) => {
+      const nodeBlock = Number(n.block_height) || 0;
+      const accurateSync = maxBlock > 0
+        ? Math.min(100, Math.round((nodeBlock / maxBlock) * 10000) / 100)
+        : n.sync_percent ?? 0;
+      return {
       id: n.id,
       name: n.name,
       host: n.host,
@@ -142,8 +150,9 @@ async function getHandler(request: NextRequest) {
       isActive: n.is_active,
       createdAt: n.created_at,
       status: n.status,
-      blockHeight: Number(n.block_height) || 0,
-      syncPercent: n.sync_percent ?? 0,
+      blockHeight: nodeBlock,
+      networkHeight: maxBlock,
+      syncPercent: accurateSync,
       peerCount: n.peer_count ?? 0,
       cpuPercent: n.cpu_percent ?? 0,
       memoryPercent: n.memory_percent ?? 0,
@@ -158,7 +167,7 @@ async function getHandler(request: NextRequest) {
       chainDataSize: Number(n.chain_data_size) || 0,
       databaseSize: Number(n.database_size) || 0,
       clientVersion: n.client_version || 'Unknown',
-    }));
+    };});
 
     return {
       healthScore,
