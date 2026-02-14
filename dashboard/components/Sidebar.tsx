@@ -176,7 +176,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-[var(--border-subtle)]">
         <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-          <img src="https://s2.coinmarketcap.com/static/img/coins/200x200/2634.png" alt="XDC" width={36} height={36} className="rounded-lg" />
+          <img src="/xdc-logo.png" alt="XDC" width={36} height={36} className="rounded-lg" />
         </div>
         {(!collapsed || isMobile) && (
           <div className="overflow-hidden">

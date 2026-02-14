@@ -41,7 +41,7 @@ export default function Header({
         <div className="flex items-center gap-3">
           {/* XDC Logo SVG */}
           <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden">
-            <img src="https://s2.coinmarketcap.com/static/img/coins/200x200/2634.png" alt="XDC" width={40} height={40} className="rounded-full" />
+            <img src="/xdc-logo.png" alt="XDC" width={40} height={40} className="rounded-full" />
           </div>
           <div>
             <h1 className="text-lg lg:text-xl font-semibold text-[#F9FAFB]" style={{ fontFamily: 'var(--font-fira-sans)' }}>
