@@ -5,8 +5,6 @@ import {
   Server, 
   Activity, 
   RefreshCw, 
-  FileText, 
-  Settings, 
   Filter,
   Grid3X3,
   List,
@@ -17,15 +15,15 @@ import {
   HardDrive,
   MemoryStick,
   Globe,
-  Tag,
-  ChevronDown,
-  MoreHorizontal,
-  Play,
   Square,
+  MoreHorizontal,
   RotateCcw,
   Terminal,
   Edit3,
-  Trash2
+  Users,
+  TrendingUp,
+  TrendingDown,
+  Minus
 } from 'lucide-react';
 
 // Types
@@ -45,6 +43,22 @@ interface FleetNode {
   tags: string[];
   lastSeen: string;
   ip: string;
+  syncPercent?: number;
+  isSyncing?: boolean;
+}
+
+interface FleetData {
+  nodes: FleetNode[];
+  incidents: {
+    critical: number;
+    warning: number;
+    info: number;
+    total: number;
+  };
+}
+
+interface BlockHeightHistory {
+  [nodeId: string]: number[];
 }
 
 // Map API status to UI status
@@ -62,6 +76,49 @@ const mapStatus = (apiStatus: string): 'healthy' | 'warning' | 'critical' | 'off
   }
 };
 
+// Format time ago
+const formatTimeAgo = (timestamp: string): string => {
+  const diff = Date.now() - new Date(timestamp).getTime();
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return `${seconds}s ago`;
+};
+
+// Sparkline Component (Pure SVG)
+function Sparkline({ data }: { data: number[] }) {
+  if (data.length < 2) {
+    return <div className="h-6 flex items-center justify-center text-[10px] text-[#6B7280]">—</div>;
+  }
+  
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  
+  const points = data.map((value, i) => {
+    const x = (i / (data.length - 1)) * 100;
+    const y = 100 - ((value - min) / range) * 100;
+    return `${x},${y}`;
+  }).join(' ');
+
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-6" preserveAspectRatio="none">
+      <polyline
+        points={points}
+        fill="none"
+        stroke="#1E90FF"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
 const regions = ['all'];
 const roles = ['all', 'validator', 'rpc', 'archive', 'bootnode', 'fullnode', 'masternode'];
 const statuses = ['all', 'healthy', 'warning', 'critical', 'offline'];
@@ -77,8 +134,15 @@ export default function FleetOverview() {
   
   // API state
   const [nodes, setNodes] = useState<FleetNode[]>([]);
+  const [incidents, setIncidents] = useState({ critical: 0, warning: 0, info: 0, total: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Block height history for sparklines (rolling buffer of last 10 readings per node)
+  const [blockHeightHistory, setBlockHeightHistory] = useState<BlockHeightHistory>({});
+  
+  // Previous block heights for calculating blocks/min
+  const [previousBlockHeights, setPreviousBlockHeights] = useState<{ [nodeId: string]: { height: number; timestamp: number } }>({});
 
   // Fetch nodes from API
   const fetchNodes = useCallback(async () => {
@@ -92,6 +156,9 @@ export default function FleetOverview() {
       
       const data = await res.json();
       const apiNodes = data.data?.nodes || [];
+      const apiIncidents = data.data?.incidents || { critical: 0, warning: 0, info: 0, total: 0 };
+      
+      setIncidents(apiIncidents);
       
       // Map API response to FleetNode interface
       const mappedNodes: FleetNode[] = apiNodes.map((node: any) => ({
@@ -110,17 +177,60 @@ export default function FleetOverview() {
         tags: node.tags || [],
         lastSeen: node.lastSeen || '',
         ip: node.host || node.ipv4 || '',
+        syncPercent: node.syncPercent ?? 0,
+        isSyncing: node.status === 'syncing',
       }));
       
       setNodes(mappedNodes);
+      
+      // Update block height history (keep last 10 readings)
+      const now = Date.now();
+      setBlockHeightHistory(prev => {
+        const updated = { ...prev };
+        mappedNodes.forEach(node => {
+          if (!updated[node.id]) {
+            updated[node.id] = [];
+          }
+          updated[node.id] = [...updated[node.id], node.blockHeight].slice(-10);
+        });
+        return updated;
+      });
+      
+      // Update previous block heights for rate calculation
+      setPreviousBlockHeights(prev => {
+        const updated = { ...prev };
+        mappedNodes.forEach(node => {
+          if (!updated[node.id]) {
+            updated[node.id] = { height: node.blockHeight, timestamp: now };
+          } else {
+            // Keep the previous value for rate calculation
+            updated[node.id] = { height: node.blockHeight, timestamp: now };
+          }
+        });
+        return updated;
+      });
     } catch (err) {
       console.error('Error fetching nodes:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch nodes');
-      setNodes([]); // Clear nodes on error
+      setNodes([]);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // Calculate blocks/min
+  const calculateBlocksPerMin = (nodeId: string, currentHeight: number): number | null => {
+    const prev = previousBlockHeights[nodeId];
+    if (!prev) return null;
+    
+    const timeDiffMs = Date.now() - prev.timestamp;
+    const timeDiffMin = timeDiffMs / (1000 * 60);
+    
+    if (timeDiffMin < 0.5) return null; // Not enough time passed
+    
+    const blockDiff = currentHeight - prev.height;
+    return blockDiff / timeDiffMin;
+  };
 
   // Initial fetch
   useEffect(() => {
@@ -209,6 +319,12 @@ export default function FleetOverview() {
     if (value < 50) return '#10B981';
     if (value < 80) return '#F59E0B';
     return '#EF4444';
+  };
+  
+  const getPeerColor = (peers: number) => {
+    if (peers >= 5) return 'text-[#10B981]';
+    if (peers >= 1) return 'text-[#F59E0B]';
+    return 'text-[#EF4444]';
   };
 
   // Loading skeleton
@@ -309,7 +425,7 @@ export default function FleetOverview() {
           </div>
         </div>
 
-        {/* Stats Summary */}
+        {/* Stats Summary with Incidents */}
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(16,185,129,0.15)] border border-[rgba(16,185,129,0.3)]">
             <CheckCircle2 className="w-4 h-4 text-[var(--success)]" />
@@ -329,6 +445,29 @@ export default function FleetOverview() {
           </div>
         </div>
       </div>
+
+      {/* Incidents Section */}
+      {incidents.total > 0 && (
+        <div className="mb-6 p-4 rounded-xl border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.05)]">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-[var(--critical)]" />
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-[#F9FAFB] mb-1">Active Incidents</h3>
+              <div className="flex items-center gap-4 text-sm">
+                <span className="text-[var(--critical)]">{incidents.critical} Critical</span>
+                <span className="text-[var(--warning)]">{incidents.warning} Warning</span>
+                <span className="text-[#1E90FF]">{incidents.info} Info</span>
+              </div>
+            </div>
+            <a 
+              href="/incidents" 
+              className="px-3 py-1.5 rounded-lg bg-[var(--accent-blue)] text-white text-sm hover:bg-[var(--accent-blue)]/90 transition-colors"
+            >
+              View All
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col lg:flex-row lg:items-center gap-4 mb-6 p-4 rounded-xl bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)]">
@@ -439,6 +578,8 @@ export default function FleetOverview() {
             const statusStyle = getStatusColor(node.status);
             const StatusIcon = statusStyle.icon;
             const isSelected = selectedNodes.has(node.id);
+            const blocksPerMin = calculateBlocksPerMin(node.id, node.blockHeight);
+            const historyData = blockHeightHistory[node.id] || [];
             
             return (
               <div 
@@ -493,7 +634,7 @@ export default function FleetOverview() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-[#F9FAFB] truncate">{node.name}</h3>
-                    <p className="text-xs text-[#6B7280]">{node.id} • {node.ip}</p>
+                    <p className="text-xs text-[#6B7280]">{node.id.slice(0, 8)} • {node.ip}</p>
                   </div>
                 </div>
                 
@@ -503,7 +644,55 @@ export default function FleetOverview() {
                   {node.status.charAt(0).toUpperCase() + node.status.slice(1)}
                 </div>
                 
-                {/* Metrics */}
+                {/* Block Height Section - PROMINENT */}
+                <div className="mb-3 p-3 rounded-lg bg-[rgba(30,144,255,0.1)] border border-[rgba(30,144,255,0.2)]">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-[#6B7280]">Block Height</span>
+                    {blocksPerMin !== null && blocksPerMin > 0 && (
+                      <span className="text-xs text-[#1E90FF] flex items-center gap-1">
+                        <TrendingUp className="w-3 h-3" />
+                        {blocksPerMin.toFixed(1)} bl/min
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-lg font-bold font-mono text-[#1E90FF]">
+                    {node.blockHeight.toLocaleString()}
+                  </div>
+                  {historyData.length > 1 && (
+                    <div className="mt-2">
+                      <Sparkline data={historyData} />
+                    </div>
+                  )}
+                </div>
+                
+                {/* Connected Peers - VISIBLE */}
+                <div className="mb-3 flex items-center justify-between p-2 rounded-lg bg-[rgba(255,255,255,0.02)]">
+                  <div className="flex items-center gap-2">
+                    <Users className={`w-4 h-4 ${getPeerColor(node.peers)}`} />
+                    <span className="text-xs text-[#6B7280]">Peers</span>
+                  </div>
+                  <span className={`text-sm font-bold ${getPeerColor(node.peers)}`}>
+                    {node.peers}
+                  </span>
+                </div>
+                
+                {/* Sync Progress (if syncing) */}
+                {node.isSyncing && (
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-[#6B7280]">Syncing</span>
+                      <span className="text-[#F59E0B]">{node.syncPercent?.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full bg-[#F59E0B] transition-all" 
+                        style={{ width: `${node.syncPercent || 0}%` }} 
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                {/* Resource Metrics */}
                 <div className="space-y-2 mb-3">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-[#6B7280] flex items-center gap-1"><Cpu className="w-3 h-3" /> CPU</span>
@@ -530,11 +719,11 @@ export default function FleetOverview() {
                   </div>
                 </div>
                 
-                {/* Footer info */}
+                {/* Footer info with Last Seen */}
                 <div className="flex items-center justify-between text-xs text-[#6B7280] pt-3 border-t border-[rgba(255,255,255,0.06)]">
                   <span className="flex items-center gap-1">
-                    <Globe className="w-3 h-3" />
-                    {node.region}
+                    <Clock className="w-3 h-3" />
+                    {formatTimeAgo(node.lastSeen)}
                   </span>
                   <span>v{node.version}</span>
                 </div>
@@ -559,7 +748,7 @@ export default function FleetOverview() {
       {/* List View */}
       {viewMode === 'list' && (
         <div className="overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.06)]">
-          <table className="w-full min-w-[1000px]">
+          <table className="w-full min-w-[1200px]">
             <thead className="bg-[var(--bg-card)]">
               <tr className="border-b border-[rgba(255,255,255,0.06)]">
                 <th className="text-left py-3 px-4">
@@ -575,11 +764,11 @@ export default function FleetOverview() {
                 </th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Node</th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Status</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Role</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Block</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Block Height</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Sync</th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Peers</th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Resources</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Region</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Last Seen</th>
                 <th className="text-right py-3 px-4 text-xs font-medium text-[#6B7280]">Actions</th>
               </tr>
             </thead>
@@ -588,6 +777,7 @@ export default function FleetOverview() {
                 const statusStyle = getStatusColor(node.status);
                 const StatusIcon = statusStyle.icon;
                 const isSelected = selectedNodes.has(node.id);
+                const blocksPerMin = calculateBlocksPerMin(node.id, node.blockHeight);
                 
                 return (
                   <tr key={node.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
@@ -608,7 +798,7 @@ export default function FleetOverview() {
                         </div>
                         <div>
                           <div className="font-medium text-[#F9FAFB]">{node.name}</div>
-                          <div className="text-xs text-[#6B7280]">{node.id}</div>
+                          <div className="text-xs text-[#6B7280]">{node.id.slice(0, 8)}</div>
                         </div>
                       </div>
                     </td>
@@ -618,9 +808,33 @@ export default function FleetOverview() {
                         {node.status}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-sm text-[#9CA3AF] capitalize">{node.role}</td>
-                    <td className="py-3 px-4 text-sm font-mono-nums text-[#F9FAFB]">{node.blockHeight.toLocaleString()}</td>
-                    <td className="py-3 px-4 text-sm text-[#9CA3AF]">{node.peers}</td>
+                    <td className="py-3 px-4">
+                      <div className="font-mono-nums text-[#1E90FF] font-semibold">{node.blockHeight.toLocaleString()}</div>
+                      {blocksPerMin !== null && blocksPerMin > 0 && (
+                        <div className="text-xs text-[#6B7280]">{blocksPerMin.toFixed(1)} bl/min</div>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      {node.isSyncing ? (
+                        <div className="w-20">
+                          <div className="text-xs text-[#F59E0B] mb-1">{node.syncPercent?.toFixed(0)}%</div>
+                          <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
+                            <div 
+                              className="h-full rounded-full bg-[#F59E0B] transition-all" 
+                              style={{ width: `${node.syncPercent || 0}%` }} 
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-[#10B981]">Synced ✓</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <Users className={`w-4 h-4 ${getPeerColor(node.peers)}`} />
+                        <span className={`font-semibold ${getPeerColor(node.peers)}`}>{node.peers}</span>
+                      </div>
+                    </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1.5">
@@ -633,7 +847,7 @@ export default function FleetOverview() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-sm text-[#9CA3AF]">{node.region}</td>
+                    <td className="py-3 px-4 text-sm text-[#9CA3AF]">{formatTimeAgo(node.lastSeen)}</td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button 
