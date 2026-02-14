@@ -96,7 +96,7 @@ export async function GET(
         client_type: node.client_type,
         node_type: node.node_type,
         metrics: {
-          blockHeight: node.block_height,
+          blockHeight: parseInt(node.block_height || '0', 10),
           syncPercent: node.sync_percent,
           peerCount: node.peer_count,
           cpuPercent: node.cpu_percent,

@@ -22,7 +22,9 @@ import {
   Activity,
   X,
   Wifi,
-  Layers
+  Layers,
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 
 type NodeStatus = 'online' | 'degraded' | 'offline';
@@ -129,6 +131,68 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   );
 }
 
+// Confirmation Dialog Component
+function ConfirmDialog({ 
+  isOpen, 
+  title, 
+  message, 
+  confirmText = 'Confirm', 
+  cancelText = 'Cancel',
+  confirmVariant = 'danger',
+  onConfirm, 
+  onCancel,
+  isLoading = false
+}: { 
+  isOpen: boolean; 
+  title: string; 
+  message: string; 
+  confirmText?: string;
+  cancelText?: string;
+  confirmVariant?: 'danger' | 'primary' | 'warning';
+  onConfirm: () => void; 
+  onCancel: () => void;
+  isLoading?: boolean;
+}) {
+  if (!isOpen) return null;
+
+  const confirmStyles = {
+    danger: 'bg-[#EF4444] hover:bg-[#EF4444]/90 text-white',
+    primary: 'bg-[#1E90FF] hover:bg-[#1E90FF]/90 text-white',
+    warning: 'bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-white',
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-[#111827] border border-white/10 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-[#EF4444]/10 flex items-center justify-center">
+            <AlertCircle className="w-5 h-5 text-[#EF4444]" />
+          </div>
+          <h3 className="text-lg font-semibold text-[#F1F5F9]">{title}</h3>
+        </div>
+        <p className="text-[#94A3B8] mb-6 leading-relaxed">{message}</p>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onCancel}
+            disabled={isLoading}
+            className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isLoading}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2 ${confirmStyles[confirmVariant]}`}
+          >
+            {isLoading && <RefreshCw className="w-4 h-4 animate-spin" />}
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DiagnosticsRow({ nodeId, onAction }: { nodeId: string; onAction: (action: string, node: string) => void }) {
   const [running, setRunning] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
@@ -199,6 +263,10 @@ export default function FleetPage() {
   const [roleFilter, setRoleFilter] = useState<NodeRole | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<NodeStatus | 'all'>('all');
   const [toast, setToast] = useState<string | null>(null);
+  
+  // Node removal state
+  const [nodeToRemove, setNodeToRemove] = useState<FleetNode | null>(null);
+  const [isRemovingNode, setIsRemovingNode] = useState(false);
 
   // WebSocket for live updates
   const { incidents: wsIncidents, connected: wsConnected } = useWebSocket();
@@ -277,6 +345,33 @@ export default function FleetPage() {
 
   const handleRowClick = (nodeId: string) => {
     router.push(`/nodes/${nodeId}`);
+  };
+
+  // Handle node removal
+  const handleRemoveNode = async (node: FleetNode) => {
+    setIsRemovingNode(true);
+    try {
+      const res = await fetch(`/api/v1/nodes/${node.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setToast(`Node "${node.name}" has been removed successfully`);
+        // Refresh the fleet data
+        await fetchFleet();
+      } else {
+        const error = await res.json();
+        setToast(`Failed to remove node: ${error.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Error removing node:', err);
+      setToast('Failed to remove node. Please try again.');
+    } finally {
+      setIsRemovingNode(false);
+      setNodeToRemove(null);
+    }
   };
 
   const filteredAndSortedNodes = useMemo(() => {

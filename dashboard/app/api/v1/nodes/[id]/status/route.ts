@@ -105,7 +105,7 @@ export async function GET(
     const networkHeight = parseInt(networkHeightResult.rows[0]?.network_height || '0');
 
     // Recalculate accurate sync percent
-    const nodeBlock = latestMetrics?.block_height || 0;
+    const nodeBlock = parseInt(latestMetrics?.block_height || '0', 10);
     const accurateSyncPercent = networkHeight > 0
       ? Math.min(100, Math.round((nodeBlock / networkHeight) * 10000) / 100)
       : latestMetrics?.sync_percent ?? 0;
@@ -137,7 +137,7 @@ export async function GET(
         security_issues: node.security_issues,
       },
       status: {
-        blockHeight: latestMetrics?.block_height,
+        blockHeight: parseInt(latestMetrics?.block_height || '0', 10),
         networkHeight,
         isSyncing: accurateSyncPercent < 99.9,
         syncPercent: accurateSyncPercent,
