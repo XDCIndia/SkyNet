@@ -38,7 +38,7 @@ export async function GET(
       `SELECT 
         id, name, host, role, is_active, created_at, updated_at,
         location_city, location_country, location_lat, location_lng,
-        tags, ipv4, ipv6, os_info, client_type, node_type
+        tags, ipv4, ipv6, os_info, client_type, node_type, sync_mode
        FROM skynet.nodes 
        WHERE id = $1`,
       [id]
@@ -58,7 +58,7 @@ export async function GET(
         coinbase, cpu_percent, memory_percent, disk_percent,
         disk_used_gb, disk_total_gb, rpc_latency_ms, collected_at,
         ipv4, ipv6, os_type, os_release, os_arch, kernel_version,
-        client_type, node_type, sync_mode, security_score, security_issues,
+        client_type, node_type, security_score, security_issues,
         chain_data_size, database_size
        FROM skynet.node_metrics 
        WHERE node_id = $1 
@@ -134,7 +134,7 @@ export async function GET(
         clientVersion: latestMetrics?.client_version,
         clientType: latestMetrics?.client_type,
         nodeType: latestMetrics?.node_type,
-        syncMode: latestMetrics?.sync_mode,
+        syncMode: node.sync_mode,
         coinbase: latestMetrics?.coinbase,
         system: latestMetrics ? {
           cpuPercent: latestMetrics.cpu_percent,
