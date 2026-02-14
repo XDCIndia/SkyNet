@@ -56,6 +56,8 @@ interface FleetNode {
   syncMode?: string;
   chainDataSize?: number;
   databaseSize?: number;
+  storageType?: string;
+  iopsEstimate?: number;
   clientVersion?: string;
 }
 
@@ -311,6 +313,8 @@ export default function FleetOverview() {
           syncMode: node.syncMode || node.sync_mode,
           chainDataSize: node.chainDataSize || node.chain_data_size,
           databaseSize: node.databaseSize || node.database_size,
+          storageType: node.storageType || node.storage_type,
+          iopsEstimate: node.iopsEstimate || node.iops_estimate || 0,
           clientVersion: node.clientVersion || node.client_version,
         };
       });
@@ -937,17 +941,31 @@ export default function FleetOverview() {
                 </div>
                 
                 {/* Storage */}
-                {(node.chainDataSize || node.databaseSize) && (
+                {(node.chainDataSize || node.databaseSize || node.storageType) ? (
                   <div className="mb-3 flex items-center justify-between p-2 rounded-lg bg-[rgba(255,255,255,0.02)]">
                     <div className="flex items-center gap-2">
                       <Database className="w-4 h-4 text-[#6B7280]" />
                       <span className="text-xs text-[#6B7280]">Storage</span>
+                      {node.storageType && node.storageType !== 'unknown' && (
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                          node.storageType.includes('NVMe') ? 'bg-[#10B981]/10 text-[#10B981]' :
+                          node.storageType.includes('SSD') ? 'bg-[#3B82F6]/10 text-[#3B82F6]' :
+                          'bg-[#F59E0B]/10 text-[#F59E0B]'
+                        }`}>
+                          {node.storageType}
+                        </span>
+                      )}
                     </div>
-                    <span className="text-sm font-medium text-[#F9FAFB]">
-                      {formatBytes(node.chainDataSize || node.databaseSize)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {(node.iopsEstimate || 0) > 0 && (
+                        <span className="text-[10px] text-[#6B7280]">~{((node.iopsEstimate || 0) / 1000).toFixed(1)}K IOPS</span>
+                      )}
+                      <span className="text-sm font-medium text-[#F9FAFB]">
+                        {(node.chainDataSize || node.databaseSize) ? formatBytes(node.chainDataSize || node.databaseSize) : '—'}
+                      </span>
+                    </div>
                   </div>
-                )}
+                ) : null}
                 
                 {/* Resource Metrics */}
                 <div className="space-y-2 mb-3">

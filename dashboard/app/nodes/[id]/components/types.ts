@@ -58,6 +58,9 @@ export interface NodeStatus {
   storage?: {
     chainDataSize?: number;
     databaseSize?: number;
+    storageType?: string;
+    storageModel?: string;
+    iopsEstimate?: number;
   };
   os?: {
     type?: string;

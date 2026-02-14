@@ -69,6 +69,9 @@ export const SystemMetricsSchema = z.object({
   loadAvg1m: z.coerce.number().min(0).optional(),
   loadAvg5m: z.coerce.number().min(0).optional(),
   loadAvg15m: z.coerce.number().min(0).optional(),
+  storageType: z.string().max(50).optional(),
+  storageModel: z.string().max(200).optional(),
+  iopsEstimate: z.coerce.number().int().min(0).optional(),
 });
 
 export const HeartbeatSchema = z.object({

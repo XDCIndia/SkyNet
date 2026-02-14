@@ -45,6 +45,8 @@ async function getHandler(request: NextRequest) {
           disk_percent,
           chain_data_size,
           database_size,
+          storage_type,
+          iops_estimate,
           client_version,
           collected_at
         FROM skynet.node_metrics
@@ -72,6 +74,8 @@ async function getHandler(request: NextRequest) {
         m.disk_percent,
         m.chain_data_size,
         m.database_size,
+        m.storage_type,
+        m.iops_estimate,
         m.client_version,
         m.collected_at,
         CASE
@@ -166,6 +170,8 @@ async function getHandler(request: NextRequest) {
       syncMode: n.sync_mode || 'full',
       chainDataSize: Number(n.chain_data_size) || 0,
       databaseSize: Number(n.database_size) || 0,
+      storageType: n.storage_type || null,
+      iopsEstimate: Number(n.iops_estimate) || 0,
       clientVersion: n.client_version || 'Unknown',
     };});
 
