@@ -95,6 +95,7 @@ curl -X POST http://localhost:3000/api/v1/nodes/register \
 | Node Diagnostics | ✅ Live | RPC health, sync status, peer analysis |
 | Peer Intelligence | ✅ Live | Geographic map, latency, client versions |
 | Incident Detection | ✅ Live | Auto-detected issues with severity |
+| Automated Issue Pipeline | ✅ Live | Deduplication, GitHub integration, auto-fixes |
 | Validator Leaderboard | 🔄 Beta | Real-time ranking by stake and performance |
 | Mobile App | 📅 Q3 2026 | iOS/Android companion app |
 | AI Diagnostics | 📅 Q4 2026 | Intelligent root cause analysis |
@@ -194,7 +195,135 @@ curl -X POST http://localhost:3000/api/v1/nodes/heartbeat \
 }
 ```
 
-### Fleet Status API
+### Automated Issue Pipeline
+
+SkyNet includes an automated issue pipeline that receives problems from SkyOne nodes, deduplicates them, and creates GitHub issues with analysis and suggested fixes.
+
+#### How SkyOne Reports Issues
+
+Nodes report issues via the report API:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/issues/report \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nodeId": "550e8400-e29b-41d4-a716-446655440000",
+    "nodeName": "xdc-node-01",
+    "type": "sync_stall",
+    "severity": "high",
+    "title": "Block sync stalled at height 89234567",
+    "description": "Node has not progressed for over 10 minutes",
+    "diagnostics": {
+      "blockHeight": 89234567,
+      "peerCount": 5,
+      "cpuPercent": 45,
+      "memoryPercent": 62,
+      "diskPercent": 78,
+      "clientVersion": "v2.6.8-stable",
+      "clientType": "geth",
+      "isSyncing": false,
+      "recentErrors": ["p2p dial timeout", "sync failed"]
+    }
+  }'
+```
+
+**Issue Types:**
+
+| Type | Severity | Description |
+|------|----------|-------------|
+| `sync_stall` | warning/high | Block sync has stopped progressing |
+| `peer_drop` | critical/high | Peer count dropped critically |
+| `disk_critical` | critical/high | Disk usage exceeded threshold |
+| `rpc_error` | high/medium | RPC endpoint not responding |
+| `bad_block` | critical | BAD BLOCK detected |
+| `container_crash` | critical | Node container crashed |
+
+#### Issue Deduplication Logic
+
+The pipeline automatically deduplicates issues:
+- Same `node_id` + same `type` + `status = 'open'` + `last_seen` within last 24h = duplicate
+- Duplicates increment `occurrence_count` instead of creating new records
+- API returns `{ isDuplicate: true, issue: { ... } }` for duplicates
+
+#### GitHub Integration
+
+For critical and high severity issues, SkyNet automatically creates GitHub issues:
+
+1. **Analysis**: Generates solution description based on known patterns
+2. **Code Generation**: Provides solution scripts for common problems
+3. **GitHub Issue**: Created via `gh` CLI on the appropriate repository
+4. **Issue Body** includes:
+   - Node details (name, IP, client version)
+   - Full diagnostics (metrics, logs, errors)
+   - Suggested solution and files to check
+   - Ready-to-run fix script
+
+Labels applied: `auto-detected`, severity level, issue type
+
+#### Issue API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/issues/report` | POST | Report new issue from node |
+| `/api/v1/issues` | GET | List issues with filters |
+| `/api/v1/issues/{id}/resolve` | POST | Mark issue as resolved |
+
+**List Issues Query Parameters:**
+
+```bash
+# Get all open critical issues
+curl "http://localhost:3000/api/v1/issues?status=open&severity=critical" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+# Get issues for specific node
+curl "http://localhost:3000/api/v1/issues?nodeId=550e8400-...&limit=50" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "...",
+      "node_id": "...",
+      "node_name": "xdc-node-01",
+      "type": "sync_stall",
+      "severity": "high",
+      "title": "Block sync stalled at height 89234567",
+      "status": "open",
+      "github_issue_url": "https://github.com/AnilChinchawale/xdc-node-setup/issues/123",
+      "solution_description": "Sync stall detected. Common causes: insufficient peers...",
+      "solution_code": "#!/bin/bash\n# Fix sync stall\n...",
+      "occurrence_count": 3,
+      "first_seen": "2026-02-14T10:00:00Z",
+      "last_seen": "2026-02-14T12:30:00Z"
+    }
+  ],
+  "summary": {
+    "open": 5,
+    "critical": 1,
+    "high": 2,
+    "resolved": 12,
+    "total": 17
+  }
+}
+```
+
+#### Dashboard Integration
+
+The Issues page (`/issues`) provides:
+- **Issue Cards**: Severity badges, occurrence count, duration
+- **Filters**: By status (open/resolved) and severity
+- **Diagnostics View**: Expandable metrics and logs
+- **Solution View**: Suggested fixes with code
+- **Resolve Action**: Mark issues as resolved
+- **GitHub Links**: Direct links to created issues
+
+Sidebar shows real-time count of open issues.
 
 Get an overview of all registered nodes with real-time metrics:
 

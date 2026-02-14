@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Menu,
   X,
+  AlertCircle,
 } from 'lucide-react';
 
 interface NavItem {
@@ -37,6 +38,7 @@ const navItems: NavItem[] = [
   { id: 'executive', label: 'Executive', icon: <Building2 className="w-5 h-5" />, path: '/executive', section: 'Overview' },
   { id: 'fleet', label: 'Fleet', icon: <Wrench className="w-5 h-5" />, path: '/fleet', section: 'Operations' },
   { id: 'alerts', label: 'Alerts', icon: <Bell className="w-5 h-5" />, path: '/alerts', section: 'Operations' },
+  { id: 'issues', label: 'Issues', icon: <AlertCircle className="w-5 h-5" />, path: '/issues', section: 'Operations' },
   { id: 'analytics', label: 'Analytics', icon: <TrendingUp className="w-5 h-5" />, path: '/analytics', section: 'Operations' },
   { id: 'network', label: 'Network Stats', icon: <BarChart3 className="w-5 h-5" />, path: '/network', section: 'Network' },
   { id: 'peers', label: 'Peers', icon: <Globe className="w-5 h-5" />, path: '/peers', section: 'Network' },
@@ -123,6 +125,7 @@ export default function Sidebar() {
   const router = useRouter();
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus | null>(null);
   const [lastFetched, setLastFetched] = useState<number>(0);
+  const [openIssueCount, setOpenIssueCount] = useState<number>(0);
   const [, setTick] = useState(0);
 
   const fetchNetworkStatus = useCallback(async () => {
@@ -138,11 +141,27 @@ export default function Sidebar() {
     }
   }, []);
 
+  const fetchIssueCount = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/issues?status=open&limit=1', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setOpenIssueCount(data.summary?.open || 0);
+      }
+    } catch {
+      // Ignore errors
+    }
+  }, []);
+
   useEffect(() => {
     fetchNetworkStatus();
-    const interval = setInterval(fetchNetworkStatus, 30000);
+    fetchIssueCount();
+    const interval = setInterval(() => {
+      fetchNetworkStatus();
+      fetchIssueCount();
+    }, 30000);
     return () => clearInterval(interval);
-  }, [fetchNetworkStatus]);
+  }, [fetchNetworkStatus, fetchIssueCount]);
 
   // Tick every 10s to update "last updated" display
   useEffect(() => {
@@ -248,6 +267,11 @@ export default function Sidebar() {
                     {(!collapsed || isMobile) && item.badge && (
                       <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--critical)]/20 text-[var(--critical)]">
                         {item.badge}
+                      </span>
+                    )}
+                    {(!collapsed || isMobile) && item.id === 'issues' && openIssueCount > 0 && (
+                      <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--critical)]/20 text-[var(--critical)]">
+                        {openIssueCount > 99 ? '99+' : openIssueCount}
                       </span>
                     )}
                     {(!collapsed || isMobile) && item.isPublic && (
