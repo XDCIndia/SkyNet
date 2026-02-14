@@ -73,13 +73,6 @@ function parseRemoteAddress(remoteAddress: string | null): { ip: string; port: n
   return { ip, port };
 }
 
-// Parse enode: enode://pubkey@ip:port
-function parseEnode(enode: string): { ip: string; port: number } | null {
-  const match = enode.match(/@([^:]+):(\d+)/);
-  if (!match) return null;
-  return { ip: match[1], port: parseInt(match[2]) };
-}
-
 // Process peers in batches
 async function checkPortsBatch(
   peers: PeerData[], 
@@ -153,23 +146,6 @@ export async function GET(request: NextRequest) {
         ORDER BY ps.collected_at DESC`
       );
 
-      // 2. Also get enodes from node_metrics where peer_count > 0 (the nodes themselves)
-      const nodeEnodesResult = await query(
-        `SELECT DISTINCT
-          n.enode,
-          n.name,
-          n.ipv4,
-          n.client_version,
-          nm.peer_count,
-          nm.collected_at
-        FROM skynet.nodes n
-        JOIN skynet.node_metrics nm ON n.id = nm.node_id
-        WHERE n.enode IS NOT NULL 
-          AND nm.peer_count > 0
-          AND nm.collected_at > NOW() - INTERVAL '30 minutes'
-        ORDER BY nm.collected_at DESC`
-      );
-
       // Deduplicate peers by enode
       const peerMap = new Map<string, PeerData>();
       
@@ -206,41 +182,6 @@ export async function GET(request: NextRequest) {
           connectedNodes: [row.node_name],
           lastSeen: row.collected_at,
         });
-      }
-
-      // Add node enodes (the nodes themselves as peers)
-      for (const row of nodeEnodesResult.rows) {
-        const enode = row.enode;
-        if (!enode) continue;
-        
-        // Parse IP from enode if available
-        const parsed = parseEnode(enode);
-        if (!parsed) continue;
-        
-        // Use default XDC P2P port if not specified
-        const ip = parsed.ip;
-        const port = parsed.port || 30303;
-        
-        if (!peerMap.has(enode)) {
-          peerMap.set(enode, {
-            enode,
-            ip,
-            port,
-            name: row.client_version || row.name || 'XDC Node',
-            protocols: ['eth/68', 'xdc'],
-            direction: 'outbound',
-            country: null,
-            city: null,
-            connectedNodes: [row.name],
-            lastSeen: row.collected_at,
-          });
-        } else {
-          // Add connected node to existing peer
-          const peer = peerMap.get(enode)!;
-          if (!peer.connectedNodes.includes(row.name)) {
-            peer.connectedNodes.push(row.name);
-          }
-        }
       }
 
       const uniquePeers = Array.from(peerMap.values());
