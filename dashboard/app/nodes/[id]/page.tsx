@@ -40,7 +40,9 @@ import {
   AlertCircle,
   ShieldCheck,
   ShieldAlert,
-  Info
+  Info,
+  Radio,
+  Antenna
 } from 'lucide-react';
 
 // Types
@@ -113,6 +115,8 @@ interface NodeStatus {
     score?: number;
     issues?: string;
   };
+  // Erigon dual sentry monitoring (Issue #14)
+  sentries?: SentryInfo[];
 }
 
 interface Incident {
@@ -153,6 +157,14 @@ interface MetricHistory {
   rpc_latency_ms?: number;
   chain_data_size?: number;
   database_size?: number;
+  sentries?: SentryInfo[];
+}
+
+// Erigon Dual Sentry Info (Issue #14)
+interface SentryInfo {
+  port: number;
+  protocol: string;
+  peers: number;
 }
 
 function StatusIndicator({ status }: { status: 'healthy' | 'degraded' | 'offline' }) {
@@ -506,6 +518,102 @@ function SecuritySuggestions({ issues }: { issues?: string }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// Erigon Dual Sentry Monitor Component (Issue #14)
+function SentryMonitor({ sentries, clientType }: { sentries?: SentryInfo[]; clientType?: string }) {
+  // Only show for Erigon clients
+  if (clientType?.toLowerCase() !== 'erigon' || !sentries || sentries.length === 0) {
+    return null;
+  }
+
+  const totalPeers = sentries.reduce((sum, s) => sum + s.peers, 0);
+  const hasIssues = sentries.some(s => s.peers === 0);
+
+  return (
+    <div className="card-xdc">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400">
+          <Layers className="w-5 h-5" />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold">Erigon Sentry Monitoring</h2>
+          <p className="text-xs text-[#64748B]">Dual sentry P2P status</p>
+        </div>
+        {hasIssues && (
+          <span className="ml-auto px-2 py-1 bg-[#EF4444]/10 text-[#EF4444] text-xs rounded-lg flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            Sentry Issue
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {sentries.map((sentry, i) => (
+          <div 
+            key={i} 
+            className={`bg-white/5 rounded-lg p-4 border ${
+              sentry.peers > 0 ? 'border-[#10B981]/20' : 'border-[#EF4444]/20'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Network className={`w-4 h-4 ${sentry.peers > 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`} />
+                <span className="text-sm font-medium">Sentry {i + 1}</span>
+              </div>
+              <span className={`w-2.5 h-2.5 rounded-full ${
+                sentry.peers > 0 ? 'bg-[#10B981]' : 'bg-[#EF4444] animate-pulse'
+              }`} />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[#64748B]">Port</span>
+                <span className="font-mono">{sentry.port}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[#64748B]">Protocol</span>
+                <span className={`font-mono px-2 py-0.5 rounded text-xs ${
+                  sentry.protocol.includes('68') 
+                    ? 'bg-[#1E90FF]/10 text-[#1E90FF]' 
+                    : 'bg-[#8B5CF6]/10 text-[#8B5CF6]'
+                }`}>
+                  {sentry.protocol}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[#64748B]">Peers</span>
+                <span className={`font-mono font-bold ${
+                  sentry.peers > 0 ? 'text-[#10B981]' : 'text-[#EF4444]'
+                }`}>
+                  {sentry.peers}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Protocol Summary */}
+      <div className="mt-4 pt-4 border-t border-white/10">
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-[#64748B]">Total P2P Peers</div>
+          <div className="text-lg font-bold font-mono-nums">{totalPeers}</div>
+        </div>
+        <div className="flex gap-4 mt-2">
+          {sentries.map((s, i) => (
+            <div key={i} className="flex items-center gap-2 text-xs">
+              <span className={`w-2 h-2 rounded-full ${
+                s.protocol.includes('68') ? 'bg-[#1E90FF]' : 'bg-[#8B5CF6]'
+              }`} />
+              <span className="text-[#64748B]">{s.protocol}:</span>
+              <span className="font-mono">{s.peers} peers</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1334,6 +1442,9 @@ export default function NodeDetailPage() {
             )}
           </div>
         )}
+
+        {/* Erigon Sentry Monitoring (Issue #14) */}
+        <SentryMonitor sentries={status.sentries} clientType={status.clientType || node.client_type} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Peer List */}

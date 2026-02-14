@@ -9,6 +9,13 @@ import { logger } from '@/lib/logger';
 import { invalidateByTag } from '@/lib/cache';
 import { z } from 'zod';
 
+// Sentry info for Erigon dual sentry monitoring
+const SentrySchema = z.object({
+  port: z.number().int().min(1).max(65535),
+  protocol: z.string(),
+  peers: z.number().int().min(0),
+});
+
 // Extended schema for heartbeat with additional fields
 const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
   syncProgress: z.number().min(0).max(100).optional(),
@@ -48,6 +55,8 @@ const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
   // Storage metrics
   chainDataSize: z.number().int().min(0).optional(),
   databaseSize: z.number().int().min(0).optional(),
+  // Erigon dual sentry monitoring (Issue #14)
+  sentries: z.array(SentrySchema).optional(),
 });
 
 /**
@@ -96,6 +105,7 @@ async function postHandler(request: NextRequest) {
     timestamp,
     chainDataSize,
     databaseSize,
+    sentries,
   } = body;
 
   // Verify node ownership (if using node-specific key)
@@ -126,7 +136,7 @@ async function postHandler(request: NextRequest) {
 
   // Store metrics and peers in transaction
   await withTransaction(async (client) => {
-    // Insert node metrics with new fields
+    // Insert node metrics with new fields (including sentries for Issue #14)
     await client.query(
       `INSERT INTO skynet.node_metrics 
        (node_id, block_height, sync_percent, peer_count, 
@@ -136,8 +146,8 @@ async function postHandler(request: NextRequest) {
         chain_data_size, database_size, 
         os_type, os_release, os_arch, kernel_version,
         ipv4, ipv6, security_score, security_issues,
-        collected_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)`,
+        sentries, collected_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)`,
       [
         nodeId,
         blockHeight ?? null,
@@ -167,6 +177,7 @@ async function postHandler(request: NextRequest) {
         ipv6 ?? null,
         security?.score ?? null,
         security?.issues?.join(',') ?? null,
+        sentries ? JSON.stringify(sentries) : null,
         timestamp ? new Date(timestamp) : new Date(),
       ]
     );
@@ -308,7 +319,7 @@ async function postHandler(request: NextRequest) {
     }
   }
 
-  // Auto-resolve incidents when conditions clear
+  // === AUTO-RESOLVE INCIDENTS (Issue #11) ===
   const resolvedIncidents: Array<{ type: string; details: string }> = [];
 
   // Resolve sync_stall if block height increased from 5min ago
@@ -332,6 +343,13 @@ async function postHandler(request: NextRequest) {
           details: `Block height recovered: ${prevMetrics5m.block_height} → ${blockHeight}`,
         });
       }
+      // Also auto-resolve any open issues of type sync_stall (Issue #11)
+      await queryAll(
+        `UPDATE skynet.issues 
+         SET status = 'resolved', resolved_at = NOW() 
+         WHERE node_id = $1 AND type = 'sync_stall' AND status = 'open'`,
+        [nodeId]
+      );
     }
   }
 
@@ -355,6 +373,13 @@ async function postHandler(request: NextRequest) {
         details: `Peer count recovered to ${peerCount}`,
       });
     }
+    // Also auto-resolve any open issues of type peer_drop (Issue #11)
+    await queryAll(
+      `UPDATE skynet.issues 
+       SET status = 'resolved', resolved_at = NOW() 
+       WHERE node_id = $1 AND type = 'peer_drop' AND status = 'open'`,
+      [nodeId]
+    );
   }
 
   // Resolve disk_pressure if disk < 80%
@@ -377,6 +402,13 @@ async function postHandler(request: NextRequest) {
         details: `Disk usage dropped to ${body.system.diskPercent.toFixed(1)}%`,
       });
     }
+    // Also auto-resolve any open issues of type disk_critical (Issue #11)
+    await queryAll(
+      `UPDATE skynet.issues 
+       SET status = 'resolved', resolved_at = NOW() 
+       WHERE node_id = $1 AND type = 'disk_critical' AND status = 'open'`,
+      [nodeId]
+    );
   }
 
   // Resolve block_drift if caught up (< 100 blocks behind)
@@ -401,6 +433,13 @@ async function postHandler(request: NextRequest) {
           details: `Node caught up, drift now ${drift} blocks`,
         });
       }
+      // Also auto-resolve any open issues related to sync (Issue #11)
+      await queryAll(
+        `UPDATE skynet.issues 
+         SET status = 'resolved', resolved_at = NOW() 
+         WHERE node_id = $1 AND type IN ('sync_stall', 'bad_block') AND status = 'open'`,
+        [nodeId]
+      );
     }
   }
 
