@@ -43,6 +43,9 @@ async function getHandler(request: NextRequest) {
           cpu_percent,
           memory_percent,
           disk_percent,
+          chain_data_size,
+          database_size,
+          client_version,
           collected_at
         FROM skynet.node_metrics
         WHERE collected_at > NOW() - INTERVAL '5 minutes'
@@ -57,6 +60,9 @@ async function getHandler(request: NextRequest) {
         n.created_at,
         n.email,
         n.telegram,
+        n.client_type,
+        n.node_type,
+        n.sync_mode,
         m.block_height,
         m.sync_percent,
         m.peer_count,
@@ -64,6 +70,9 @@ async function getHandler(request: NextRequest) {
         m.cpu_percent,
         m.memory_percent,
         m.disk_percent,
+        m.chain_data_size,
+        m.database_size,
+        m.client_version,
         m.collected_at,
         CASE
           WHEN m.collected_at IS NULL OR m.collected_at < NOW() - INTERVAL '2 minutes' THEN 'offline'
@@ -142,6 +151,13 @@ async function getHandler(request: NextRequest) {
       lastSeen: n.collected_at || n.created_at,
       email: mask(n.email),
       telegram: mask(n.telegram),
+      // New fields
+      clientType: n.client_type || 'unknown',
+      nodeType: n.node_type || 'fullnode',
+      syncMode: n.sync_mode || 'full',
+      chainDataSize: Number(n.chain_data_size) || 0,
+      databaseSize: Number(n.database_size) || 0,
+      clientVersion: n.client_version || 'Unknown',
     }));
 
     return {

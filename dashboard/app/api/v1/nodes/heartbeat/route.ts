@@ -23,9 +23,10 @@ const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
   }).optional(),
   coinbase: z.string().optional(),
   clientVersion: z.string().max(200).optional(),
-  clientType: z.string().max(50).optional(),
+  clientType: z.enum(['geth', 'erigon', 'geth-pr5', 'XDC', 'unknown']).optional().default('unknown'),
   isMasternode: z.boolean().optional(),
-  nodeType: z.enum(['masternode', 'standby', 'fullnode']).optional(),
+  nodeType: z.enum(['masternode', 'standby', 'fullnode', 'full', 'archive', 'fast', 'snap']).optional(),
+  syncMode: z.enum(['full', 'fast', 'snap', 'archive']).optional().default('full'),
   ipv4: z.string().ip({ version: 'v4' }).optional(),
   ipv6: z.string().ip({ version: 'v6' }).nullable().optional().or(z.literal('')),
   os: z.object({
@@ -37,12 +38,15 @@ const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
   masternodeStatus: z.string().optional(),
   security: z.object({
     score: z.number().int().min(0).max(100).optional(),
-    issues: z.union([z.array(z.string()), z.string()]).optional().transform(v => 
+    issues: z.union([z.array(z.string()), z.string()]).optional().transform(v =>
       typeof v === 'string' ? v.split(',').filter(Boolean) : v
     ),
   }).optional(),
   rpcLatencyMs: z.number().int().min(0).optional(),
   timestamp: z.coerce.date().optional(),
+  // Storage metrics
+  chainDataSize: z.number().int().min(0).optional(),
+  databaseSize: z.number().int().min(0).optional(),
 });
 
 /**
@@ -82,12 +86,15 @@ async function postHandler(request: NextRequest) {
     clientVersion,
     clientType,
     nodeType,
+    syncMode,
     ipv4,
     ipv6,
     os,
     security,
     rpcLatencyMs,
     timestamp,
+    chainDataSize,
+    databaseSize,
   } = body;
 
   // Verify node ownership (if using node-specific key)
@@ -125,8 +132,11 @@ async function postHandler(request: NextRequest) {
         cpu_percent, memory_percent, disk_percent, disk_used_gb, disk_total_gb,
         tx_pool_pending, tx_pool_queued, gas_price, rpc_latency_ms,
         is_syncing, client_version, client_type, node_type, coinbase, 
+        chain_data_size, database_size, 
+        os_type, os_release, os_arch, kernel_version,
+        ipv4, ipv6, security_score, security_issues,
         collected_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)`,
       [
         nodeId,
         blockHeight ?? null,
@@ -146,6 +156,16 @@ async function postHandler(request: NextRequest) {
         clientType ?? null,
         nodeType ?? null,
         coinbase ?? null,
+        chainDataSize ?? null,
+        databaseSize ?? null,
+        os?.type ?? null,
+        os?.release ?? null,
+        os?.arch ?? null,
+        os?.kernel ?? null,
+        ipv4 ?? null,
+        ipv6 ?? null,
+        security?.score ?? null,
+        security?.issues?.join(',') ?? null,
         timestamp ? new Date(timestamp) : new Date(),
       ]
     );
@@ -185,9 +205,11 @@ async function postHandler(request: NextRequest) {
            security_score = COALESCE($3, security_score),
            ipv4 = COALESCE($4, ipv4),
            client_version = COALESCE($5, client_version),
-           client_type = COALESCE($6, client_type)
+           client_type = COALESCE($6, client_type),
+           node_type = COALESCE($7, node_type),
+           sync_mode = COALESCE($8, sync_mode)
        WHERE id = $1`,
-      [nodeId, nodeType || null, security?.score ?? null, ipv4 || null, clientVersion || null, clientType || null]
+      [nodeId, nodeType || null, security?.score ?? null, ipv4 || null, clientVersion || null, clientType || null, nodeType || null, syncMode || null]
     );
   });
 
