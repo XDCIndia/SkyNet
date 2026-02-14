@@ -138,9 +138,9 @@ export default function HeroSection({ node, status, metrics }: HeroSectionProps)
   // Calculate ETA
   const estimatedMinutes = useMemo(() => {
     if (!status.isSyncing || blocksPerMinute <= 0) return 0;
-    const remaining = (status.highestBlock || 0) - (status.blockHeight || 0);
+    const remaining = (status.networkHeight || status.highestBlock || 0) - (status.blockHeight || 0);
     return remaining / blocksPerMinute;
-  }, [status.isSyncing, blocksPerMinute, status.highestBlock, status.blockHeight]);
+  }, [status.isSyncing, blocksPerMinute, status.networkHeight, status.highestBlock, status.blockHeight]);
   
   const showETA = status.isSyncing && estimatedMinutes > 0;
   
@@ -216,9 +216,9 @@ export default function HeroSection({ node, status, metrics }: HeroSectionProps)
           </div>
           
           <div className="flex items-center gap-2 text-sm mb-3">
-            <span className="text-[var(--text-tertiary)]">Highest:</span>
+            <span className="text-[var(--text-tertiary)]">Network:</span>
             <span className="font-mono-nums text-[var(--text-secondary)]">
-              {(status.highestBlock ?? 0) > 0 ? formatNumber(status.highestBlock ?? 0) : '—'}
+              {(status.networkHeight ?? 0) > 0 ? formatNumber(status.networkHeight) : '—'}
             </span>
           </div>
           
