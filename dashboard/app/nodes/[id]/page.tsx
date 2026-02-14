@@ -994,8 +994,21 @@ export default function NodeDetailPage() {
             </button>
             
             <div className="text-right mr-4">
-              <div className="text-xs text-[#64748B]">Last seen</div>
-              <div className="text-sm font-medium">{formatTimeAgo(status.lastSeen)}</div>
+              <div className="flex items-center gap-2 text-xs text-[#64748B] mb-1">
+                <span className={`w-2 h-2 rounded-full ${
+                  nodeStatus === 'healthy' ? 'bg-[#10B981] animate-pulse' :
+                  nodeStatus === 'degraded' ? 'bg-[#F59E0B]' :
+                  'bg-[#EF4444]'
+                }`} />
+                <span>Last Heartbeat</span>
+              </div>
+              <div className={`text-sm font-medium ${
+                nodeStatus === 'healthy' ? 'text-[#10B981]' :
+                nodeStatus === 'degraded' ? 'text-[#F59E0B]' :
+                'text-[#EF4444]'
+              }`}>
+                {formatTimeAgo(status.lastSeen)}
+              </div>
             </div>
             <button
               onClick={handleRestart}

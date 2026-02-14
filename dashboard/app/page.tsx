@@ -698,10 +698,24 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
           </div>
         )}
         
-        {/* Last Seen */}
-        <div className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)] pt-2 border-t border-[var(--border-subtle)]">
-          <Clock className="w-3 h-3" />
-          {node.lastSeen ? formatTimeAgo(node.lastSeen) : 'Never'}
+        {/* Last Heartbeat */}
+        <div className="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)]">
+          <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-tertiary)]">
+            <span className={`w-1.5 h-1.5 rounded-full ${
+              node.status === 'healthy' ? 'bg-[var(--success)] animate-pulse' :
+              node.status === 'syncing' || node.status === 'degraded' ? 'bg-[var(--warning)]' :
+              'bg-[var(--critical)]'
+            }`} />
+            <Clock className="w-3 h-3" />
+            <span>Heartbeat</span>
+          </div>
+          <span className={`text-[10px] font-medium ${
+            node.status === 'healthy' ? 'text-[var(--success)]' :
+            node.status === 'syncing' || node.status === 'degraded' ? 'text-[var(--warning)]' :
+            'text-[var(--critical)]'
+          }`}>
+            {node.lastSeen ? formatTimeAgo(node.lastSeen) : 'Never'}
+          </span>
         </div>
       </div>
       
@@ -869,11 +883,22 @@ function TableRow({
         <SecurityBadge score={node.security_score} />
       </td>
       
-      {/* Last Seen */}
+      {/* Last Heartbeat */}
       <td className="py-2 px-3">
-        <span className="text-xs text-[var(--text-tertiary)]">
-          {node.lastSeen ? formatTimeAgo(node.lastSeen) : 'Never'}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className={`w-1.5 h-1.5 rounded-full ${
+            node.status === 'healthy' ? 'bg-[var(--success)] animate-pulse' :
+            node.status === 'syncing' || node.status === 'degraded' ? 'bg-[var(--warning)]' :
+            'bg-[var(--critical)]'
+          }`} />
+          <span className={`text-xs ${
+            node.status === 'healthy' ? 'text-[var(--success)]' :
+            node.status === 'syncing' || node.status === 'degraded' ? 'text-[var(--warning)]' :
+            'text-[var(--critical)]'
+          }`}>
+            {node.lastSeen ? formatTimeAgo(node.lastSeen) : 'Never'}
+          </span>
+        </div>
       </td>
     </tr>
   );
