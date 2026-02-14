@@ -1679,30 +1679,31 @@ export default function NodeDetailPage() {
                   </button>
                 ))}
               
-              {/* Storage series (only show if data exists) */}
-              {metrics.length > 0 && metrics.some(m => m.chain_data_size || m.database_size) && (
-                <>
-                  {['chain_data_size', 'database_size'].map((series) => (
-                    <button
-                      key={series}
-                      onClick={() => {
-                        setSelectedSeries(prev => 
-                          prev.includes(series) 
-                            ? prev.filter(s => s !== series)
-                            : [...prev, series]
-                        );
-                      }}
-                      className={`px-3 py-1 rounded text-xs transition-colors ${
-                        selectedSeries.includes(series)
-                          ? 'bg-[#F59E0B]/20 text-[#F59E0B]'
-                          : 'bg-white/5 text-[#64748B]'
-                      }`}
-                    >
-                      {series.replace('_', ' ')}
-                    </button>
-                  ))}
-                </>
-              )}
+                {/* Storage series (only show if data exists) */}
+                {metrics.length > 0 && metrics.some(m => m.chain_data_size || m.database_size) && (
+                  <>
+                    {['chain_data_size', 'database_size'].map((series) => (
+                      <button
+                        key={series}
+                        onClick={() => {
+                          setSelectedSeries(prev => 
+                            prev.includes(series) 
+                              ? prev.filter(s => s !== series)
+                              : [...prev, series]
+                          );
+                        }}
+                        className={`px-3 py-1 rounded text-xs transition-colors whitespace-nowrap flex-shrink-0 ${
+                          selectedSeries.includes(series)
+                            ? 'bg-[#F59E0B]/20 text-[#F59E0B]'
+                            : 'bg-white/5 text-[#64748B]'
+                        }`}
+                      >
+                        {series.replace('_', ' ')}
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
             </div>
           </div>
           
