@@ -380,7 +380,7 @@ export default function FleetOverview() {
   const calculateSyncETA = (node: FleetNode, blocksPerMin: number | null): { eta: string | null; blocksBehind: number } | null => {
     const blocksBehind = maxFleetBlock - node.blockHeight;
     
-    if (!node.isSyncing || node.syncPercent >= 100) {
+    if (!node.isSyncing || (node.syncPercent ?? 0) >= 100) {
       return blocksBehind > 100 ? { eta: null, blocksBehind } : null;
     }
     
@@ -400,16 +400,18 @@ export default function FleetOverview() {
   // Initial fetch
   useEffect(() => {
     fetchNodes();
-  }, [fetchNodes]);
+    fetchNetworkHealth();
+  }, [fetchNodes, fetchNetworkHealth]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       fetchNodes();
+      fetchNetworkHealth();
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [fetchNodes]);
+  }, [fetchNodes, fetchNetworkHealth]);
 
   // Filter nodes
   const filteredNodes = useMemo(() => {
@@ -630,6 +632,45 @@ export default function FleetOverview() {
             >
               View All
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* Network Health Card */}
+      {networkHealth && (
+        <div className="mb-6 p-4 rounded-xl border border-[rgba(30,144,255,0.3)] bg-[rgba(30,144,255,0.05)]">
+          <div className="flex items-center gap-3 mb-3">
+            <Globe className="w-5 h-5 text-[var(--accent-blue)]" />
+            <h3 className="text-sm font-semibold text-[#F9FAFB]">Network Health</h3>
+            <span className="text-xs text-[#6B7280] ml-auto">
+              Updated {formatTimeAgo(networkHealth.timestamp)}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="text-center">
+              <div className="text-xs text-[#6B7280] mb-1">Avg Block</div>
+              <div className="text-lg font-bold font-mono text-[#1E90FF]">{networkHealth.avgBlockHeight.toLocaleString()}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xs text-[#6B7280] mb-1">Max Block</div>
+              <div className="text-lg font-bold font-mono text-[#10B981]">{networkHealth.maxBlockHeight.toLocaleString()}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xs text-[#6B7280] mb-1">Nakamoto</div>
+              <div className="text-lg font-bold font-mono text-[#8B5CF6]">{networkHealth.nakamotoCoefficient}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xs text-[#6B7280] mb-1">Avg Latency</div>
+              <div className="text-lg font-bold font-mono text-[#F59E0B]">{networkHealth.avgRpcLatencyMs.toFixed(1)}ms</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xs text-[#6B7280] mb-1">Total Peers</div>
+              <div className="text-lg font-bold font-mono text-[#EC4899]">{networkHealth.totalPeers.toLocaleString()}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xs text-[#6B7280] mb-1">Health Score</div>
+              <div className="text-lg font-bold font-mono text-[#10B981]">{Math.round((networkHealth.healthyNodes / networkHealth.totalNodes) * 100)}%</div>
+            </div>
           </div>
         </div>
       )}
