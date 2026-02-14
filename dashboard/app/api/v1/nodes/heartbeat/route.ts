@@ -12,8 +12,8 @@ import { z } from 'zod';
 const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
   syncProgress: z.number().min(0).max(100).optional(),
   peers: z.array(z.object({
-    enode: z.string(),
-    name: z.string().optional(),
+    enode: z.string().nullable().optional(),
+    name: z.string().nullable().optional(),
     protocols: z.array(z.string()).optional(),
     direction: z.enum(['inbound', 'outbound']).optional(),
   })).optional(),
@@ -27,7 +27,7 @@ const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
   isMasternode: z.boolean().optional(),
   nodeType: z.enum(['masternode', 'standby', 'fullnode']).optional(),
   ipv4: z.string().ip({ version: 'v4' }).optional(),
-  ipv6: z.string().ip({ version: 'v6' }).optional(),
+  ipv6: z.string().ip({ version: 'v6' }).nullable().optional().or(z.literal('')),
   os: z.object({
     type: z.string().optional(),
     release: z.string().optional(),
@@ -37,7 +37,9 @@ const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
   masternodeStatus: z.string().optional(),
   security: z.object({
     score: z.number().int().min(0).max(100).optional(),
-    issues: z.array(z.string()).optional(),
+    issues: z.union([z.array(z.string()), z.string()]).optional().transform(v => 
+      typeof v === 'string' ? v.split(',').filter(Boolean) : v
+    ),
   }).optional(),
   rpcLatencyMs: z.number().int().min(0).optional(),
   timestamp: z.coerce.date().optional(),
