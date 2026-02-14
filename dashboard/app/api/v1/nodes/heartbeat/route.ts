@@ -53,8 +53,8 @@ const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
   rpcLatencyMs: z.number().int().min(0).optional(),
   timestamp: z.coerce.date().optional(),
   // Storage metrics
-  chainDataSize: z.number().int().min(0).optional(),
-  databaseSize: z.number().int().min(0).optional(),
+  chainDataSize: z.number().min(0).optional(),
+  databaseSize: z.number().min(0).optional(),
   // Erigon dual sentry monitoring (Issue #14)
   sentries: z.array(SentrySchema).optional(),
 });
