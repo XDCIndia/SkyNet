@@ -1269,25 +1269,21 @@ export default function Home() {
         const d = json.data || json;
         const counts = d.nodeCounts || d.nodes || {};
         
-        // Get nodes array from API
-        const nodeArr: Node[] = Array.isArray(d.nodes) ? d.nodes : [];
+        // Get nodes array from API and filter out stale nodes (>24h no heartbeat)
+        const nodeArr: Node[] = (Array.isArray(d.nodes) ? d.nodes : []).filter((n: Node) => !isNodeStale(n));
         
-        // Split into active and inactive for accurate stats
-        const inactiveList = nodeArr.filter(isNodeInactive);
-        const activeList = nodeArr.filter(n => !isNodeInactive(n));
-        
-        // Count active nodes by status
-        const activeHealthy = activeList.filter(n => n.status === 'healthy').length;
-        const activeSyncing = activeList.filter(n => n.status === 'syncing').length;
-        const activeOffline = activeList.filter(n => n.status === 'offline').length;
-        const activeDegraded = activeList.filter(n => n.status === 'degraded').length;
+        // Count nodes by status
+        const countHealthy = nodeArr.filter(n => n.status === 'healthy').length;
+        const countSyncing = nodeArr.filter(n => n.status === 'syncing').length;
+        const countOffline = nodeArr.filter(n => n.status === 'offline').length;
+        const countDegraded = nodeArr.filter(n => n.status === 'degraded').length;
         
         setFleet({
-          totalNodes: activeList.length, // Only count active nodes
-          healthyNodes: activeHealthy,
-          degradedNodes: activeDegraded,
-          offlineNodes: activeOffline, // Only count active offline nodes (not inactive)
-          syncingNodes: activeSyncing,
+          totalNodes: nodeArr.length,
+          healthyNodes: countHealthy,
+          degradedNodes: countDegraded,
+          offlineNodes: countOffline,
+          syncingNodes: countSyncing,
           healthScore: d.healthScore || 0,
           totalPeers: 0,
           mainnetHead: d.maxBlockHeight || 0,
@@ -1346,28 +1342,10 @@ export default function Home() {
     }
   }, [nodes.length]);
 
-  // Split nodes into active and inactive
-  const { activeNodes, inactiveNodes } = useMemo(() => {
-    const active: Node[] = [];
-    const inactive: Node[] = [];
-    
-    for (const node of nodes) {
-      if (isNodeInactive(node)) {
-        inactive.push(node);
-      } else {
-        active.push(node);
-      }
-    }
-    
-    return { activeNodes: active, inactiveNodes: inactive };
-  }, [nodes]);
-
   // Filter and sort nodes
   const filteredNodes = useMemo(() => {
     let result = nodes.filter(node => {
-      const nodeIsInactive = isNodeInactive(node);
-      
-      // Status filter
+      // Status filter (stale nodes already filtered out at fetch time)
       switch (filter) {
         case 'healthy':
           if (node.status !== 'healthy') return false;
@@ -1377,18 +1355,6 @@ export default function Home() {
           break;
         case 'behind':
           if (node.blocksBehind <= 0) return false;
-          break;
-        case 'offline':
-          // Offline filter shows only offline nodes that are NOT inactive
-          if (node.status !== 'offline' || nodeIsInactive) return false;
-          break;
-        case 'inactive':
-          // Inactive filter shows only inactive nodes
-          if (!nodeIsInactive) return false;
-          break;
-        case 'all':
-          // All filter shows only active nodes (not inactive)
-          if (nodeIsInactive) return false;
           break;
       }
       

@@ -33,6 +33,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   Info,
+  Trash2,
 } from 'lucide-react';
 
 // Import the new components
@@ -446,6 +447,10 @@ export default function NodeDetailPage() {
   const [expandedLogs, setExpandedLogs] = useState(false);
   const [selectedSeries, setSelectedSeries] = useState<string[]>(['block_height', 'peer_count']);
   const [timeRange, setTimeRange] = useState<number>(24);
+  
+  // Node removal state
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [isRemovingNode, setIsRemovingNode] = useState(false);
 
   // Calculate status from last seen
   const nodeStatus = useMemo(() => {
@@ -579,6 +584,35 @@ export default function NodeDetailPage() {
     }
   };
 
+  // Handle node removal
+  const handleRemoveNode = async () => {
+    setIsRemovingNode(true);
+    try {
+      const res = await fetch(`/api/v1/nodes/${nodeId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (res.ok) {
+        setToast({ message: 'Node has been removed successfully', type: 'success' });
+        // Redirect to fleet page after short delay
+        setTimeout(() => {
+          router.push('/fleet');
+        }, 1500);
+      } else {
+        const error = await res.json();
+        setToast({ message: `Failed to remove node: ${error.error || 'Unknown error'}`, type: 'error' });
+        setShowRemoveConfirm(false);
+      }
+    } catch (err) {
+      console.error('Error removing node:', err);
+      setToast({ message: 'Failed to remove node. Please try again.', type: 'error' });
+      setShowRemoveConfirm(false);
+    } finally {
+      setIsRemovingNode(false);
+    }
+  };
+
   // Filter logs
   const filteredLogs = useMemo(() => {
     if (!logFilter) return logs;
@@ -686,6 +720,13 @@ export default function NodeDetailPage() {
             </button>
             <button onClick={() => setToast({ message: 'Add peers dialog not implemented', type: 'error' })} className="flex items-center gap-2 px-4 py-2 bg-[#10B981]/10 hover:bg-[#10B981]/20 text-[#10B981] rounded-lg text-sm transition-colors">
               <UserPlus className="w-4 h-4" />Add Peers
+            </button>
+            <button 
+              onClick={() => setShowRemoveConfirm(true)} 
+              className="flex items-center gap-2 px-4 py-2 bg-[#EF4444]/10 hover:bg-[#EF4444]/20 text-[#EF4444] rounded-lg text-sm transition-colors"
+              title="Remove this node from fleet"
+            >
+              <Trash2 className="w-4 h-4" />Remove
             </button>
           </div>
         </div>
@@ -915,6 +956,42 @@ export default function NodeDetailPage() {
       </div>
       
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      
+      {/* Confirmation Dialog for Node Removal */}
+      {showRemoveConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#111827] border border-white/10 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#EF4444]/10 flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-[#EF4444]" />
+              </div>
+              <h3 className="text-lg font-semibold text-[#F1F5F9]">Remove Node</h3>
+            </div>
+            <p className="text-[#94A3B8] mb-6 leading-relaxed">
+              Are you sure you want to remove <strong className="text-[#F1F5F9]">{node?.name}</strong>? 
+              This will deactivate the node and revoke its API keys. Historical data will be preserved, 
+              but the node will no longer appear in the fleet.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowRemoveConfirm(false)}
+                disabled={isRemovingNode}
+                className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRemoveNode}
+                disabled={isRemovingNode}
+                className="px-4 py-2 bg-[#EF4444] hover:bg-[#EF4444]/90 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isRemovingNode && <RefreshCw className="w-4 h-4 animate-spin" />}
+                Remove Node
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
