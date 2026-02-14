@@ -149,6 +149,8 @@ interface MetricHistory {
   cpu_percent: number;
   memory_percent: number;
   disk_percent: number;
+  sync_percent: number;
+  rpc_latency_ms?: number;
   chain_data_size?: number;
   database_size?: number;
 }
@@ -619,6 +621,8 @@ function MetricsChart({ data, series }: { data: MetricHistory[]; series: string[
     cpu_percent: '#F59E0B',
     memory_percent: '#8B5CF6',
     disk_percent: '#EF4444',
+    sync_percent: '#EC4899',
+    rpc_latency_ms: '#F59E0B',
     chain_data_size: '#F59E0B',
     database_size: '#EC4899',
   };
@@ -664,6 +668,12 @@ function MetricsChart({ data, series }: { data: MetricHistory[]; series: string[
         )}
         {series.includes('disk_percent') && (
           <path d={generatePath('disk_percent')} fill="none" stroke={colors.disk_percent} strokeWidth="2" strokeLinecap="round" strokeDasharray="2,2" />
+        )}
+        {series.includes('sync_percent') && (
+          <path d={generatePath('sync_percent')} fill="none" stroke={colors.sync_percent} strokeWidth="2" strokeLinecap="round" strokeDasharray="3,3" />
+        )}
+        {series.includes('rpc_latency_ms') && (
+          <path d={generatePath('rpc_latency_ms')} fill="none" stroke={colors.rpc_latency_ms} strokeWidth="2" strokeLinecap="round" />
         )}
         {series.includes('chain_data_size') && (
           <path d={generatePath('chain_data_size')} fill="none" stroke={colors.chain_data_size} strokeWidth="2" strokeLinecap="round" />
@@ -1537,7 +1547,7 @@ export default function NodeDetailPage() {
               </div>
               
               {/* Series toggles */}
-              {['block_height', 'peer_count', 'cpu_percent', 'memory_percent', 'disk_percent'].map((series) => (
+              {['block_height', 'peer_count', 'cpu_percent', 'memory_percent', 'disk_percent', 'sync_percent', 'rpc_latency_ms'].map((series) => (
                 <button
                   key={series}
                   onClick={() => {

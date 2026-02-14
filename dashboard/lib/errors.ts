@@ -249,9 +249,9 @@ export function validateQuery<T>(
  * Wrap an API route handler with error handling
  */
 export function withErrorHandling<R extends Request = Request, T = unknown>(
-  handler: (req: R, context?: T) => Promise<NextResponse>
-): (req: R, context?: T) => Promise<NextResponse> {
-  return async (req: R, context?: T) => {
+  handler: (req: R, context: T) => Promise<NextResponse>
+): (req: R, context: T) => Promise<NextResponse> {
+  return async (req: R, context: T) => {
     const requestId = crypto.randomUUID();
 
     try {

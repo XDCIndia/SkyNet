@@ -69,6 +69,18 @@ interface FleetData {
   };
 }
 
+interface NetworkHealthData {
+  totalNodes: number;
+  healthyNodes: number;
+  avgBlockHeight: number;
+  maxBlockHeight: number;
+  avgSyncPercent: number;
+  avgRpcLatencyMs: number;
+  totalPeers: number;
+  nakamotoCoefficient: number;
+  timestamp: string;
+}
+
 interface BlockHeightHistory {
   [nodeId: string]: number[];
 }
@@ -233,6 +245,7 @@ export default function FleetOverview() {
   // API state
   const [nodes, setNodes] = useState<FleetNode[]>([]);
   const [incidents, setIncidents] = useState({ critical: 0, warning: 0, info: 0, total: 0 });
+  const [networkHealth, setNetworkHealth] = useState<NetworkHealthData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -331,7 +344,25 @@ export default function FleetOverview() {
     }
   }, []);
 
-  // Calculate blocks/min
+  // Fetch network health
+  const fetchNetworkHealth = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/network/health', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setNetworkHealth(data.data);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching network health:', err);
+    }
+  }, []);
+
+  // Calculate max block height for blocks behind calculation
+  const maxFleetBlock = useMemo(() => {
+    return Math.max(...nodes.map(n => n.blockHeight), 0);
+  }, [nodes]);
   const calculateBlocksPerMin = (nodeId: string, currentHeight: number): number | null => {
     const prev = prevBlockDataRef.current[nodeId];
     if (!prev) return null;
@@ -345,19 +376,25 @@ export default function FleetOverview() {
     return blockDiff / timeDiffMin;
   };
 
-  // Calculate sync ETA
-  const calculateSyncETA = (node: FleetNode, blocksPerMin: number | null): string | null => {
-    if (!node.isSyncing || !node.syncPercent || node.syncPercent >= 100) return null;
-    if (!blocksPerMin || blocksPerMin <= 0) return null;
+  // Calculate sync ETA with blocks behind
+  const calculateSyncETA = (node: FleetNode, blocksPerMin: number | null): { eta: string | null; blocksBehind: number } | null => {
+    const blocksBehind = maxFleetBlock - node.blockHeight;
     
-    // Estimate remaining blocks (assuming 100% = current height / syncPercent * 100)
-    const remainingPercent = 100 - node.syncPercent;
-    // Rough estimate: if at 80% with 1000000 blocks, remaining = 250000 blocks
-    const estimatedTotalBlocks = node.blockHeight / (node.syncPercent / 100);
-    const remainingBlocks = estimatedTotalBlocks * (remainingPercent / 100);
-    const minutesRemaining = remainingBlocks / blocksPerMin;
+    if (!node.isSyncing || node.syncPercent >= 100) {
+      return blocksBehind > 100 ? { eta: null, blocksBehind } : null;
+    }
     
-    return formatDuration(minutesRemaining);
+    if (!blocksPerMin || blocksPerMin <= 0) {
+      return { eta: null, blocksBehind };
+    }
+    
+    // Calculate ETA based on blocks behind
+    const minutesRemaining = blocksBehind / blocksPerMin;
+    
+    return {
+      eta: formatDuration(minutesRemaining),
+      blocksBehind
+    };
   };
 
   // Initial fetch
@@ -709,7 +746,9 @@ export default function FleetOverview() {
             const blocksPerMin = calculateBlocksPerMin(node.id, node.blockHeight);
             const historyData = blockHeightHistory[node.id] || [];
             const blockIncrease = blockIncreases[node.id] || 0;
-            const syncETA = calculateSyncETA(node, blocksPerMin);
+            const syncInfo = calculateSyncETA(node, blocksPerMin);
+            const blocksBehind = maxFleetBlock - node.blockHeight;
+            const isStalled = node.isSyncing && blocksPerMin !== null && blocksPerMin < 0.5;
             
             return (
               <div 
@@ -813,24 +852,35 @@ export default function FleetOverview() {
                   )}
                 </div>
                 
-                {/* Sync Progress with ETA */}
+                {/* Sync Progress with ETA and Blocks Behind */}
                 {node.isSyncing && (
                   <div className="mb-3">
                     <div className="flex items-center justify-between text-xs mb-1">
                       <span className="text-[#6B7280]">Syncing</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-[#F59E0B]">{node.syncPercent?.toFixed(1)}%</span>
-                        {syncETA && (
-                          <span className="text-[#6B7280]">~{syncETA} left</span>
+                        <span className="text-[#F59E0B] font-semibold">{node.syncPercent?.toFixed(1)}%</span>
+                        {blocksBehind > 0 && (
+                          <span className="text-[#6B7280]">{blocksBehind.toLocaleString()} behind</span>
+                        )}
+                        {syncInfo?.eta && (
+                          <span className="text-[#10B981]">~{syncInfo.eta} left</span>
+                        )}
+                        {isStalled && (
+                          <span className="text-[#EF4444]">Stalled</span>
                         )}
                       </div>
                     </div>
                     <div className="w-full h-2 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
                       <div 
-                        className="h-full rounded-full bg-[#F59E0B] transition-all" 
-                        style={{ width: `${node.syncPercent || 0}%` }} 
+                        className="h-full rounded-full bg-gradient-to-r from-[#F59E0B] to-[#EF4444] transition-all" 
+                        style={{ width: `${Math.min(node.syncPercent || 0, 100)}%` }} 
                       />
                     </div>
+                    {blocksPerMin !== null && blocksPerMin > 0 && (
+                      <div className="text-xs text-[#6B7280] mt-1 text-right">
+                        {blocksPerMin.toFixed(0)} blocks/min
+                      </div>
+                    )}
                   </div>
                 )}
                 
@@ -947,6 +997,9 @@ export default function FleetOverview() {
                 const isSelected = selectedNodes.has(node.id);
                 const blocksPerMin = calculateBlocksPerMin(node.id, node.blockHeight);
                 const blockIncrease = blockIncreases[node.id] || 0;
+                const syncInfo = calculateSyncETA(node, blocksPerMin);
+                const blocksBehind = maxFleetBlock - node.blockHeight;
+                const isStalled = node.isSyncing && blocksPerMin !== null && blocksPerMin < 0.5;
                 
                 return (
                   <tr key={node.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
@@ -996,14 +1049,31 @@ export default function FleetOverview() {
                     </td>
                     <td className="py-3 px-4">
                       {node.isSyncing ? (
-                        <div className="w-20">
-                          <div className="text-xs text-[#F59E0B] mb-1">{node.syncPercent?.toFixed(0)}%</div>
-                          <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
+                        <div className="w-24">
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="text-[#F59E0B] font-semibold">{node.syncPercent?.toFixed(0)}%</span>
+                            {isStalled ? (
+                              <span className="text-[#EF4444] text-[10px]">Stalled</span>
+                            ) : syncInfo?.eta ? (
+                              <span className="text-[#10B981] text-[10px]">~{syncInfo.eta}</span>
+                            ) : null}
+                          </div>
+                          <div className="w-full h-1.5 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden mb-1">
                             <div 
-                              className="h-full rounded-full bg-[#F59E0B] transition-all" 
-                              style={{ width: `${node.syncPercent || 0}%` }} 
+                              className="h-full rounded-full bg-gradient-to-r from-[#F59E0B] to-[#EF4444] transition-all" 
+                              style={{ width: `${Math.min(node.syncPercent || 0, 100)}%` }} 
                             />
                           </div>
+                          {blocksBehind > 0 && (
+                            <div className="text-[10px] text-[#6B7280]">{blocksBehind.toLocaleString()} behind</div>
+                          )}
+                        </div>
+                      ) : blocksBehind > 100 ? (
+                        <div className="w-24">
+                          <div className="flex items-center gap-1 text-xs mb-1">
+                            <span className="text-[#10B981]">Synced ✓</span>
+                          </div>
+                          <div className="text-[10px] text-[#6B7280]">{blocksBehind.toLocaleString()} behind</div>
                         </div>
                       ) : (
                         <span className="text-xs text-[#10B981]">Synced ✓</span>

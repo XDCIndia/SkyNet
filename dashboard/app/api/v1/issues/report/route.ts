@@ -193,7 +193,7 @@ function createGitHubIssue(
     try { fs.unlinkSync(tmpBody); } catch {}
     return result;
   } catch (e) {
-    logger.error('Failed to create GitHub issue:', e);
+    logger.error('Failed to create GitHub issue:', e instanceof Error ? e : new Error(String(e)));
     return null;
   }
 }
@@ -384,7 +384,7 @@ async function postHandler(request: NextRequest) {
         logger.info(`GitHub issue created: ${githubIssueUrl}`);
       }
     } catch (e) {
-      logger.error('Failed to create GitHub issue:', e);
+      logger.error('Failed to create GitHub issue:', e instanceof Error ? e : new Error(String(e)));
       // Non-blocking: don't fail the API response
     }
   }

@@ -9,7 +9,7 @@ const ParamsSchema = z.object({
   id: z.string().uuid(),
 });
 
-async function postHandler(request: NextRequest, { params }: { params: { id: string } }) {
+async function postHandler(request: NextRequest, { params }: { params?: { id: string } }) {
   // Authenticate request
   const auth = await authenticateRequest(request);
   if (!auth.valid) {
@@ -17,7 +17,8 @@ async function postHandler(request: NextRequest, { params }: { params: { id: str
   }
 
   // Validate issue ID
-  const validationResult = ParamsSchema.safeParse({ id: params.id });
+  const id = params?.id;
+  const validationResult = ParamsSchema.safeParse({ id });
   if (!validationResult.success) {
     return NextResponse.json(
       { error: 'Invalid issue ID' },
@@ -25,7 +26,7 @@ async function postHandler(request: NextRequest, { params }: { params: { id: str
     );
   }
 
-  const { id } = validationResult.data;
+  const { id: validatedId } = validationResult.data;
 
   // Check if issue exists
   const issueResult = await queryAll(
@@ -57,10 +58,10 @@ async function postHandler(request: NextRequest, { params }: { params: { id: str
          last_seen = NOW()
      WHERE id = $1
      RETURNING id, status, resolved_at, last_seen`,
-    [id]
+    [validatedId]
   );
 
-  logger.info(`Issue resolved: ${id} - ${issue.title} (${issue.node_name})`);
+  logger.info(`Issue resolved: ${validatedId} - ${issue.title} (${issue.node_name})`);
 
   return NextResponse.json({
     success: true,

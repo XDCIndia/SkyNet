@@ -40,6 +40,8 @@ export async function GET(
         avg(cpu_percent)::numeric(5,2) as cpu_percent,
         avg(memory_percent)::numeric(5,2) as memory_percent,
         avg(disk_percent)::numeric(5,2) as disk_percent,
+        avg(sync_percent)::numeric(5,2) as sync_percent,
+        avg(rpc_latency_ms)::numeric(5,2) as rpc_latency_ms,
         avg(chain_data_size)::bigint as chain_data_size,
         avg(database_size)::bigint as database_size
       FROM skynet.node_metrics
@@ -60,6 +62,8 @@ export async function GET(
         cpu_percent: parseFloat(row.cpu_percent) || 0,
         memory_percent: parseFloat(row.memory_percent) || 0,
         disk_percent: parseFloat(row.disk_percent) || 0,
+        sync_percent: parseFloat(row.sync_percent) || 100,
+        rpc_latency_ms: parseFloat(row.rpc_latency_ms) || 0,
         chain_data_size: parseInt(row.chain_data_size) || 0,
         database_size: parseInt(row.database_size) || 0,
       })),
