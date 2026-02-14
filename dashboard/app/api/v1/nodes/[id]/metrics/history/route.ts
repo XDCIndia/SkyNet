@@ -39,7 +39,9 @@ export async function GET(
         avg(peer_count)::int as peer_count,
         avg(cpu_percent)::numeric(5,2) as cpu_percent,
         avg(memory_percent)::numeric(5,2) as memory_percent,
-        avg(disk_percent)::numeric(5,2) as disk_percent
+        avg(disk_percent)::numeric(5,2) as disk_percent,
+        avg(chain_data_size)::bigint as chain_data_size,
+        avg(database_size)::bigint as database_size
       FROM skynet.node_metrics
       WHERE node_id = $1
         AND collected_at > NOW() - INTERVAL '${hours} hours'
@@ -58,6 +60,8 @@ export async function GET(
         cpu_percent: parseFloat(row.cpu_percent) || 0,
         memory_percent: parseFloat(row.memory_percent) || 0,
         disk_percent: parseFloat(row.disk_percent) || 0,
+        chain_data_size: parseInt(row.chain_data_size) || 0,
+        database_size: parseInt(row.database_size) || 0,
       })),
       timestamp: new Date().toISOString(),
     });

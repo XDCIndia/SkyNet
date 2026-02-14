@@ -58,7 +58,8 @@ export async function GET(
         coinbase, cpu_percent, memory_percent, disk_percent,
         disk_used_gb, disk_total_gb, rpc_latency_ms, collected_at,
         ipv4, ipv6, os_type, os_release, os_arch, kernel_version,
-        client_type, node_type, security_score, security_issues
+        client_type, node_type, sync_mode, security_score, security_issues,
+        chain_data_size, database_size
        FROM skynet.node_metrics 
        WHERE node_id = $1 
        ORDER BY collected_at DESC 
@@ -117,6 +118,9 @@ export async function GET(
         os_info: node.os_info,
         client_type: node.client_type,
         node_type: node.node_type,
+        sync_mode: node.sync_mode,
+        security_score: node.security_score,
+        security_issues: node.security_issues,
       },
       status: {
         blockHeight: latestMetrics?.block_height,
@@ -130,6 +134,7 @@ export async function GET(
         clientVersion: latestMetrics?.client_version,
         clientType: latestMetrics?.client_type,
         nodeType: latestMetrics?.node_type,
+        syncMode: latestMetrics?.sync_mode,
         coinbase: latestMetrics?.coinbase,
         system: latestMetrics ? {
           cpuPercent: latestMetrics.cpu_percent,
@@ -137,6 +142,10 @@ export async function GET(
           diskPercent: latestMetrics.disk_percent,
           diskUsedGb: latestMetrics.disk_used_gb,
           diskTotalGb: latestMetrics.disk_total_gb,
+        } : null,
+        storage: latestMetrics ? {
+          chainDataSize: latestMetrics.chain_data_size,
+          databaseSize: latestMetrics.database_size,
         } : null,
         os: latestMetrics ? {
           type: latestMetrics.os_type,

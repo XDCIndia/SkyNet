@@ -137,32 +137,66 @@ curl -X POST http://localhost:3000/api/v1/nodes/heartbeat \
     "nodeId": "550e8400-e29b-41d4-a716-446655440000",
     "blockHeight": 89234567,
     "syncing": false,
+    "syncProgress": 99.8,
     "peerCount": 25,
     "system": {
       "cpuPercent": 45.2,
       "memoryPercent": 62.1,
-      "diskPercent": 78.0
+      "diskPercent": 78.0,
+      "diskUsedGb": 450.5,
+      "diskTotalGb": 1000.0
     },
-    "client": {
-      "name": "XDC Stable",
-      "version": "v2.6.8"
+    "clientType": "geth",
+    "nodeType": "full",
+    "syncMode": "full",
+    "clientVersion": "v2.6.8-stable",
+    "chainDataSize": 485000000000,
+    "databaseSize": 520000000000,
+    "ipv4": "203.0.113.1",
+    "os": {
+      "type": "linux",
+      "release": "Ubuntu 22.04",
+      "arch": "amd64",
+      "kernel": "5.15.0"
     }
   }'
 ```
+
+**Request Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `nodeId` | string (UUID) | Unique identifier for the node |
+| `blockHeight` | number | Current blockchain height |
+| `syncing` | boolean | Whether node is syncing |
+| `syncProgress` | number | Sync percentage (0-100) |
+| `peerCount` | number | Number of connected peers |
+| `system` | object | System metrics (cpu, memory, disk) |
+| `clientType` | string | Client type: `geth`, `erigon`, `geth-pr5` |
+| `nodeType` | string | Node type: `full`, `archive`, `fast`, `snap` |
+| `syncMode` | string | Sync mode: `full`, `fast`, `snap` |
+| `clientVersion` | string | Client version string |
+| `chainDataSize` | number | Chain data size in bytes |
+| `databaseSize` | number | Database size in bytes |
+| `ipv4` | string | Node IPv4 address |
+| `os` | object | OS information (type, release, arch, kernel) |
 
 **Response:**
 
 ```json
 {
   "success": true,
-  "timestamp": "2026-02-14T12:00:00Z",
-  "nextHeartbeat": 300
+  "data": {
+    "ok": true,
+    "commands": []
+  },
+  "incidentsDetected": 0
 }
 ```
 
 ### Fleet Status API
 
-Get an overview of all registered nodes:
+Get an overview of all registered nodes with real-time metrics:
 
 ```bash
 curl -X GET http://localhost:3000/api/v1/fleet/status \
@@ -173,24 +207,67 @@ curl -X GET http://localhost:3000/api/v1/fleet/status \
 
 ```json
 {
-  "fleet": {
+  "success": true,
+  "data": {
+    "healthScore": 92,
     "totalNodes": 12,
-    "online": 11,
-    "offline": 1,
-    "syncing": 2,
-    "healthy": 10
-  },
-  "networks": {
-    "mainnet": 10,
-    "testnet": 2
-  },
-  "alerts": {
-    "critical": 0,
-    "warning": 2,
-    "info": 5
+    "nodes": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "name": "xdc-node-01",
+        "host": "192.168.1.100",
+        "role": "masternode",
+        "status": "healthy",
+        "blockHeight": 89234567,
+        "syncPercent": 100,
+        "peerCount": 25,
+        "cpuPercent": 45.2,
+        "memoryPercent": 62.1,
+        "diskPercent": 78.0,
+        "lastSeen": "2026-02-14T12:00:00Z",
+        "clientType": "geth",
+        "nodeType": "full",
+        "syncMode": "full",
+        "chainDataSize": 485000000000,
+        "databaseSize": 520000000000,
+        "clientVersion": "v2.6.8-stable"
+      }
+    ],
+    "nodeCounts": {
+      "healthy": 10,
+      "syncing": 1,
+      "degraded": 1,
+      "offline": 0
+    },
+    "incidents": {
+      "critical": 0,
+      "warning": 2,
+      "info": 5,
+      "total": 7
+    },
+    "avgBlockHeight": 89234560,
+    "maxBlockHeight": 89234567,
+    "lastUpdated": "2026-02-14T12:00:00Z"
   }
 }
 ```
+
+**Response Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `healthScore` | number | Fleet health score (0-100) |
+| `totalNodes` | number | Total number of active nodes |
+| `nodes` | array | List of nodes with detailed metrics |
+| `nodes[].status` | string | Node status: `healthy`, `syncing`, `degraded`, `offline` |
+| `nodes[].clientType` | string | Client type: `geth`, `erigon`, `geth-pr5` |
+| `nodes[].nodeType` | string | Node type: `full`, `archive`, `fast`, `snap` |
+| `nodes[].syncMode` | string | Sync mode: `full`, `fast`, `snap` |
+| `nodes[].chainDataSize` | number | Chain data size in bytes |
+| `nodes[].databaseSize` | number | Database size in bytes |
+| `nodes[].clientVersion` | string | Client version string |
+| `nodeCounts` | object | Count of nodes by status |
+| `incidents` | object | Active incident counts by severity |
 
 ### Node Status API
 
@@ -233,6 +310,85 @@ curl -X GET http://localhost:3000/api/v1/nodes/{nodeId}/status \
 | Heartbeat | 120 req | 1 min |
 | Write | 30 req | 1 min |
 | Admin | 300 req | 1 min |
+
+---
+
+## 🚀 Fleet Monitoring Features
+
+### Node Type & Client Display
+
+Each node displays its client type and sync mode:
+
+- **Client Badges**: 🔷 Geth / 🔶 Erigon / 🟢 Geth PR5 / ⚡ XDC
+- **Node Types**: Full Node / Archive / Fast Sync / Snap Sync / Masternode / Standby
+- **Sync Mode**: full, fast, snap, archive
+
+### Real-Time Storage Metrics
+
+Track blockchain storage usage in real-time:
+
+- **Chain Data Size**: Size of blockchain data on disk
+- **Database Size**: Total database storage usage
+- Storage displayed in human-readable format (GB, TB)
+- Historical storage growth charts
+
+### Block Increase Tracking
+
+Monitor sync progress and block production:
+
+- **Block Increase**: Shows "+N blocks" since last refresh
+- **Blocks/min**: Real-time calculation of block processing rate
+- **Sync ETA**: Estimated time remaining when syncing
+- Block height sparkline charts
+
+### Dynamic Charts (Pure SVG)
+
+All charts are rendered as pure SVG without external libraries:
+
+- **Time Range Selector**: 1h, 6h, 24h views
+- **Multi-Series Support**: Block height, peers, CPU, memory, disk, storage
+- **Interactive Legend**: Toggle series on/off
+- **Responsive Design**: Charts adapt to container size
+
+### Architecture: Agent → API → DB → Dashboard
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        XDC SkyNet Data Flow                            │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│  ┌──────────────┐     ┌────────────────┐     ┌─────────────────────┐  │
+│  │  XDC Node 1  │────▶│                │────▶│                     │  │
+│  └──────────────┘     │                │     │                     │  │
+│                       │   Heartbeat    │     │   PostgreSQL        │  │
+│  ┌──────────────┐     │   API          │     │   (skynet schema)   │  │
+│  │  XDC Node 2  │────▶│   /api/v1/     │────▶│                     │  │
+│  └──────────────┘     │   nodes/       │     │   • nodes           │  │
+│                       │   heartbeat    │     │   • node_metrics    │  │
+│  ┌──────────────┐     │                │     │   • incidents       │  │
+│  │  XDC Node N  │────▶│                │────▶│   • peer_snapshots  │  │
+│  └──────────────┘     └────────────────┘     └─────────────────────┘  │
+│         │                                              │              │
+│         │  Every 30-60s                                │              │
+│         │  sends:                                      │              │
+│         │  • blockHeight                               ▼              │
+│         │  • peerCount                   ┌─────────────────────────┐  │
+│         │  • system metrics              │                         │  │
+│         │  • clientType/nodeType         │   Fleet Dashboard       │  │
+│         │  • chainDataSize               │   /fleet                │  │
+│         │  • databaseSize                │                         │  │
+│         │                                │   • Node cards          │  │
+│         │                                │   • Client badges       │  │
+│         ▼                                │   • Block tracking      │  │
+│  ┌──────────────┐                        │   • Storage metrics     │  │
+│  │  Response:   │                        │   • Historical charts   │  │
+│  │  • ok: true  │                        │                         │  │
+│  │  • commands  │◀───────────────────────│   Real-time updates     │  │
+│  │    (remote)  │                        │   every 30s             │  │
+│  └──────────────┘                        └─────────────────────────┘  │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 

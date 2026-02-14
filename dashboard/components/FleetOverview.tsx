@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { 
   Server, 
   Activity, 
@@ -23,7 +24,11 @@ import {
   Users,
   TrendingUp,
   TrendingDown,
-  Minus
+  Minus,
+  Database,
+  Zap,
+  Layers,
+  FileBox
 } from 'lucide-react';
 
 // Types
@@ -45,6 +50,13 @@ interface FleetNode {
   ip: string;
   syncPercent?: number;
   isSyncing?: boolean;
+  // New fields
+  clientType?: string;
+  nodeType?: string;
+  syncMode?: string;
+  chainDataSize?: number;
+  databaseSize?: number;
+  clientVersion?: string;
 }
 
 interface FleetData {
@@ -59,6 +71,10 @@ interface FleetData {
 
 interface BlockHeightHistory {
   [nodeId: string]: number[];
+}
+
+interface PreviousBlockData {
+  [nodeId: string]: { height: number; timestamp: number };
 }
 
 // Map API status to UI status
@@ -87,6 +103,88 @@ const formatTimeAgo = (timestamp: string): string => {
   if (minutes > 0) return `${minutes}m ago`;
   return `${seconds}s ago`;
 };
+
+// Format bytes to human readable
+const formatBytes = (bytes?: number): string => {
+  if (!bytes || bytes === 0) return '—';
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+};
+
+// Format duration
+const formatDuration = (minutes: number): string => {
+  if (minutes < 1) return '< 1m';
+  if (minutes < 60) return `${Math.round(minutes)}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = Math.round(minutes % 60);
+  return `${hours}h ${mins}m`;
+};
+
+// Client badge component
+function ClientBadge({ clientType }: { clientType?: string }) {
+  const styles: Record<string, { bg: string; text: string; icon: string; label: string }> = {
+    geth: { 
+      bg: 'bg-blue-500/15', 
+      text: 'text-blue-400',
+      icon: '🔷',
+      label: 'Geth'
+    },
+    erigon: { 
+      bg: 'bg-orange-500/15', 
+      text: 'text-orange-400',
+      icon: '🔶',
+      label: 'Erigon'
+    },
+    'geth-pr5': { 
+      bg: 'bg-green-500/15', 
+      text: 'text-green-400',
+      icon: '🟢',
+      label: 'Geth PR5'
+    },
+    XDC: { 
+      bg: 'bg-[#1E90FF]/15', 
+      text: 'text-[#1E90FF]',
+      icon: '⚡',
+      label: 'XDC'
+    },
+  };
+  
+  const style = styles[clientType || ''] || { 
+    bg: 'bg-gray-500/15', 
+    text: 'text-gray-400',
+    icon: '●',
+    label: clientType || 'Unknown'
+  };
+  
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${style.bg} ${style.text}`}>
+      <span>{style.icon}</span>
+      {style.label}
+    </span>
+  );
+}
+
+// Node type badge
+function NodeTypeBadge({ nodeType, syncMode }: { nodeType?: string; syncMode?: string }) {
+  const getLabel = () => {
+    if (nodeType === 'archive') return 'Archive';
+    if (nodeType === 'full' || nodeType === 'fullnode') {
+      if (syncMode === 'fast') return 'Fast Sync';
+      if (syncMode === 'snap') return 'Snap Sync';
+      return 'Full Node';
+    }
+    if (nodeType === 'masternode') return 'Masternode';
+    if (nodeType === 'standby') return 'Standby';
+    return nodeType || 'Full Node';
+  };
+  
+  return (
+    <span className="text-xs text-[#6B7280] bg-[rgba(255,255,255,0.05)] px-2 py-0.5 rounded">
+      {getLabel()}
+    </span>
+  );
+}
 
 // Sparkline Component (Pure SVG)
 function Sparkline({ data }: { data: number[] }) {
@@ -141,8 +239,9 @@ export default function FleetOverview() {
   // Block height history for sparklines (rolling buffer of last 10 readings per node)
   const [blockHeightHistory, setBlockHeightHistory] = useState<BlockHeightHistory>({});
   
-  // Previous block heights for calculating blocks/min
-  const [previousBlockHeights, setPreviousBlockHeights] = useState<{ [nodeId: string]: { height: number; timestamp: number } }>({});
+  // Previous block heights for calculating blocks/min and block increase
+  const prevBlockDataRef = useRef<PreviousBlockData>({});
+  const [blockIncreases, setBlockIncreases] = useState<{ [nodeId: string]: number }>({});
 
   // Fetch nodes from API
   const fetchNodes = useCallback(async () => {
@@ -160,31 +259,59 @@ export default function FleetOverview() {
       
       setIncidents(apiIncidents);
       
+      const now = Date.now();
+      
+      // Calculate block increases since last fetch
+      const newBlockIncreases: { [nodeId: string]: number } = {};
+      
       // Map API response to FleetNode interface
-      const mappedNodes: FleetNode[] = apiNodes.map((node: any) => ({
-        id: node.id || '',
-        name: node.name || 'Unknown',
-        role: (node.role || 'fullnode') as FleetNode['role'],
-        region: node.region || 'unknown',
-        status: mapStatus(node.status),
-        version: node.clientVersion || node.client_version || 'Unknown',
-        blockHeight: node.blockHeight || 0,
-        peers: node.peerCount || 0,
-        cpuUsage: node.cpuPercent !== null ? node.cpuPercent : 0,
-        memoryUsage: node.memoryPercent !== null ? node.memoryPercent : 0,
-        diskUsage: node.diskPercent !== null ? node.diskPercent : 0,
-        uptime: node.uptime || 0,
-        tags: node.tags || [],
-        lastSeen: node.lastSeen || '',
-        ip: node.host || node.ipv4 || '',
-        syncPercent: node.syncPercent ?? 0,
-        isSyncing: node.status === 'syncing',
-      }));
+      const mappedNodes: FleetNode[] = apiNodes.map((node: any) => {
+        const prevData = prevBlockDataRef.current[node.id];
+        if (prevData) {
+          const increase = (node.blockHeight || 0) - prevData.height;
+          if (increase > 0) {
+            newBlockIncreases[node.id] = increase;
+          }
+        }
+        
+        return {
+          id: node.id || '',
+          name: node.name || 'Unknown',
+          role: (node.role || 'fullnode') as FleetNode['role'],
+          region: node.region || 'unknown',
+          status: mapStatus(node.status),
+          version: node.clientVersion || node.client_version || 'Unknown',
+          blockHeight: node.blockHeight || 0,
+          peers: node.peerCount || 0,
+          cpuUsage: node.cpuPercent !== null ? node.cpuPercent : 0,
+          memoryUsage: node.memoryPercent !== null ? node.memoryPercent : 0,
+          diskUsage: node.diskPercent !== null ? node.diskPercent : 0,
+          uptime: node.uptime || 0,
+          tags: node.tags || [],
+          lastSeen: node.lastSeen || '',
+          ip: node.host || node.ipv4 || '',
+          syncPercent: node.syncPercent ?? 0,
+          isSyncing: node.status === 'syncing',
+          // New fields
+          clientType: node.clientType || node.client_type,
+          nodeType: node.nodeType || node.node_type,
+          syncMode: node.syncMode || node.sync_mode,
+          chainDataSize: node.chainDataSize || node.chain_data_size,
+          databaseSize: node.databaseSize || node.database_size,
+          clientVersion: node.clientVersion || node.client_version,
+        };
+      });
       
       setNodes(mappedNodes);
+      setBlockIncreases(newBlockIncreases);
+      
+      // Update previous block data for next comparison
+      prevBlockDataRef.current = mappedNodes.reduce((acc, node) => {
+        acc[node.id] = { height: node.blockHeight, timestamp: now };
+        return acc;
+      }, {} as PreviousBlockData);
       
       // Update block height history (keep last 10 readings)
-      const now = Date.now();
       setBlockHeightHistory(prev => {
         const updated = { ...prev };
         mappedNodes.forEach(node => {
@@ -192,20 +319,6 @@ export default function FleetOverview() {
             updated[node.id] = [];
           }
           updated[node.id] = [...updated[node.id], node.blockHeight].slice(-10);
-        });
-        return updated;
-      });
-      
-      // Update previous block heights for rate calculation
-      setPreviousBlockHeights(prev => {
-        const updated = { ...prev };
-        mappedNodes.forEach(node => {
-          if (!updated[node.id]) {
-            updated[node.id] = { height: node.blockHeight, timestamp: now };
-          } else {
-            // Keep the previous value for rate calculation
-            updated[node.id] = { height: node.blockHeight, timestamp: now };
-          }
         });
         return updated;
       });
@@ -220,7 +333,7 @@ export default function FleetOverview() {
 
   // Calculate blocks/min
   const calculateBlocksPerMin = (nodeId: string, currentHeight: number): number | null => {
-    const prev = previousBlockHeights[nodeId];
+    const prev = prevBlockDataRef.current[nodeId];
     if (!prev) return null;
     
     const timeDiffMs = Date.now() - prev.timestamp;
@@ -230,6 +343,21 @@ export default function FleetOverview() {
     
     const blockDiff = currentHeight - prev.height;
     return blockDiff / timeDiffMin;
+  };
+
+  // Calculate sync ETA
+  const calculateSyncETA = (node: FleetNode, blocksPerMin: number | null): string | null => {
+    if (!node.isSyncing || !node.syncPercent || node.syncPercent >= 100) return null;
+    if (!blocksPerMin || blocksPerMin <= 0) return null;
+    
+    // Estimate remaining blocks (assuming 100% = current height / syncPercent * 100)
+    const remainingPercent = 100 - node.syncPercent;
+    // Rough estimate: if at 80% with 1000000 blocks, remaining = 250000 blocks
+    const estimatedTotalBlocks = node.blockHeight / (node.syncPercent / 100);
+    const remainingBlocks = estimatedTotalBlocks * (remainingPercent / 100);
+    const minutesRemaining = remainingBlocks / blocksPerMin;
+    
+    return formatDuration(minutesRemaining);
   };
 
   // Initial fetch
@@ -580,6 +708,8 @@ export default function FleetOverview() {
             const isSelected = selectedNodes.has(node.id);
             const blocksPerMin = calculateBlocksPerMin(node.id, node.blockHeight);
             const historyData = blockHeightHistory[node.id] || [];
+            const blockIncrease = blockIncreases[node.id] || 0;
+            const syncETA = calculateSyncETA(node, blocksPerMin);
             
             return (
               <div 
@@ -614,6 +744,11 @@ export default function FleetOverview() {
                   
                   {showActions === node.id && (
                     <div className="absolute right-0 top-8 w-40 rounded-lg bg-[#1a2234] border border-[rgba(255,255,255,0.1)] shadow-lg z-10">
+                      <Link href={`/nodes/${node.id}`} onClick={(e) => e.stopPropagation()}>
+                        <button className="w-full px-3 py-2 text-left text-sm text-[#F9FAFB] hover:bg-[rgba(255,255,255,0.05)] flex items-center gap-2">
+                          <Activity className="w-3.5 h-3.5" /> Details
+                        </button>
+                      </Link>
                       <button onClick={(e) => { e.stopPropagation(); handleNodeAction(node.id, 'restart'); }} className="w-full px-3 py-2 text-left text-sm text-[#F9FAFB] hover:bg-[rgba(255,255,255,0.05)] flex items-center gap-2">
                         <RotateCcw className="w-3.5 h-3.5" /> Restart
                       </button>
@@ -638,6 +773,12 @@ export default function FleetOverview() {
                   </div>
                 </div>
                 
+                {/* Client Badge + Node Type */}
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <ClientBadge clientType={node.clientType} />
+                  <NodeTypeBadge nodeType={node.nodeType} syncMode={node.syncMode} />
+                </div>
+                
                 {/* Status badge */}
                 <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${statusStyle.bg} ${statusStyle.text} text-xs font-medium mb-3`}>
                   <StatusIcon className="w-3.5 h-3.5" />
@@ -648,12 +789,19 @@ export default function FleetOverview() {
                 <div className="mb-3 p-3 rounded-lg bg-[rgba(30,144,255,0.1)] border border-[rgba(30,144,255,0.2)]">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-[#6B7280]">Block Height</span>
-                    {blocksPerMin !== null && blocksPerMin > 0 && (
-                      <span className="text-xs text-[#1E90FF] flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" />
-                        {blocksPerMin.toFixed(1)} bl/min
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {blockIncrease > 0 && (
+                        <span className="text-xs text-[#10B981] font-medium">
+                          +{blockIncrease}
+                        </span>
+                      )}
+                      {blocksPerMin !== null && blocksPerMin > 0 && (
+                        <span className="text-xs text-[#1E90FF] flex items-center gap-0.5">
+                          <Zap className="w-3 h-3" />
+                          {blocksPerMin.toFixed(1)}/min
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="text-lg font-bold font-mono text-[#1E90FF]">
                     {node.blockHeight.toLocaleString()}
@@ -664,6 +812,27 @@ export default function FleetOverview() {
                     </div>
                   )}
                 </div>
+                
+                {/* Sync Progress with ETA */}
+                {node.isSyncing && (
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-[#6B7280]">Syncing</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[#F59E0B]">{node.syncPercent?.toFixed(1)}%</span>
+                        {syncETA && (
+                          <span className="text-[#6B7280]">~{syncETA} left</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="w-full h-2 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full bg-[#F59E0B] transition-all" 
+                        style={{ width: `${node.syncPercent || 0}%` }} 
+                      />
+                    </div>
+                  </div>
+                )}
                 
                 {/* Connected Peers - VISIBLE */}
                 <div className="mb-3 flex items-center justify-between p-2 rounded-lg bg-[rgba(255,255,255,0.02)]">
@@ -676,19 +845,16 @@ export default function FleetOverview() {
                   </span>
                 </div>
                 
-                {/* Sync Progress (if syncing) */}
-                {node.isSyncing && (
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-[#6B7280]">Syncing</span>
-                      <span className="text-[#F59E0B]">{node.syncPercent?.toFixed(1)}%</span>
+                {/* Storage */}
+                {(node.chainDataSize || node.databaseSize) && (
+                  <div className="mb-3 flex items-center justify-between p-2 rounded-lg bg-[rgba(255,255,255,0.02)]">
+                    <div className="flex items-center gap-2">
+                      <Database className="w-4 h-4 text-[#6B7280]" />
+                      <span className="text-xs text-[#6B7280]">Storage</span>
                     </div>
-                    <div className="w-full h-2 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full bg-[#F59E0B] transition-all" 
-                        style={{ width: `${node.syncPercent || 0}%` }} 
-                      />
-                    </div>
+                    <span className="text-sm font-medium text-[#F9FAFB]">
+                      {formatBytes(node.chainDataSize || node.databaseSize)}
+                    </span>
                   </div>
                 )}
                 
@@ -696,7 +862,7 @@ export default function FleetOverview() {
                 <div className="space-y-2 mb-3">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-[#6B7280] flex items-center gap-1"><Cpu className="w-3 h-3" /> CPU</span>
-                    <span style={{ color: getUsageColor(node.cpuUsage) }}>{node.cpuUsage}%</span>
+                    <span style={{ color: getUsageColor(node.cpuUsage) }}>{node.cpuUsage.toFixed(0)}%</span>
                   </div>
                   <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all" style={{ width: `${node.cpuUsage}%`, backgroundColor: getUsageColor(node.cpuUsage) }} />
@@ -704,7 +870,7 @@ export default function FleetOverview() {
                   
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-[#6B7280] flex items-center gap-1"><MemoryStick className="w-3 h-3" /> RAM</span>
-                    <span style={{ color: getUsageColor(node.memoryUsage) }}>{node.memoryUsage}%</span>
+                    <span style={{ color: getUsageColor(node.memoryUsage) }}>{node.memoryUsage.toFixed(0)}%</span>
                   </div>
                   <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all" style={{ width: `${node.memoryUsage}%`, backgroundColor: getUsageColor(node.memoryUsage) }} />
@@ -712,7 +878,7 @@ export default function FleetOverview() {
                   
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-[#6B7280] flex items-center gap-1"><HardDrive className="w-3 h-3" /> Disk</span>
-                    <span style={{ color: getUsageColor(node.diskUsage) }}>{node.diskUsage}%</span>
+                    <span style={{ color: getUsageColor(node.diskUsage) }}>{node.diskUsage.toFixed(0)}%</span>
                   </div>
                   <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all" style={{ width: `${node.diskUsage}%`, backgroundColor: getUsageColor(node.diskUsage) }} />
@@ -725,7 +891,7 @@ export default function FleetOverview() {
                     <Clock className="w-3 h-3" />
                     {formatTimeAgo(node.lastSeen)}
                   </span>
-                  <span>v{node.version}</span>
+                  <span className="truncate max-w-[100px]" title={node.version}>v{node.version?.slice(0, 15)}</span>
                 </div>
                 
                 {/* Tags */}
@@ -748,7 +914,7 @@ export default function FleetOverview() {
       {/* List View */}
       {viewMode === 'list' && (
         <div className="overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.06)]">
-          <table className="w-full min-w-[1200px]">
+          <table className="w-full min-w-[1400px]">
             <thead className="bg-[var(--bg-card)]">
               <tr className="border-b border-[rgba(255,255,255,0.06)]">
                 <th className="text-left py-3 px-4">
@@ -763,10 +929,12 @@ export default function FleetOverview() {
                   </button>
                 </th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Node</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Client</th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Status</th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Block Height</th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Sync</th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Peers</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Storage</th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Resources</th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Last Seen</th>
                 <th className="text-right py-3 px-4 text-xs font-medium text-[#6B7280]">Actions</th>
@@ -778,6 +946,7 @@ export default function FleetOverview() {
                 const StatusIcon = statusStyle.icon;
                 const isSelected = selectedNodes.has(node.id);
                 const blocksPerMin = calculateBlocksPerMin(node.id, node.blockHeight);
+                const blockIncrease = blockIncreases[node.id] || 0;
                 
                 return (
                   <tr key={node.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
@@ -803,16 +972,27 @@ export default function FleetOverview() {
                       </div>
                     </td>
                     <td className="py-3 px-4">
+                      <div className="flex flex-col gap-1">
+                        <ClientBadge clientType={node.clientType} />
+                        <span className="text-xs text-[#6B7280]">{node.nodeType || 'fullnode'}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${statusStyle.bg} ${statusStyle.text} text-xs font-medium`}>
                         <StatusIcon className="w-3.5 h-3.5" />
                         {node.status}
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="font-mono-nums text-[#1E90FF] font-semibold">{node.blockHeight.toLocaleString()}</div>
-                      {blocksPerMin !== null && blocksPerMin > 0 && (
-                        <div className="text-xs text-[#6B7280]">{blocksPerMin.toFixed(1)} bl/min</div>
-                      )}
+                      <div className="font-mono text-[#1E90FF] font-semibold">{node.blockHeight.toLocaleString()}</div>
+                      <div className="flex items-center gap-2 text-xs">
+                        {blockIncrease > 0 && (
+                          <span className="text-[#10B981]">+{blockIncrease}</span>
+                        )}
+                        {blocksPerMin !== null && blocksPerMin > 0 && (
+                          <span className="text-[#6B7280]">{blocksPerMin.toFixed(1)}/min</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       {node.isSyncing ? (
@@ -836,20 +1016,33 @@ export default function FleetOverview() {
                       </div>
                     </td>
                     <td className="py-3 px-4">
+                      <span className="text-sm text-[#F9FAFB]">
+                        {formatBytes(node.chainDataSize || node.databaseSize)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1.5">
                           <Cpu className="w-3.5 h-3.5" style={{ color: getUsageColor(node.cpuUsage) }} />
-                          <span className="text-xs" style={{ color: getUsageColor(node.cpuUsage) }}>{node.cpuUsage}%</span>
+                          <span className="text-xs" style={{ color: getUsageColor(node.cpuUsage) }}>{node.cpuUsage.toFixed(0)}%</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <MemoryStick className="w-3.5 h-3.5" style={{ color: getUsageColor(node.memoryUsage) }} />
-                          <span className="text-xs" style={{ color: getUsageColor(node.memoryUsage) }}>{node.memoryUsage}%</span>
+                          <span className="text-xs" style={{ color: getUsageColor(node.memoryUsage) }}>{node.memoryUsage.toFixed(0)}%</span>
                         </div>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-[#9CA3AF]">{formatTimeAgo(node.lastSeen)}</td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Link href={`/nodes/${node.id}`}>
+                          <button 
+                            className="p-1.5 rounded hover:bg-[rgba(30,144,255,0.15)] text-[#6B7280] hover:text-[var(--accent-blue)] transition-colors"
+                            title="Details"
+                          >
+                            <Activity className="w-4 h-4" />
+                          </button>
+                        </Link>
                         <button 
                           onClick={() => handleNodeAction(node.id, 'restart')}
                           className="p-1.5 rounded hover:bg-[rgba(245,158,11,0.15)] text-[#6B7280] hover:text-[var(--warning)] transition-colors"

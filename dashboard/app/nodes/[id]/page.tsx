@@ -69,6 +69,7 @@ interface NodeDetail {
   };
   client_type?: string;
   node_type?: string;
+  sync_mode?: string;
   security_score?: number;
   security_issues?: string;
 }
@@ -85,6 +86,7 @@ interface NodeStatus {
   clientVersion: string;
   clientType?: string;
   nodeType?: string;
+  syncMode?: string;
   coinbase: string;
   system: {
     cpuPercent: number;
@@ -93,6 +95,10 @@ interface NodeStatus {
     diskUsedGb: number;
     diskTotalGb: number;
   } | null;
+  storage?: {
+    chainDataSize?: number;
+    databaseSize?: number;
+  };
   os?: {
     type?: string;
     release?: string;
@@ -142,6 +148,9 @@ interface MetricHistory {
   peer_count: number;
   cpu_percent: number;
   memory_percent: number;
+  disk_percent: number;
+  chain_data_size?: number;
+  database_size?: number;
 }
 
 function StatusIndicator({ status }: { status: 'healthy' | 'degraded' | 'offline' }) {
@@ -256,8 +265,20 @@ function useCopyToClipboard() {
 }
 
 // Node Type Badge
-function NodeTypeBadge({ nodeType }: { nodeType?: string }) {
+function NodeTypeBadge({ nodeType, syncMode }: { nodeType?: string; syncMode?: string }) {
   if (!nodeType) return null;
+  
+  const getLabel = () => {
+    if (nodeType === 'archive') return 'Archive';
+    if (nodeType === 'full' || nodeType === 'fullnode') {
+      if (syncMode === 'fast') return 'Fast Sync';
+      if (syncMode === 'snap') return 'Snap Sync';
+      return 'Full Node';
+    }
+    if (nodeType === 'masternode') return 'Masternode';
+    if (nodeType === 'standby') return 'Standby';
+    return nodeType.charAt(0).toUpperCase() + nodeType.slice(1);
+  };
   
   const styles: Record<string, { bg: string; icon: React.ReactNode; label: string }> = {
     masternode: { 
@@ -273,7 +294,17 @@ function NodeTypeBadge({ nodeType }: { nodeType?: string }) {
     fullnode: { 
       bg: 'bg-[#1E90FF]/10 text-[#1E90FF] border-[#1E90FF]/20', 
       icon: <Link2 className="w-3 h-3" />,
-      label: 'Full Node'
+      label: getLabel()
+    },
+    full: { 
+      bg: 'bg-[#1E90FF]/10 text-[#1E90FF] border-[#1E90FF]/20', 
+      icon: <Link2 className="w-3 h-3" />,
+      label: getLabel()
+    },
+    archive: { 
+      bg: 'bg-[#8B5CF6]/10 text-[#8B5CF6] border-[#8B5CF6]/20', 
+      icon: <Layers className="w-3 h-3" />,
+      label: 'Archive'
     },
   };
   
@@ -339,6 +370,14 @@ function formatTimeAgo(timestamp: string): string {
   if (hours > 0) return `${hours}h ago`;
   if (minutes > 0) return `${minutes}m ago`;
   return `${seconds}s ago`;
+}
+
+// Format bytes to human readable
+function formatBytes(bytes?: number): string {
+  if (!bytes || bytes === 0) return '—';
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
 }
 
 // Security Score Gauge
@@ -579,6 +618,9 @@ function MetricsChart({ data, series }: { data: MetricHistory[]; series: string[
     peer_count: '#10B981',
     cpu_percent: '#F59E0B',
     memory_percent: '#8B5CF6',
+    disk_percent: '#EF4444',
+    chain_data_size: '#F59E0B',
+    database_size: '#EC4899',
   };
 
   const generatePath = (key: keyof MetricHistory) => {
@@ -619,6 +661,15 @@ function MetricsChart({ data, series }: { data: MetricHistory[]; series: string[
         )}
         {series.includes('memory_percent') && (
           <path d={generatePath('memory_percent')} fill="none" stroke={colors.memory_percent} strokeWidth="2" strokeLinecap="round" />
+        )}
+        {series.includes('disk_percent') && (
+          <path d={generatePath('disk_percent')} fill="none" stroke={colors.disk_percent} strokeWidth="2" strokeLinecap="round" strokeDasharray="2,2" />
+        )}
+        {series.includes('chain_data_size') && (
+          <path d={generatePath('chain_data_size')} fill="none" stroke={colors.chain_data_size} strokeWidth="2" strokeLinecap="round" />
+        )}
+        {series.includes('database_size') && (
+          <path d={generatePath('database_size')} fill="none" stroke={colors.database_size} strokeWidth="2" strokeLinecap="round" strokeDasharray="3,3" />
         )}
         
         {/* X-axis labels (every 6th point) */}
@@ -717,6 +768,7 @@ export default function NodeDetailPage() {
   const [expandedPeers, setExpandedPeers] = useState(false);
   const [expandedLogs, setExpandedLogs] = useState(false);
   const [selectedSeries, setSelectedSeries] = useState<string[]>(['block_height', 'peer_count']);
+  const [timeRange, setTimeRange] = useState<number>(24);
   
   const [sortField, setSortField] = useState<keyof Peer>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -739,7 +791,7 @@ export default function NodeDetailPage() {
         fetch(`/api/v1/nodes/${nodeId}/status`, { cache: 'no-store' }),
         fetch(`/api/incidents?nodeId=${nodeId}&limit=20`, { cache: 'no-store' }),
         fetch(`/api/v1/nodes/${nodeId}/peers`, { cache: 'no-store' }).catch(() => null),
-        fetch(`/api/v1/nodes/${nodeId}/metrics/history?hours=24`, { cache: 'no-store' }),
+        fetch(`/api/v1/nodes/${nodeId}/metrics/history?hours=${timeRange}`, { cache: 'no-store' }),
       ]);
 
       if (statusRes.ok) {
@@ -771,7 +823,7 @@ export default function NodeDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [nodeId]);
+  }, [nodeId, timeRange]);
 
   // Auto-refresh every 10 seconds
   useEffect(() => {
@@ -978,7 +1030,7 @@ export default function NodeDetailPage() {
               
               {/* Node Type and Client Type Badges */}
               <div className="flex items-center gap-2 mt-2">
-                <NodeTypeBadge nodeType={status.nodeType || node.node_type} />
+                <NodeTypeBadge nodeType={status.nodeType || node.node_type} syncMode={status.syncMode || node.sync_mode} />
                 <ClientTypeBadge clientType={status.clientType || node.client_type} />
               </div>
             </div>
@@ -1226,6 +1278,53 @@ export default function NodeDetailPage() {
           </div>
         </div>
 
+        {/* Storage Section */}
+        {(status.storage?.chainDataSize || status.storage?.databaseSize) && (
+          <div className="card-xdc">
+            <div className="flex items-center gap-3 mb-4">
+              <HardDrive className="w-5 h-5 text-[#1E90FF]" />
+              <h2 className="text-lg font-semibold">Storage</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {status.storage?.chainDataSize && (
+                <div className="bg-white/5 rounded-lg p-4">
+                  <div className="text-[10px] uppercase text-[#64748B] mb-1">Chain Data Size</div>
+                  <div className="text-2xl font-bold font-mono text-[#F59E0B]">
+                    {formatBytes(status.storage.chainDataSize)}
+                  </div>
+                  <div className="text-xs text-[#64748B] mt-1">
+                    {status.storage.chainDataSize.toLocaleString()} bytes
+                  </div>
+                </div>
+              )}
+              
+              {status.storage?.databaseSize && (
+                <div className="bg-white/5 rounded-lg p-4">
+                  <div className="text-[10px] uppercase text-[#64748B] mb-1">Database Size</div>
+                  <div className="text-2xl font-bold font-mono text-[#EC4899]">
+                    {formatBytes(status.storage.databaseSize)}
+                  </div>
+                  <div className="text-xs text-[#64748B] mt-1">
+                    {status.storage.databaseSize.toLocaleString()} bytes
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {metrics.length > 0 && (metrics[0].chain_data_size || metrics[0].database_size) && (
+              <div className="mt-4">
+                <div className="text-sm text-[#64748B] mb-2">Storage History</div>
+                <Sparkline 
+                  data={metrics.slice(-30).map(m => m.chain_data_size || m.database_size || 0).filter(Boolean)} 
+                  color="#F59E0B" 
+                  height={60}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Peer List */}
           <div className="card-xdc">
@@ -1414,13 +1513,31 @@ export default function NodeDetailPage() {
 
         {/* Metrics History Chart */}
         <div className="card-xdc">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-4">
             <div className="flex items-center gap-3">
               <Activity className="w-5 h-5 text-[#1E90FF]" />
-              <h2 className="text-lg font-semibold">24h Metrics History</h2>
+              <h2 className="text-lg font-semibold">Metrics History</h2>
             </div>
-            <div className="flex gap-2">
-              {['block_height', 'peer_count', 'cpu_percent', 'memory_percent'].map((series) => (
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Time range selector */}
+              <div className="flex gap-1 mr-4">
+                {[1, 6, 24].map((hours) => (
+                  <button
+                    key={hours}
+                    onClick={() => setTimeRange(hours)}
+                    className={`px-3 py-1 rounded text-xs transition-colors ${
+                      timeRange === hours
+                        ? 'bg-[#1E90FF]/20 text-[#1E90FF]'
+                        : 'bg-white/5 text-[#64748B] hover:bg-white/10'
+                    }`}
+                  >
+                    {hours}h
+                  </button>
+                ))}
+              </div>
+              
+              {/* Series toggles */}
+              {['block_height', 'peer_count', 'cpu_percent', 'memory_percent', 'disk_percent'].map((series) => (
                 <button
                   key={series}
                   onClick={() => {
@@ -1439,6 +1556,31 @@ export default function NodeDetailPage() {
                   {series.replace('_', ' ')}
                 </button>
               ))}
+              
+              {/* Storage series (only show if data exists) */}
+              {metrics.length > 0 && metrics.some(m => m.chain_data_size || m.database_size) && (
+                <>
+                  {['chain_data_size', 'database_size'].map((series) => (
+                    <button
+                      key={series}
+                      onClick={() => {
+                        setSelectedSeries(prev => 
+                          prev.includes(series) 
+                            ? prev.filter(s => s !== series)
+                            : [...prev, series]
+                        );
+                      }}
+                      className={`px-3 py-1 rounded text-xs transition-colors ${
+                        selectedSeries.includes(series)
+                          ? 'bg-[#F59E0B]/20 text-[#F59E0B]'
+                          : 'bg-white/5 text-[#64748B]'
+                      }`}
+                    >
+                      {series.replace('_', ' ')}
+                    </button>
+                  ))}
+                </>
+              )}
             </div>
           </div>
           

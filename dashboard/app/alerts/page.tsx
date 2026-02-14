@@ -736,7 +736,7 @@ function ChannelModal({ channel, onClose, onSave }: {
         username: form.username,
         password: form.password,
         fromAddress: form.fromAddress,
-        toAddresses: form.toAddresses.split(',').map(s => s.trim()).filter(Boolean),
+        toAddresses: form.toAddresses.split(',').map((s: string) => s.trim()).filter(Boolean),
         useTls: form.useTls,
       };
     } else if (channelType === 'webhook') {

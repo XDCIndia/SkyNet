@@ -517,10 +517,10 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Secondary Charts Grid */}
-        {data?.timeseries?.length > 0 && (
+        {(data?.timeseries?.length ?? 0) > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Min/Max Range Chart for applicable metrics */}
-            {(selectedMetric === 'peers' || selectedMetric === 'latency' || selectedMetric === 'cpu' || selectedMetric === 'memory' || selectedMetric === 'disk') && (
+            {data && (selectedMetric === 'peers' || selectedMetric === 'latency' || selectedMetric === 'cpu' || selectedMetric === 'memory' || selectedMetric === 'disk') && (
               <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-subtle)] p-6">
                 <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-4">Min/Max Range</h3>
                 <div className="h-48">
