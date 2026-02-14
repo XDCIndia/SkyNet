@@ -3,9 +3,12 @@
 
 import WebSocket, { WebSocketServer } from 'ws';
 import { Pool } from 'pg';
+import { verify } from 'jsonwebtoken';
 
 const WS_PORT = parseInt(process.env.WS_PORT || '3006');
 const DATABASE_URL = process.env.DATABASE_URL;
+const JWT_SECRET = process.env.JWT_SECRET || process.env.API_KEYS?.split(',')[0] || 'dev-secret-change-in-production';
+const WS_AUTH_REQUIRED = process.env.WS_AUTH_REQUIRED !== 'false'; // Default to true
 
 if (!DATABASE_URL) {
   console.error('Error: DATABASE_URL environment variable is required');
@@ -24,11 +27,18 @@ const pool = new Pool({
 
 // Track subscribed channels per client
 const clientSubscriptions = new Map<WebSocket, Set<string>>();
+const authenticatedClients = new WeakSet<WebSocket>();
 
 interface BroadcastMessage {
-  type: 'metrics' | 'incidents' | 'peers' | 'health' | 'error' | 'ack';
+  type: 'metrics' | 'incidents' | 'peers' | 'health' | 'error' | 'ack' | 'auth_required' | 'auth_success';
   data: unknown;
   timestamp: string;
+}
+
+interface AuthenticatedWebSocket extends WebSocket {
+  userId?: string;
+  nodeId?: string;
+  isAuthenticated: boolean;
 }
 
 async function query(text: string, params?: any[]): Promise<any> {
@@ -158,12 +168,72 @@ async function broadcastUpdates(wss: WebSocketServer): Promise<void> {
   }
 }
 
-function handleClientMessage(ws: WebSocket, message: string): void {
+function authenticateClient(token: string): { valid: boolean; userId?: string; nodeId?: string } {
+  try {
+    // Check if token matches API key (simple auth)
+    const apiKeys = process.env.API_KEYS?.split(',') || [];
+    if (apiKeys.includes(token)) {
+      return { valid: true, userId: 'api-key-user' };
+    }
+    
+    // Try JWT verification
+    const decoded = verify(token, JWT_SECRET) as { userId?: string; nodeId?: string };
+    return { valid: true, ...decoded };
+  } catch {
+    return { valid: false };
+  }
+}
+
+function handleClientMessage(ws: AuthenticatedWebSocket, message: string): void {
   try {
     const data = JSON.parse(message);
 
     switch (data.type) {
+      case 'auth': {
+        if (!data.token) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            data: { message: 'Token required' },
+            timestamp: new Date().toISOString(),
+          }));
+          return;
+        }
+        
+        const auth = authenticateClient(data.token);
+        if (!auth.valid) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            data: { message: 'Invalid token' },
+            timestamp: new Date().toISOString(),
+          }));
+          ws.close(1008, 'Invalid token');
+          return;
+        }
+        
+        ws.isAuthenticated = true;
+        ws.userId = auth.userId;
+        ws.nodeId = auth.nodeId;
+        authenticatedClients.add(ws);
+        
+        ws.send(JSON.stringify({
+          type: 'auth_success',
+          data: { userId: auth.userId },
+          timestamp: new Date().toISOString(),
+        }));
+        break;
+      }
+
       case 'subscribe': {
+        // Check authentication if required
+        if (WS_AUTH_REQUIRED && !ws.isAuthenticated) {
+          ws.send(JSON.stringify({
+            type: 'auth_required',
+            data: { message: 'Authentication required' },
+            timestamp: new Date().toISOString(),
+          }));
+          return;
+        }
+        
         const subs = clientSubscriptions.get(ws) || new Set();
         data.channels?.forEach((ch: string) => subs.add(ch));
         clientSubscriptions.set(ws, subs);
@@ -182,6 +252,16 @@ function handleClientMessage(ws: WebSocket, message: string): void {
       }
 
       case 'action': {
+        // Actions require authentication
+        if (WS_AUTH_REQUIRED && !ws.isAuthenticated) {
+          ws.send(JSON.stringify({
+            type: 'auth_required',
+            data: { message: 'Authentication required for actions' },
+            timestamp: new Date().toISOString(),
+          }));
+          return;
+        }
+        
         console.log('[WebSocket] Action received:', data.action, data.payload);
         ws.send(JSON.stringify({
           type: 'ack',
@@ -210,11 +290,22 @@ function handleClientMessage(ws: WebSocket, message: string): void {
 function main(): void {
   const wss = new WebSocketServer({ port: WS_PORT });
 
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws: AuthenticatedWebSocket) => {
     console.log('[WebSocket] Client connected');
+    
+    ws.isAuthenticated = false;
 
     // Default subscription to all channels
     clientSubscriptions.set(ws, new Set(['metrics', 'incidents', 'peers', 'health']));
+
+    // If auth is required, send auth_required message
+    if (WS_AUTH_REQUIRED) {
+      ws.send(JSON.stringify({
+        type: 'auth_required',
+        data: { message: 'Please authenticate with { type: "auth", token: "your-token" }' },
+        timestamp: new Date().toISOString(),
+      }));
+    }
 
     ws.on('message', (message) => {
       handleClientMessage(ws, message.toString());
@@ -223,15 +314,19 @@ function main(): void {
     ws.on('close', () => {
       console.log('[WebSocket] Client disconnected');
       clientSubscriptions.delete(ws);
+      authenticatedClients.delete(ws);
     });
 
     ws.on('error', (error) => {
       console.error('[WebSocket] Client error:', error);
       clientSubscriptions.delete(ws);
+      authenticatedClients.delete(ws);
     });
 
-    // Send initial data
-    broadcastUpdates(wss).catch(console.error);
+    // Send initial data only if auth is not required
+    if (!WS_AUTH_REQUIRED) {
+      broadcastUpdates(wss).catch(console.error);
+    }
   });
 
   // Periodic broadcasts every 10 seconds
@@ -241,6 +336,7 @@ function main(): void {
 
   console.log(`[WebSocket] Server started on port ${WS_PORT}`);
   console.log(`[WebSocket] Database: ${DB_URL.replace(/:[^:@]+@/, ':***@')}`);
+  console.log(`[WebSocket] Auth required: ${WS_AUTH_REQUIRED}`);
 
   // Graceful shutdown
   process.on('SIGTERM', () => {
