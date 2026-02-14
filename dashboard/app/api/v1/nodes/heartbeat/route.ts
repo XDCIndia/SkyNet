@@ -219,9 +219,10 @@ async function postHandler(request: NextRequest) {
            client_version = COALESCE($5, client_version),
            client_type = COALESCE($6, client_type),
            node_type = COALESCE($7, node_type),
-           sync_mode = COALESCE($8, sync_mode)
+           sync_mode = COALESCE($8, sync_mode),
+           os_info = COALESCE($9, os_info)
        WHERE id = $1`,
-      [nodeId, nodeType || null, security?.score ?? null, ipv4 || null, clientVersion || null, clientType || null, nodeType || null, syncMode || null]
+      [nodeId, nodeType || null, security?.score ?? null, ipv4 || null, clientVersion || null, clientType || null, nodeType || null, syncMode || null, os ? JSON.stringify(os) : null]
     );
   });
 
