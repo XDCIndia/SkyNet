@@ -182,9 +182,12 @@ async function postHandler(request: NextRequest) {
       `UPDATE skynet.nodes 
        SET updated_at = NOW(),
            role = COALESCE($2, role),
-           security_score = COALESCE($3, security_score)
+           security_score = COALESCE($3, security_score),
+           ipv4 = COALESCE($4, ipv4),
+           client_version = COALESCE($5, client_version),
+           client_type = COALESCE($6, client_type)
        WHERE id = $1`,
-      [nodeId, nodeType || null, security?.score ?? null]
+      [nodeId, nodeType || null, security?.score ?? null, ipv4 || null, clientVersion || null, clientType || null]
     );
   });
 
