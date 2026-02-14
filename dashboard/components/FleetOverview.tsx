@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   Server, 
   Activity, 
@@ -32,7 +32,7 @@ import {
 interface FleetNode {
   id: string;
   name: string;
-  role: 'validator' | 'rpc' | 'archive' | 'bootnode';
+  role: 'validator' | 'rpc' | 'archive' | 'bootnode' | 'fullnode' | 'masternode';
   region: string;
   status: 'healthy' | 'warning' | 'critical' | 'offline';
   version: string;
@@ -47,148 +47,23 @@ interface FleetNode {
   ip: string;
 }
 
-// Mock data
-const mockNodes: FleetNode[] = [
-  {
-    id: 'mn-001',
-    name: 'Masternode Alpha',
-    role: 'validator',
-    region: 'eu-west',
-    status: 'healthy',
-    version: 'v2.6.8',
-    blockHeight: 99234567,
-    peers: 45,
-    cpuUsage: 12,
-    memoryUsage: 45,
-    diskUsage: 34,
-    uptime: 99.98,
-    tags: ['production', 'critical', 'masternode'],
-    lastSeen: '2026-02-11T14:30:00Z',
-    ip: '192.168.1.10'
-  },
-  {
-    id: 'mn-002',
-    name: 'Masternode Beta',
-    role: 'validator',
-    region: 'us-east',
-    status: 'warning',
-    version: 'v2.6.8',
-    blockHeight: 99234562,
-    peers: 38,
-    cpuUsage: 25,
-    memoryUsage: 78,
-    diskUsage: 92,
-    uptime: 99.95,
-    tags: ['production', 'masternode'],
-    lastSeen: '2026-02-11T14:29:45Z',
-    ip: '192.168.2.20'
-  },
-  {
-    id: 'mn-003',
-    name: 'Masternode Gamma',
-    role: 'validator',
-    region: 'ap-south',
-    status: 'critical',
-    version: 'v2.6.7',
-    blockHeight: 99234520,
-    peers: 12,
-    cpuUsage: 95,
-    memoryUsage: 88,
-    diskUsage: 45,
-    uptime: 98.50,
-    tags: ['production', 'masternode', 'needs-update'],
-    lastSeen: '2026-02-11T14:25:00Z',
-    ip: '192.168.3.30'
-  },
-  {
-    id: 'rpc-001',
-    name: 'RPC Node Primary',
-    role: 'rpc',
-    region: 'eu-west',
-    status: 'healthy',
-    version: 'v2.6.8',
-    blockHeight: 99234567,
-    peers: 50,
-    cpuUsage: 35,
-    memoryUsage: 62,
-    diskUsage: 78,
-    uptime: 99.99,
-    tags: ['production', 'rpc', 'public'],
-    lastSeen: '2026-02-11T14:30:00Z',
-    ip: '192.168.1.50'
-  },
-  {
-    id: 'rpc-002',
-    name: 'RPC Node Secondary',
-    role: 'rpc',
-    region: 'us-west',
-    status: 'healthy',
-    version: 'v2.6.8',
-    blockHeight: 99234567,
-    peers: 48,
-    cpuUsage: 28,
-    memoryUsage: 55,
-    diskUsage: 65,
-    uptime: 99.97,
-    tags: ['production', 'rpc'],
-    lastSeen: '2026-02-11T14:29:55Z',
-    ip: '192.168.4.40'
-  },
-  {
-    id: 'arch-001',
-    name: 'Archive Node',
-    role: 'archive',
-    region: 'eu-west',
-    status: 'warning',
-    version: 'v2.6.8',
-    blockHeight: 99234567,
-    peers: 25,
-    cpuUsage: 45,
-    memoryUsage: 85,
-    diskUsage: 94,
-    uptime: 99.90,
-    tags: ['production', 'archive', 'historical'],
-    lastSeen: '2026-02-11T14:28:00Z',
-    ip: '192.168.1.100'
-  },
-  {
-    id: 'boot-001',
-    name: 'Bootstrap Node 1',
-    role: 'bootnode',
-    region: 'us-east',
-    status: 'healthy',
-    version: 'v2.6.8',
-    blockHeight: 99234567,
-    peers: 100,
-    cpuUsage: 8,
-    memoryUsage: 25,
-    diskUsage: 15,
-    uptime: 99.99,
-    tags: ['production', 'bootnode', 'discovery'],
-    lastSeen: '2026-02-11T14:30:00Z',
-    ip: '192.168.2.5'
-  },
-  {
-    id: 'mn-004',
-    name: 'Masternode Delta',
-    role: 'validator',
-    region: 'ap-northeast',
-    status: 'offline',
-    version: 'v2.6.7',
-    blockHeight: 99234000,
-    peers: 0,
-    cpuUsage: 0,
-    memoryUsage: 0,
-    diskUsage: 0,
-    uptime: 95.00,
-    tags: ['production', 'masternode', 'down'],
-    lastSeen: '2026-02-11T13:00:00Z',
-    ip: '192.168.5.50'
+// Map API status to UI status
+const mapStatus = (apiStatus: string): 'healthy' | 'warning' | 'critical' | 'offline' => {
+  switch (apiStatus) {
+    case 'healthy':
+      return 'healthy';
+    case 'syncing':
+    case 'degraded':
+      return 'warning';
+    case 'offline':
+      return 'offline';
+    default:
+      return 'offline';
   }
-];
+};
 
-const regions = ['all', 'eu-west', 'us-east', 'us-west', 'ap-south', 'ap-northeast'];
-const roles = ['all', 'validator', 'rpc', 'archive', 'bootnode'];
+const regions = ['all'];
+const roles = ['all', 'validator', 'rpc', 'archive', 'bootnode', 'fullnode', 'masternode'];
 const statuses = ['all', 'healthy', 'warning', 'critical', 'offline'];
 
 export default function FleetOverview() {
@@ -199,17 +74,78 @@ export default function FleetOverview() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterTag, setFilterTag] = useState('');
   const [showActions, setShowActions] = useState<string | null>(null);
+  
+  // API state
+  const [nodes, setNodes] = useState<FleetNode[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch nodes from API
+  const fetchNodes = useCallback(async () => {
+    try {
+      setError(null);
+      const res = await fetch('/api/v1/fleet/status', { cache: 'no-store' });
+      
+      if (!res.ok) {
+        throw new Error(`Failed to fetch: ${res.status} ${res.statusText}`);
+      }
+      
+      const data = await res.json();
+      const apiNodes = data.data?.nodes || [];
+      
+      // Map API response to FleetNode interface
+      const mappedNodes: FleetNode[] = apiNodes.map((node: any) => ({
+        id: node.id || '',
+        name: node.name || 'Unknown',
+        role: (node.role || 'fullnode') as FleetNode['role'],
+        region: node.region || 'unknown',
+        status: mapStatus(node.status),
+        version: node.clientVersion || node.client_version || 'Unknown',
+        blockHeight: node.blockHeight || 0,
+        peers: node.peerCount || 0,
+        cpuUsage: node.cpuPercent !== null ? node.cpuPercent : 0,
+        memoryUsage: node.memoryPercent !== null ? node.memoryPercent : 0,
+        diskUsage: node.diskPercent !== null ? node.diskPercent : 0,
+        uptime: node.uptime || 0,
+        tags: node.tags || [],
+        lastSeen: node.lastSeen || '',
+        ip: node.host || node.ipv4 || '',
+      }));
+      
+      setNodes(mappedNodes);
+    } catch (err) {
+      console.error('Error fetching nodes:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch nodes');
+      setNodes([]); // Clear nodes on error
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchNodes();
+  }, [fetchNodes]);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchNodes();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [fetchNodes]);
 
   // Filter nodes
   const filteredNodes = useMemo(() => {
-    return mockNodes.filter(node => {
+    return nodes.filter(node => {
       if (filterRegion !== 'all' && node.region !== filterRegion) return false;
       if (filterRole !== 'all' && node.role !== filterRole) return false;
       if (filterStatus !== 'all' && node.status !== filterStatus) return false;
       if (filterTag && !node.tags.some(t => t.toLowerCase().includes(filterTag.toLowerCase()))) return false;
       return true;
     });
-  }, [filterRegion, filterRole, filterStatus, filterTag]);
+  }, [nodes, filterRegion, filterRole, filterStatus, filterTag]);
 
   // Stats
   const stats = useMemo(() => {
@@ -274,6 +210,87 @@ export default function FleetOverview() {
     if (value < 80) return '#F59E0B';
     return '#EF4444';
   };
+
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div className="card-xdc">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1E90FF]/20 to-[#1E90FF]/10 flex items-center justify-center">
+              <RefreshCw className="w-5 h-5 text-[var(--accent-blue)] animate-spin" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-[#F9FAFB]">Fleet Overview</h2>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-[#6B7280]">Loading nodes...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Loading skeleton grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="animate-pulse">
+              <div className="p-4 rounded-xl border bg-[var(--bg-card)] border-[rgba(255,255,255,0.06)]">
+                <div className="h-4 bg-[rgba(255,255,255,0.1)] rounded mb-3 w-2/3"></div>
+                <div className="h-3 bg-[rgba(255,255,255,0.1)] rounded mb-2"></div>
+                <div className="h-3 bg-[rgba(255,255,255,0.1)] rounded mb-4 w-1/2"></div>
+                <div className="space-y-2">
+                  <div className="h-2 bg-[rgba(255,255,255,0.1)] rounded"></div>
+                  <div className="h-2 bg-[rgba(255,255,255,0.1)] rounded"></div>
+                  <div className="h-2 bg-[rgba(255,255,255,0.1)] rounded"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="card-xdc">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-16 h-16 rounded-xl bg-[rgba(239,68,68,0.15)] flex items-center justify-center mb-4">
+            <AlertTriangle className="w-8 h-8 text-[var(--critical)]" />
+          </div>
+          <h3 className="text-lg font-semibold text-[#F9FAFB] mb-2">Failed to Load Nodes</h3>
+          <p className="text-sm text-[#6B7280] mb-4 text-center max-w-md">{error}</p>
+          <button
+            onClick={() => {
+              setLoading(true);
+              fetchNodes();
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--accent-blue)] text-white hover:bg-[var(--accent-blue)]/90 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (nodes.length === 0 && !loading && !error) {
+    return (
+      <div className="card-xdc">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-16 h-16 rounded-xl bg-[rgba(107,114,128,0.15)] flex items-center justify-center mb-4">
+            <Server className="w-8 h-8 text-[#6B7280]" />
+          </div>
+          <h3 className="text-lg font-semibold text-[#F9FAFB] mb-2">No Nodes Registered</h3>
+          <p className="text-sm text-[#6B7280] mb-4 text-center max-w-md">
+            No nodes have been registered to your fleet yet. Add a node to start monitoring.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="card-xdc">
@@ -364,6 +381,13 @@ export default function FleetOverview() {
         </div>
         
         <div className="flex items-center gap-2 ml-auto">
+          <button
+            onClick={() => fetchNodes()}
+            className="p-2 rounded-lg transition-colors text-[#6B7280] hover:text-[#F9FAFB] hover:bg-[rgba(255,255,255,0.05)]"
+            title="Refresh nodes"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
           <button
             onClick={() => setViewMode('grid')}
             className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-[rgba(30,144,255,0.25)] text-[var(--accent-blue)]' : 'text-[#6B7280] hover:text-[#F9FAFB]'}`}
