@@ -33,7 +33,7 @@ const POOL_CONFIG = {
   max: parseInt(process.env.DB_POOL_MAX || '20'),
   min: parseInt(process.env.DB_POOL_MIN || '5'),
   idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
-  connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '10000'),
+  connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '5000'),
   acquireTimeoutMillis: parseInt(process.env.DB_ACQUIRE_TIMEOUT || '10000'),
   statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000'),
 };
