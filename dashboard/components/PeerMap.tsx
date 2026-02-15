@@ -630,13 +630,13 @@ export default function PeerMap({ peers }: PeerMapProps) {
 function getCountryFlag(countryCode: string): React.ReactNode {
   if (!countryCode) {
     return (
-      <span className="w-5 h-5 rounded-full bg-[var(--accent-blue)]/20 flex items-center justify-center text-[9px] font-bold text-[var(--accent-blue)]">
+      <span className="w-5 h-5 rounded-full bg-[var(--accent-blue)]/20 flex items-center justify-center text-[12px] font-bold text-[var(--accent-blue)]">
         ?
       </span>
     );
   }
   return (
-    <span className="w-5 h-5 rounded-full bg-[var(--accent-blue)]/20 flex items-center justify-center text-[9px] font-bold text-[var(--accent-blue)]">
+    <span className="w-5 h-5 rounded-full bg-[var(--accent-blue)]/20 flex items-center justify-center text-[12px] font-bold text-[var(--accent-blue)]">
       {countryCode.toUpperCase()}
     </span>
   );

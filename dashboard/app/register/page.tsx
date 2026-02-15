@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import DashboardLayout from '@/components/DashboardLayout';
 import { 
   Server, 
   Copy, 
@@ -254,6 +255,7 @@ export default function RegisterPage() {
   }
 
   return (
+    <DashboardLayout>
     <div className="min-h-screen bg-[var(--bg-body)] p-4 md:p-6">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
@@ -458,5 +460,6 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+    </DashboardLayout>
   );
 }

@@ -147,7 +147,7 @@ function RoleBadge({ role }: { role: string }) {
   };
   
   return (
-    <span className={`px-2 py-0.5 text-[10px] font-medium rounded border ${colors[role] || colors.fullnode}`}>
+    <span className={`px-2 py-0.5 text-[12px] font-medium rounded border ${colors[role] || colors.fullnode}`}>
       {role.toUpperCase()}
     </span>
   );
@@ -175,7 +175,7 @@ function NodeTypeBadge({ nodeType }: { nodeType?: string }) {
   const style = styles[nodeType.toLowerCase()] || styles.fullnode;
   
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border ${style.bg}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[12px] font-medium rounded border ${style.bg}`}>
       {style.icon}
       {nodeType.charAt(0).toUpperCase() + nodeType.slice(1)}
     </span>
@@ -204,7 +204,7 @@ function ClientTypeBadge({ clientType }: { clientType?: string }) {
   const style = styles[clientType] || { bg: 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] border-[var(--border-subtle)]', icon: <Terminal className="w-3 h-3" /> };
   
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border ${style.bg}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[12px] font-medium rounded border ${style.bg}`}>
       {style.icon}
       {clientType}
     </span>
@@ -276,7 +276,7 @@ function CompactMetricBar({ value, label }: { value: number | null; label: strin
       <div className="flex-1">
         <ProgressBar value={value} color={color} height={4} />
       </div>
-      <span className="text-[10px] font-mono w-7 text-right text-[var(--text-tertiary)]">{value}%</span>
+      <span className="text-[12px] font-mono w-7 text-right text-[var(--text-tertiary)]">{value}%</span>
     </div>
   );
 }
@@ -289,7 +289,7 @@ function SecurityBadge({ score }: { score?: number }) {
   
   return (
     <span 
-      className="inline-flex items-center justify-center w-8 h-5 rounded text-[10px] font-bold font-mono"
+      className="inline-flex items-center justify-center w-8 h-5 rounded text-[12px] font-bold font-mono"
       style={{ backgroundColor: `${color}20`, color }}
     >
       {score}
@@ -370,7 +370,7 @@ function NetworkHealthBanner({
               <span className="text-2xl font-bold font-mono-nums" style={{ color: healthColor }}>
                 {fleet.healthScore}
               </span>
-              <span className="text-[10px] text-[var(--text-tertiary)]">HEALTH</span>
+              <span className="text-[12px] text-[var(--text-tertiary)]">HEALTH</span>
             </div>
           </div>
           
@@ -434,7 +434,7 @@ function NetworkStatsBar({
             <Hash className="w-4 h-4 text-[var(--accent-blue)]" />
           </div>
           <div>
-            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">Best Block</p>
+            <p className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wider">Best Block</p>
             <p className="text-lg font-bold text-[var(--text-primary)] font-mono-nums">
               {stats.bestBlock.toLocaleString()}
             </p>
@@ -451,7 +451,7 @@ function NetworkStatsBar({
             <Clock className="w-4 h-4 text-[var(--success)]" />
           </div>
           <div>
-            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">Avg Block Time</p>
+            <p className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wider">Avg Block Time</p>
             <p className="text-lg font-bold text-[var(--text-primary)] font-mono-nums">
               {stats.avgBlockTime.toFixed(1)}s
             </p>
@@ -464,7 +464,7 @@ function NetworkStatsBar({
             <Zap className="w-4 h-4 text-[var(--warning)]" />
           </div>
           <div>
-            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">Gas Price</p>
+            <p className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wider">Gas Price</p>
             <p className="text-lg font-bold text-[var(--text-primary)] font-mono-nums">
               {stats.gasPrice}
             </p>
@@ -477,7 +477,7 @@ function NetworkStatsBar({
             <Server className="w-4 h-4 text-[var(--purple)]" />
           </div>
           <div>
-            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">Active Nodes</p>
+            <p className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wider">Active Nodes</p>
             <p className="text-lg font-bold text-[var(--text-primary)] font-mono-nums">
               {stats.activeNodes}
             </p>
@@ -490,7 +490,7 @@ function NetworkStatsBar({
             <TrendingUp className="w-4 h-4 text-[var(--pink)]" />
           </div>
           <div>
-            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">TPS</p>
+            <p className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wider">TPS</p>
             <p className="text-lg font-bold text-[var(--text-primary)] font-mono-nums">
               {stats.tps.toFixed(1)}
             </p>
@@ -503,7 +503,7 @@ function NetworkStatsBar({
             <Flame className="w-4 h-4 text-[var(--text-tertiary)]" />
           </div>
           <div>
-            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">Pending</p>
+            <p className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wider">Pending</p>
             <p className="text-lg font-bold text-[var(--text-primary)] font-mono-nums">
               {stats.pendingTxs}
             </p>
@@ -565,7 +565,7 @@ function StatBox({
       <div className={`text-lg font-bold font-mono-nums ${color ? '' : 'text-[var(--text-primary)]'}`} style={{ color }}>
         {value}
       </div>
-      <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider flex items-center justify-center gap-1">
+      <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wider flex items-center justify-center gap-1">
         {icon}
         {label}
       </div>
@@ -613,7 +613,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
       
       {/* OS Info */}
       {node.os_info && (
-        <div className="text-[10px] text-[var(--text-tertiary)] mb-2 flex items-center gap-1">
+        <div className="text-[12px] text-[var(--text-tertiary)] mb-2 flex items-center gap-1">
           <span>{OSIcon({ osType: node.os_info.type })}</span>
           <span className="truncate">{formatOSInfo(node.os_info)}</span>
         </div>
@@ -621,7 +621,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
       
       {/* Contact Info (masked) */}
       {(node.email || node.telegram) && (
-        <div className="text-[10px] text-[var(--text-tertiary)] mb-2 flex flex-wrap gap-2">
+        <div className="text-[12px] text-[var(--text-tertiary)] mb-2 flex flex-wrap gap-2">
           {node.email && <span>📧 {node.email}</span>}
           {node.telegram && <span>✈️ {node.telegram}</span>}
         </div>
@@ -676,7 +676,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
                     height={3}
                   />
                 </div>
-                <span className="text-[10px] font-mono-nums w-7 text-right">{node.cpuPercent}%</span>
+                <span className="text-[12px] font-mono-nums w-7 text-right">{node.cpuPercent}%</span>
               </div>
             )}
             {node.memoryPercent !== null && (
@@ -689,7 +689,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
                     height={3}
                   />
                 </div>
-                <span className="text-[10px] font-mono-nums w-7 text-right">{node.memoryPercent}%</span>
+                <span className="text-[12px] font-mono-nums w-7 text-right">{node.memoryPercent}%</span>
               </div>
             )}
             {node.diskPercent !== null && (
@@ -702,7 +702,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
                     height={3}
                   />
                 </div>
-                <span className="text-[10px] font-mono-nums w-7 text-right">{node.diskPercent}%</span>
+                <span className="text-[12px] font-mono-nums w-7 text-right">{node.diskPercent}%</span>
               </div>
             )}
           </div>
@@ -710,7 +710,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
         
         {/* Last Heartbeat */}
         <div className="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)]">
-          <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-tertiary)]">
+          <div className="flex items-center gap-1.5 text-[12px] text-[var(--text-tertiary)]">
             <span className={`w-1.5 h-1.5 rounded-full ${
               node.status === 'healthy' ? 'bg-[var(--success)] animate-pulse' :
               node.status === 'syncing' || node.status === 'degraded' ? 'bg-[var(--warning)]' :
@@ -719,7 +719,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
             <Clock className="w-3 h-3" />
             <span>Heartbeat</span>
           </div>
-          <span className={`text-[10px] font-medium ${
+          <span className={`text-[12px] font-medium ${
             node.status === 'healthy' ? 'text-[var(--success)]' :
             node.status === 'syncing' || node.status === 'degraded' ? 'text-[var(--warning)]' :
             'text-[var(--critical)]'
@@ -815,7 +815,7 @@ function TableRow({
       <td className="py-2 px-3">
         <div className="flex flex-col">
           <span className="text-sm font-medium text-[var(--text-primary)] truncate max-w-[150px]">{node.name}</span>
-          <span className="text-[10px] text-[var(--text-tertiary)] truncate max-w-[150px]">{node.host}</span>
+          <span className="text-[12px] text-[var(--text-tertiary)] truncate max-w-[150px]">{node.host}</span>
         </div>
       </td>
       
@@ -833,7 +833,7 @@ function TableRow({
       <td className="py-2 px-3">
         <div className="flex items-center gap-1">
           <ClientTypeBadge clientType={node.client_type} />
-          <span className="text-[10px] text-[var(--text-tertiary)]">
+          <span className="text-[12px] text-[var(--text-tertiary)]">
             {node.clientVersion?.split('/')[1]?.split('-')[0] || ''}
           </span>
         </div>
@@ -846,7 +846,7 @@ function TableRow({
             {node.blockHeight > 0 ? node.blockHeight.toLocaleString() : '—'}
           </span>
           {node.blocksBehind > 0 && (
-            <span className="text-[10px] text-[var(--warning)]">-{node.blocksBehind}</span>
+            <span className="text-[12px] text-[var(--warning)]">-{node.blocksBehind}</span>
           )}
         </div>
       </td>
@@ -1136,7 +1136,7 @@ function FilterBar({
           }`}
         >
           {label}
-          <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] ${
+          <span className={`ml-2 px-1.5 py-0.5 rounded text-[12px] ${
             activeFilter === key ? 'bg-[var(--accent-blue)]/20' : 'bg-[var(--bg-hover)]'
           }`}>
             {counts[key]}

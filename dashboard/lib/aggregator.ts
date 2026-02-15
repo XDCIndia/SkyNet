@@ -118,7 +118,11 @@ export function calculateHealthScore(stats: FleetStats): HealthScore {
   const nodeUptime = Math.round((stats.healthyCount / stats.totalNodes) * 25);
   
   // Sync status score (0-25)
-  const syncStatus = Math.round((stats.avgSyncPercent / 100) * 25);
+  // Don't penalize actively syncing nodes (block height > 0 means they're catching up)
+  const effectiveSyncPercent = Math.max(stats.avgSyncPercent, 
+    stats.nodes?.filter(n => n.blockHeight > 0 && n.syncPercent < 100).length > 0 
+      ? Math.max(stats.avgSyncPercent, 95) : stats.avgSyncPercent);
+  const syncStatus = Math.round((effectiveSyncPercent / 100) * 25);
   
   // Peer diversity score (0-25) - based on peer distribution
   const avgPeersPerNode = stats.totalPeers / stats.totalNodes;

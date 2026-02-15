@@ -52,6 +52,11 @@ interface NetworkStatus {
   online: boolean;
 }
 
+interface NetworkHealth {
+  healthScore: number;
+  status: 'green' | 'yellow' | 'red';
+}
+
 function formatBlock(num: number): string {
   if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
   if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
@@ -126,6 +131,7 @@ export default function Sidebar() {
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus | null>(null);
   const [lastFetched, setLastFetched] = useState<number>(0);
   const [openIssueCount, setOpenIssueCount] = useState<number>(0);
+  const [networkHealth, setNetworkHealth] = useState<NetworkHealth | null>(null);
   const [, setTick] = useState(0);
 
   const fetchNetworkStatus = useCallback(async () => {
@@ -138,6 +144,22 @@ export default function Sidebar() {
       }
     } catch {
       setNetworkStatus(prev => prev ? { ...prev, online: false } : null);
+    }
+  }, []);
+
+  const fetchNetworkHealth = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/network/health', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        const score = data.data?.healthyNodes != null && data.data?.totalNodes
+          ? Math.round((data.data.healthyNodes / data.data.totalNodes) * 100)
+          : 0;
+        const status: 'green' | 'yellow' | 'red' = score >= 75 ? 'green' : score >= 50 ? 'yellow' : 'red';
+        setNetworkHealth({ healthScore: score, status });
+      }
+    } catch {
+      // Ignore errors
     }
   }, []);
 
@@ -156,12 +178,14 @@ export default function Sidebar() {
   useEffect(() => {
     fetchNetworkStatus();
     fetchIssueCount();
+    fetchNetworkHealth();
     const interval = setInterval(() => {
       fetchNetworkStatus();
       fetchIssueCount();
+      fetchNetworkHealth();
     }, 30000);
     return () => clearInterval(interval);
-  }, [fetchNetworkStatus, fetchIssueCount]);
+  }, [fetchNetworkStatus, fetchIssueCount, fetchNetworkHealth]);
 
   // Tick every 10s to update "last updated" display
   useEffect(() => {
@@ -200,7 +224,7 @@ export default function Sidebar() {
         {(!collapsed || isMobile) && (
           <div className="overflow-hidden">
             <h1 className="text-sm font-bold text-[var(--text-primary)] whitespace-nowrap">XDC SkyNet</h1>
-            <p className="text-[10px] text-[var(--text-tertiary)] whitespace-nowrap">Network Dashboard</p>
+            <p className="text-[12px] text-[var(--text-tertiary)] whitespace-nowrap">Network Dashboard</p>
           </div>
         )}
         {isMobile && (
@@ -227,6 +251,18 @@ export default function Sidebar() {
               {networkStatus.online ? 'Online' : 'Offline'}
             </span>
           </div>
+          {networkHealth && (
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <span className={`w-2 h-2 rounded-full ${
+                networkHealth.status === 'green' ? 'bg-[var(--success)]' :
+                networkHealth.status === 'yellow' ? 'bg-[var(--warning)]' :
+                'bg-[var(--critical)]'
+              }`} />
+              <span className="text-[12px] text-[var(--text-tertiary)]">
+                Health {networkHealth.healthScore}%
+              </span>
+            </div>
+          )}
         </div>
       )}
       {!isMobile && collapsed && networkStatus && (
@@ -240,7 +276,7 @@ export default function Sidebar() {
         {sections.map(section => (
           <div key={section} className="mb-3">
             {(!collapsed || isMobile) && (
-              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              <p className="px-3 mb-1.5 text-[12px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                 {section}
               </p>
             )}
@@ -265,17 +301,17 @@ export default function Sidebar() {
                       <span className="text-sm font-medium truncate">{item.label}</span>
                     )}
                     {(!collapsed || isMobile) && item.badge && (
-                      <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--critical)]/20 text-[var(--critical)]">
+                      <span className="ml-auto text-[12px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--critical)]/20 text-[var(--critical)]">
                         {item.badge}
                       </span>
                     )}
                     {(!collapsed || isMobile) && item.id === 'issues' && openIssueCount > 0 && (
-                      <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--critical)]/20 text-[var(--critical)]">
+                      <span className="ml-auto text-[12px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--critical)]/20 text-[var(--critical)]">
                         {openIssueCount > 99 ? '99+' : openIssueCount}
                       </span>
                     )}
                     {(!collapsed || isMobile) && item.isPublic && (
-                      <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-[var(--bg-hover)] text-[var(--text-muted)]">
+                      <span className="ml-auto text-[12px] px-1.5 py-0.5 rounded bg-[var(--bg-hover)] text-[var(--text-muted)]">
                         Public
                       </span>
                     )}
@@ -294,7 +330,7 @@ export default function Sidebar() {
       {/* Last Updated */}
       {(!collapsed || isMobile) && lastFetched > 0 && (
         <div className="px-4 py-2 border-t border-[var(--border-subtle)]">
-          <p className="text-[10px] text-[var(--text-tertiary)]">Last updated: {formatTimeAgoShort(lastFetched)}</p>
+          <p className="text-[12px] text-[var(--text-tertiary)]">Last updated: {formatTimeAgoShort(lastFetched)}</p>
         </div>
       )}
 

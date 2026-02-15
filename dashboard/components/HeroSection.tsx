@@ -118,7 +118,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
           {/* Coinbase Address */}
           {data.coinbase && (
             <div className="mt-2 flex items-center gap-2">
-              <span className="text-[10px] uppercase tracking-wider text-[#6B7280]">Coinbase</span>
+              <span className="text-[12px] uppercase tracking-wider text-[#6B7280]">Coinbase</span>
               <span className="font-mono text-xs text-[var(--accent-blue)] bg-[rgba(30,144,255,0.08)] px-2 py-0.5 rounded" title={data.coinbase}>
                 {data.coinbase}
               </span>
@@ -128,7 +128,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
           {/* Ethstats Name */}
           {data.ethstatsName && (
             <div className="mt-1 flex items-center gap-2">
-              <span className="text-[10px] uppercase tracking-wider text-[#6B7280]">Ethstats</span>
+              <span className="text-[12px] uppercase tracking-wider text-[#6B7280]">Ethstats</span>
               <span className="text-xs text-[var(--success)] font-medium bg-[rgba(16,185,129,0.08)] px-2 py-0.5 rounded flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
                 {data.ethstatsName}

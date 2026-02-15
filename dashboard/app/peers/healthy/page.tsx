@@ -434,12 +434,12 @@ export default function HealthyPeersPage() {
                       <td className="py-3 px-3">
                         <div className="flex flex-wrap gap-1">
                           {peer.connectedNodes.slice(0, 2).map((node) => (
-                            <span key={node} className="px-1.5 py-0.5 bg-[#1E90FF]/10 text-[#1E90FF] rounded text-[10px]">
+                            <span key={node} className="px-1.5 py-0.5 bg-[#1E90FF]/10 text-[#1E90FF] rounded text-[12px]">
                               {node}
                             </span>
                           ))}
                           {peer.connectedNodes.length > 2 && (
-                            <span className="px-1.5 py-0.5 bg-white/5 text-[#6B7280] rounded text-[10px]">
+                            <span className="px-1.5 py-0.5 bg-white/5 text-[#6B7280] rounded text-[12px]">
                               +{peer.connectedNodes.length - 2}
                             </span>
                           )}

@@ -286,7 +286,7 @@ function StatsCard({ stats }: { stats: NetworkStats }) {
 
       {/* Branding */}
       <div className="text-center mt-4">
-        <span className="text-[10px] text-[#6B7280]">Powered by XDCNetOwn • xdc.network</span>
+        <span className="text-[12px] text-[#6B7280]">Powered by XDCNetOwn • xdc.network</span>
       </div>
     </div>
   );
@@ -353,7 +353,7 @@ function GrowthCard({ stats }: { stats: GrowthStats }) {
 
       {/* Branding */}
       <div className="text-center mt-6">
-        <span className="text-[10px] text-[#6B7280]">Powered by XDCNetOwn • xdc.network</span>
+        <span className="text-[12px] text-[#6B7280]">Powered by XDCNetOwn • xdc.network</span>
       </div>
     </div>
   );
@@ -455,7 +455,7 @@ function ValidatorCard({ data }: { data: ValidatorData }) {
 
       {/* Branding */}
       <div className="text-center mt-4">
-        <span className="text-[10px] text-[#6B7280]">#XDC #Validator #Staking #XDCNetwork</span>
+        <span className="text-[12px] text-[#6B7280]">#XDC #Validator #Staking #XDCNetwork</span>
       </div>
     </div>
   );
@@ -469,7 +469,7 @@ function StatBox({ icon, label, value, color }: { icon: React.ReactNode; label: 
         {icon}
       </div>
       <div className="text-lg font-bold text-[#F9FAFB]">{value}</div>
-      <div className="text-[10px] text-[#6B7280] mt-1">{label}</div>
+      <div className="text-[12px] text-[#6B7280] mt-1">{label}</div>
     </div>
   );
 }

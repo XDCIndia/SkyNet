@@ -181,7 +181,7 @@ function SecurityGauge({ score = 0 }: { score?: number }) {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-2xl font-bold font-mono-nums" style={{ color }}>{score}</span>
-          <span className="text-[10px] text-[#64748B] uppercase">Score</span>
+          <span className="text-[12px] text-[#64748B] uppercase">Score</span>
         </div>
       </div>
       <span className="text-sm font-medium mt-2" style={{ color }}>{getLabel()}</span>
@@ -746,7 +746,7 @@ export default function NodeDetailPage() {
               <div className="bg-white/5 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <ClientLogo clientType={parsedVersion.client} size="sm" />
-                  <div className="text-[10px] uppercase text-[#64748B]">Client Version</div>
+                  <div className="text-[12px] uppercase text-[#64748B]">Client Version</div>
                 </div>
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-[#F1F5F9]">{parsedVersion.client} {parsedVersion.version}</div>
@@ -757,13 +757,13 @@ export default function NodeDetailPage() {
             )}
             
             <div className="bg-white/5 rounded-lg p-4">
-              <div className="text-[10px] uppercase text-[#64748B] mb-2">Coinbase Address</div>
+              <div className="text-[12px] uppercase text-[#64748B] mb-2">Coinbase Address</div>
               <CoinbaseDisplay coinbase={status.coinbase} />
             </div>
             
             {status.ipv4 && (
               <div className="bg-white/5 rounded-lg p-4">
-                <div className="text-[10px] uppercase text-[#64748B] mb-1">Public IPv4</div>
+                <div className="text-[12px] uppercase text-[#64748B] mb-1">Public IPv4</div>
                 <div className="text-sm font-mono text-[#1E90FF]">{status.ipv4}</div>
               </div>
             )}
@@ -772,7 +772,7 @@ export default function NodeDetailPage() {
               <div className="bg-white/5 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <OSIcon osType={status?.os?.type || node?.os_info?.type} />
-                  <div className="text-[10px] uppercase text-[#64748B]">Operating System</div>
+                  <div className="text-[12px] uppercase text-[#64748B]">Operating System</div>
                 </div>
                 <div className="text-sm text-[#F1F5F9]">{osInfo}</div>
               </div>
@@ -905,7 +905,7 @@ export default function NodeDetailPage() {
                 {logs.length === 0 ? (
                   <div className="text-center text-[#64748B] py-8">
                     <p>Log streaming requires a log aggregation agent on the node.</p>
-                    <p className="mt-2 text-[10px]">Use <code className="bg-white/10 px-1 rounded">xdc logs -f</code> on the node directly, or configure Loki/ELK for remote log access.</p>
+                    <p className="mt-2 text-[12px]">Use <code className="bg-white/10 px-1 rounded">xdc logs -f</code> on the node directly, or configure Loki/ELK for remote log access.</p>
                   </div>
                 ) : (
                   filteredLogs.map((log, i) => (

@@ -176,7 +176,7 @@ function BlockTimeChart({ data }: { data: number[] }) {
         </svg>
       </div>
       
-      <div className="flex items-center justify-between text-[10px] text-[#64748B] mt-2">
+      <div className="flex items-center justify-between text-[12px] text-[#64748B] mt-2">
         <span>Latest &rarr;</span>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
@@ -248,7 +248,7 @@ function TransactionsChart({ data }: { data: number[] }) {
         </svg>
       </div>
       
-      <div className="flex items-center justify-between text-[10px] text-[#64748B] mt-2">
+      <div className="flex items-center justify-between text-[12px] text-[#64748B] mt-2">
         <span>Latest &rarr;</span>
         <span>Max: {maxValue} txns</span>
       </div>
@@ -312,7 +312,7 @@ function GasUsageChart({ data, gasLimit }: { data: number[]; gasLimit: number })
         </svg>
       </div>
       
-      <div className="flex items-center justify-between text-[10px] text-[#64748B] mt-2">
+      <div className="flex items-center justify-between text-[12px] text-[#64748B] mt-2">
         <span>Latest &rarr;</span>
         <span>Gas Limit: {(gasLimit / 1e6).toFixed(0)}M</span>
       </div>
@@ -362,7 +362,7 @@ function EpochProgress({ epoch }: { epoch: NetworkStats['epoch'] }) {
           
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-2xl font-bold text-[#F1F5F9] font-mono-nums">{epoch.number}</span>
-            <span className="text-[10px] text-[#64748B]">Epoch</span>
+            <span className="text-[12px] text-[#64748B]">Epoch</span>
           </div>
         </div>
       </div>
@@ -370,16 +370,16 @@ function EpochProgress({ epoch }: { epoch: NetworkStats['epoch'] }) {
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div className="text-center">
           <p className="text-lg font-bold text-[#1E90FF] font-mono-nums">{epoch.progress}%</p>
-          <p className="text-[10px] text-[#64748B]">Progress</p>
+          <p className="text-[12px] text-[#64748B]">Progress</p>
         </div>
         <div className="text-center">
           <p className="text-lg font-bold text-[#F1F5F9] font-mono-nums">{epoch.blocksRemaining}</p>
-          <p className="text-[10px] text-[#64748B]">Blocks Left</p>
+          <p className="text-[12px] text-[#64748B]">Blocks Left</p>
         </div>
       </div>      
       
       <div className="mt-3 pt-3 border-t border-white/5 text-center">
-        <p className="text-[10px] text-[#64748B]">
+        <p className="text-[12px] text-[#64748B]">
           Next epoch in ~{formatTimeRemaining(epoch.secondsToNextEpoch)}
         </p>
       </div>
@@ -402,12 +402,12 @@ function LastBlocksTable({ blocks }: { blocks: NetworkStats['lastBlocks'] }) {
         <table className="w-full">
           <thead>
             <tr className="border-b border-white/5">
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">#</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Block</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Txns</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Gas Used</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Miner</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Time</th>
+              <th className="text-left py-2 px-2 text-[12px] font-medium text-[#64748B] uppercase">#</th>
+              <th className="text-left py-2 px-2 text-[12px] font-medium text-[#64748B] uppercase">Block</th>
+              <th className="text-left py-2 px-2 text-[12px] font-medium text-[#64748B] uppercase">Txns</th>
+              <th className="text-left py-2 px-2 text-[12px] font-medium text-[#64748B] uppercase">Gas Used</th>
+              <th className="text-left py-2 px-2 text-[12px] font-medium text-[#64748B] uppercase">Miner</th>
+              <th className="text-left py-2 px-2 text-[12px] font-medium text-[#64748B] uppercase">Time</th>
             </tr>
           </thead>
           <tbody>
@@ -461,11 +461,11 @@ function NodePerformanceTable({ nodes }: { nodes: NodeInfo[] }) {
         <table className="w-full">
           <thead>
             <tr className="border-b border-white/5">
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Node</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Location</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Peers</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Block</th>
-              <th className="text-left py-2 px-2 text-[10px] font-medium text-[#64748B] uppercase">Status</th>
+              <th className="text-left py-2 px-2 text-[12px] font-medium text-[#64748B] uppercase">Node</th>
+              <th className="text-left py-2 px-2 text-[12px] font-medium text-[#64748B] uppercase">Location</th>
+              <th className="text-left py-2 px-2 text-[12px] font-medium text-[#64748B] uppercase">Peers</th>
+              <th className="text-left py-2 px-2 text-[12px] font-medium text-[#64748B] uppercase">Block</th>
+              <th className="text-left py-2 px-2 text-[12px] font-medium text-[#64748B] uppercase">Status</th>
             </tr>
           </thead>
           <tbody>

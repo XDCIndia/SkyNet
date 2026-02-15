@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
+import DashboardLayout from '@/components/DashboardLayout';
 import { 
   Search, 
   Pickaxe, 
@@ -345,6 +346,7 @@ export default function ExplorerPage() {
   }
 
   return (
+    <DashboardLayout>
     <div className="min-h-screen bg-[var(--bg-body)]">
       {/* Header */}
       <header className="border-b border-[var(--border-subtle)] bg-[var(--bg-card)]">
@@ -599,5 +601,6 @@ export default function ExplorerPage() {
         </footer>
       </main>
     </div>
+    </DashboardLayout>
   );
 }

@@ -159,7 +159,7 @@ export default function PeerDistribution({ peers }: PeerDistributionProps) {
 
             {/* No geo warning */}
             {!hasGeo && peers.length > 0 && (
-              <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-[#111827]/80 text-[10px] text-[#6B7280] border border-[rgba(255,255,255,0.06)]">
+              <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-[#111827]/80 text-[12px] text-[#6B7280] border border-[rgba(255,255,255,0.06)]">
                 ⓘ Approximate positions — geo-location pending
               </div>
             )}

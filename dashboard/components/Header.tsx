@@ -58,7 +58,7 @@ export default function Header({
               {coinbase && (
                 <>
                   <span className="text-[#6B7280]">·</span>
-                  <span className="text-[#9CA3AF] font-mono text-[10px]" title={coinbase}>
+                  <span className="text-[#9CA3AF] font-mono text-[12px]" title={coinbase}>
                     {coinbase.slice(0, 8)}...{coinbase.slice(-6)}
                   </span>
                 </>

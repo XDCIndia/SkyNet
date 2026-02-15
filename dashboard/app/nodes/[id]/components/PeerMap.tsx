@@ -232,7 +232,7 @@ export default function PeerMap({ peers }: PeerMapProps) {
                       <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[var(--bg-card)] flex items-center justify-center text-xs font-bold text-[var(--text-tertiary)]">
                         {index + 1}
                       </span>
-                      <span className="inline-flex w-5 h-5 rounded-full bg-[var(--accent-blue)]/20 flex items-center justify-center text-[9px] font-bold text-[var(--accent-blue)]">
+                      <span className="inline-flex w-5 h-5 rounded-full bg-[var(--accent-blue)]/20 flex items-center justify-center text-[12px] font-bold text-[var(--accent-blue)]">
                         {info.code}
                       </span>
                       <span className="text-xs sm:text-sm text-[var(--text-primary)] truncate max-w-[60px] sm:max-w-[80px]">{info.name}</span>
@@ -316,7 +316,7 @@ export default function PeerMap({ peers }: PeerMapProps) {
                       {peer.ip}:{peer.port}
                     </td>
                     <td className="py-2 sm:py-3 px-4 text-xs sm:text-sm text-[var(--text-primary)]">
-                      <span className="w-5 h-5 rounded-full bg-[var(--accent-blue)]/20 flex items-center justify-center text-[9px] font-bold text-[var(--accent-blue)] inline-flex mr-2">
+                      <span className="w-5 h-5 rounded-full bg-[var(--accent-blue)]/20 flex items-center justify-center text-[12px] font-bold text-[var(--accent-blue)] inline-flex mr-2">
                         {(peer.country || '??').slice(0, 2).toUpperCase()}
                       </span>
                       <span className="hidden sm:inline">{peer.country || 'Unknown'}</span>

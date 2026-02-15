@@ -477,40 +477,40 @@ export default function MasternodeDetailPage() {
             {/* Metrics Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
               <div className="bg-white/5 rounded-lg p-3">
-                <div className="text-[10px] uppercase text-[#6B7280] mb-1">Block Height</div>
+                <div className="text-[12px] uppercase text-[#6B7280] mb-1">Block Height</div>
                 <div className="text-lg font-bold font-mono-nums text-[#F9FAFB]">
                   {Number(nodeHealth.metrics.blockHeight).toLocaleString()}
                 </div>
               </div>
               <div className="bg-white/5 rounded-lg p-3">
-                <div className="text-[10px] uppercase text-[#6B7280] mb-1">Peers</div>
+                <div className="text-[12px] uppercase text-[#6B7280] mb-1">Peers</div>
                 <div className="text-lg font-bold font-mono-nums text-[#F9FAFB]">{nodeHealth.metrics.peerCount}</div>
               </div>
               <div className="bg-white/5 rounded-lg p-3">
-                <div className="text-[10px] uppercase text-[#6B7280] mb-1">CPU</div>
+                <div className="text-[12px] uppercase text-[#6B7280] mb-1">CPU</div>
                 <div className={`text-lg font-bold font-mono-nums ${
                   nodeHealth.metrics.cpuPercent > 80 ? 'text-[var(--critical)]' : 
                   nodeHealth.metrics.cpuPercent > 60 ? 'text-[var(--warning)]' : 'text-[var(--success)]'
                 }`}>{nodeHealth.metrics.cpuPercent?.toFixed(1) ?? '—'}%</div>
               </div>
               <div className="bg-white/5 rounded-lg p-3">
-                <div className="text-[10px] uppercase text-[#6B7280] mb-1">Memory</div>
+                <div className="text-[12px] uppercase text-[#6B7280] mb-1">Memory</div>
                 <div className={`text-lg font-bold font-mono-nums ${
                   nodeHealth.metrics.memoryPercent > 85 ? 'text-[var(--critical)]' : 
                   nodeHealth.metrics.memoryPercent > 70 ? 'text-[var(--warning)]' : 'text-[var(--success)]'
                 }`}>{nodeHealth.metrics.memoryPercent?.toFixed(1) ?? '—'}%</div>
               </div>
               <div className="bg-white/5 rounded-lg p-3">
-                <div className="text-[10px] uppercase text-[#6B7280] mb-1">Disk</div>
+                <div className="text-[12px] uppercase text-[#6B7280] mb-1">Disk</div>
                 <div className="text-lg font-bold font-mono-nums text-[#F9FAFB]">
                   {nodeHealth.metrics.diskPercent?.toFixed(1) ?? '—'}%
                 </div>
-                <div className="text-[10px] text-[#6B7280]">
+                <div className="text-[12px] text-[#6B7280]">
                   {nodeHealth.metrics.diskUsedGb?.toFixed(0) ?? '?'}/{nodeHealth.metrics.diskTotalGb?.toFixed(0) ?? '?'} GB
                 </div>
               </div>
               <div className="bg-white/5 rounded-lg p-3">
-                <div className="text-[10px] uppercase text-[#6B7280] mb-1">RPC Latency</div>
+                <div className="text-[12px] uppercase text-[#6B7280] mb-1">RPC Latency</div>
                 <div className={`text-lg font-bold font-mono-nums ${
                   nodeHealth.metrics.rpcLatencyMs > 500 ? 'text-[var(--critical)]' : 
                   nodeHealth.metrics.rpcLatencyMs > 100 ? 'text-[var(--warning)]' : 'text-[var(--success)]'
@@ -532,7 +532,7 @@ export default function MasternodeDetailPage() {
                 <div className="space-y-1">
                   {nodeHealth.incidents.filter(i => i.status === 'active').map((inc, i) => (
                     <div key={i} className="flex items-center gap-2 text-xs">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                      <span className={`px-1.5 py-0.5 rounded text-[12px] font-bold ${
                         inc.severity === 'critical' ? 'bg-[var(--critical)]/20 text-[var(--critical)]' :
                         inc.severity === 'warning' ? 'bg-[var(--warning)]/20 text-[var(--warning)]' :
                         'bg-[#6B7280]/20 text-[#6B7280]'

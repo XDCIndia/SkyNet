@@ -203,7 +203,7 @@ function NodeTypeBadge({ nodeType, syncMode }: { nodeType?: string; syncMode?: s
 // Sparkline Component (Pure SVG)
 function Sparkline({ data }: { data: number[] }) {
   if (data.length < 2) {
-    return <div className="h-6 flex items-center justify-center text-[10px] text-[#6B7280]">—</div>;
+    return <div className="h-6 flex items-center justify-center text-[12px] text-[#6B7280]">—</div>;
   }
   
   const min = Math.min(...data);
@@ -947,7 +947,7 @@ export default function FleetOverview() {
                       <Database className="w-4 h-4 text-[#6B7280]" />
                       <span className="text-xs text-[#6B7280]">Storage</span>
                       {node.storageType && node.storageType !== 'unknown' && (
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                        <span className={`px-1.5 py-0.5 rounded text-[12px] font-medium ${
                           node.storageType.includes('NVMe') ? 'bg-[#10B981]/10 text-[#10B981]' :
                           node.storageType.includes('SSD') ? 'bg-[#3B82F6]/10 text-[#3B82F6]' :
                           'bg-[#F59E0B]/10 text-[#F59E0B]'
@@ -958,7 +958,7 @@ export default function FleetOverview() {
                     </div>
                     <div className="flex items-center gap-2">
                       {(node.iopsEstimate || 0) > 0 && (
-                        <span className="text-[10px] text-[#6B7280]">~{((node.iopsEstimate || 0) / 1000).toFixed(1)}K IOPS</span>
+                        <span className="text-[12px] text-[#6B7280]">~{((node.iopsEstimate || 0) / 1000).toFixed(1)}K IOPS</span>
                       )}
                       <span className="text-sm font-medium text-[#F9FAFB]">
                         {(node.chainDataSize || node.databaseSize) ? formatBytes(node.chainDataSize || node.databaseSize) : '—'}
@@ -1006,12 +1006,12 @@ export default function FleetOverview() {
                 {/* Tags */}
                 <div className="flex flex-wrap gap-1 mt-2">
                   {node.tags.slice(0, 3).map(tag => (
-                    <span key={tag} className="px-1.5 py-0.5 rounded text-[10px] bg-[rgba(255,255,255,0.05)] text-[#6B7280]">
+                    <span key={tag} className="px-1.5 py-0.5 rounded text-[12px] bg-[rgba(255,255,255,0.05)] text-[#6B7280]">
                       {tag}
                     </span>
                   ))}
                   {node.tags.length > 3 && (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-[rgba(255,255,255,0.05)] text-[#6B7280]">+{node.tags.length - 3}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[12px] bg-[rgba(255,255,255,0.05)] text-[#6B7280]">+{node.tags.length - 3}</span>
                   )}
                 </div>
               </div>
@@ -1112,9 +1112,9 @@ export default function FleetOverview() {
                           <div className="flex items-center justify-between text-xs mb-1">
                             <span className="text-[#F59E0B] font-semibold">{node.syncPercent?.toFixed(0)}%</span>
                             {isStalled ? (
-                              <span className="text-[#EF4444] text-[10px]">Stalled</span>
+                              <span className="text-[#EF4444] text-[12px]">Stalled</span>
                             ) : syncInfo?.eta ? (
-                              <span className="text-[#10B981] text-[10px]">~{syncInfo.eta}</span>
+                              <span className="text-[#10B981] text-[12px]">~{syncInfo.eta}</span>
                             ) : null}
                           </div>
                           <div className="w-full h-1.5 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden mb-1">
@@ -1124,7 +1124,7 @@ export default function FleetOverview() {
                             />
                           </div>
                           {blocksBehind > 0 && (
-                            <div className="text-[10px] text-[#6B7280]">{blocksBehind.toLocaleString()} behind</div>
+                            <div className="text-[12px] text-[#6B7280]">{blocksBehind.toLocaleString()} behind</div>
                           )}
                         </div>
                       ) : blocksBehind > 100 ? (
@@ -1132,7 +1132,7 @@ export default function FleetOverview() {
                           <div className="flex items-center gap-1 text-xs mb-1">
                             <span className="text-[#10B981]">Synced ✓</span>
                           </div>
-                          <div className="text-[10px] text-[#6B7280]">{blocksBehind.toLocaleString()} behind</div>
+                          <div className="text-[12px] text-[#6B7280]">{blocksBehind.toLocaleString()} behind</div>
                         </div>
                       ) : (
                         <span className="text-xs text-[#10B981]">Synced ✓</span>

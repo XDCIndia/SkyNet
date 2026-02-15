@@ -76,10 +76,13 @@ export async function GET(request: NextRequest) {
     const totalPeers = sum(peerCounts);
 
     // Count healthy nodes (synced, with peers, recently active)
+    // Nodes that are actively syncing (is_syncing=true with block height > 0)
+    // are not penalized — they are catching up and considered healthy
     const healthyNodes = metrics.filter(m => {
       const synced = (m.sync_percent ?? 100) >= 99;
       const hasPeers = (m.peer_count ?? 0) >= 1;
-      return synced && hasPeers;
+      const isActivelySyncing = m.is_syncing && (Number(m.block_height) > 0);
+      return hasPeers && (synced || isActivelySyncing);
     }).length;
 
     // Nakamoto coefficient (simplified):
@@ -113,7 +116,7 @@ export async function GET(request: NextRequest) {
       Math.round((healthyNodes / metrics.length) * 100), // health_score
       metrics.length, // total_nodes
       healthyNodes, // healthy_nodes
-      metrics.filter(m => (m.sync_percent ?? 100) < 99).length, // degraded_nodes
+      metrics.filter(m => (m.sync_percent ?? 100) < 99 && !(m.is_syncing && Number(m.block_height) > 0)).length, // degraded_nodes
       0, // offline_nodes (we only query recent metrics)
       totalPeers, // total_peers
       avgBlock, // avg_block_height
