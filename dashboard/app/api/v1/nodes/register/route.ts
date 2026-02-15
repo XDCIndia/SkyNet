@@ -55,9 +55,10 @@ async function postHandler(request: NextRequest) {
   try {
     const result = await withTransaction(async (client) => {
       // Check if name already exists
+      // Match by name only (not host) — allows multiple clients on same IP
       const existingNode = await client.query(
-        'SELECT id FROM skynet.nodes WHERE name = $1 OR host = $2',
-        [data.name, data.host]
+        'SELECT id FROM skynet.nodes WHERE name = $1',
+        [data.name]
       );
 
       let node;
