@@ -59,6 +59,9 @@ const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
   mountPercent: z.coerce.number().int().min(0).max(100).optional(),
   // Erigon dual sentry monitoring (Issue #14)
   sentries: z.array(SentrySchema).optional(),
+  // Stall tracking
+  stallHours: z.number().min(0).optional(),
+  stalledAtBlock: z.number().int().min(0).optional(),
 });
 
 /**
@@ -124,6 +127,8 @@ async function postHandler(request: NextRequest) {
     mountPoint,
     mountPercent,
     sentries,
+    stallHours,
+    stalledAtBlock,
   } = body;
 
   // Verify node ownership (if using node-specific key)
@@ -165,8 +170,8 @@ async function postHandler(request: NextRequest) {
         storage_type, storage_model, iops_estimate, mount_point, mount_percent,
         os_type, os_release, os_arch, kernel_version,
         ipv4, ipv6, security_score, security_issues,
-        sentries, collected_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35)`,
+        sentries, stall_hours, stalled_at_block, collected_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37)`,
       [
         nodeId,
         blockHeight ?? null,
@@ -206,6 +211,8 @@ async function postHandler(request: NextRequest) {
         security?.score ?? null,
         security?.issues?.join(',') ?? null,
         sentries ? JSON.stringify(sentries) : null,
+        stallHours ?? 0,
+        stalledAtBlock ?? 0,
         timestamp ? new Date(timestamp) : new Date(),
       ]
     );

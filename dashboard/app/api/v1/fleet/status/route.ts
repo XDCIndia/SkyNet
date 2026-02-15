@@ -48,6 +48,8 @@ async function getHandler(request: NextRequest) {
           storage_type,
           iops_estimate,
           client_version,
+          stall_hours,
+          stalled_at_block,
           collected_at
         FROM skynet.node_metrics
         WHERE collected_at > NOW() - INTERVAL '5 minutes'
@@ -77,6 +79,8 @@ async function getHandler(request: NextRequest) {
         m.storage_type,
         m.iops_estimate,
         m.client_version,
+        m.stall_hours,
+        m.stalled_at_block,
         m.collected_at,
         CASE
           WHEN m.collected_at IS NULL OR m.collected_at < NOW() - INTERVAL '2 minutes' THEN 'offline'
@@ -173,6 +177,8 @@ async function getHandler(request: NextRequest) {
       storageType: n.storage_type || null,
       iopsEstimate: Number(n.iops_estimate) || 0,
       clientVersion: n.client_version || 'Unknown',
+      stallHours: Number(n.stall_hours) || 0,
+      stalledAtBlock: Number(n.stalled_at_block) || 0,
     };});
 
     return {

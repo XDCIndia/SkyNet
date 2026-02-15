@@ -87,6 +87,8 @@ interface Node {
   telegram?: string | null;
   security_score?: number;
   security_issues?: string;
+  stallHours?: number;
+  stalledAtBlock?: number;
 }
 
 interface Incident {
@@ -643,6 +645,16 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
           </div>
         </div>
         
+        {/* Sync Stall Warning */}
+        {node.stallHours && node.stallHours > 0 && (
+          <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-[var(--warning)]/10 border border-[var(--warning)]/20">
+            <Clock className="h-3.5 w-3.5 text-[var(--warning)]" />
+            <span className="text-xs text-[var(--warning)] font-medium">
+              Stuck {node.stallHours.toFixed(1)}h at #{node.stalledAtBlock?.toLocaleString()}
+            </span>
+          </div>
+        )}
+        
         {/* Block Sparkline */}
         {node.blockHeight > 0 && (
           <MiniSparkline 
@@ -847,6 +859,12 @@ function TableRow({
           </span>
           {node.blocksBehind > 0 && (
             <span className="text-[12px] text-[var(--warning)]">-{node.blocksBehind}</span>
+          )}
+          {node.stallHours && node.stallHours > 0 && (
+            <div className="flex items-center gap-1 mt-0.5" title={`Stuck at block ${node.stalledAtBlock?.toLocaleString()}`}>
+              <Clock className="h-3 w-3 text-[var(--warning)]" />
+              <span className="text-[11px] text-[var(--warning)]">{node.stallHours.toFixed(1)}h</span>
+            </div>
           )}
         </div>
       </td>
