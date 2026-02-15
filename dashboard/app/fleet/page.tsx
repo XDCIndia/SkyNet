@@ -353,7 +353,10 @@ export default function FleetPage() {
     try {
       const res = await fetch(`/api/v1/nodes/${node.id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY || 'xdc-netown-key-2026-prod'}`,
+        },
       });
 
       if (res.ok) {
