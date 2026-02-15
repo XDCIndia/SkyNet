@@ -1,0 +1,570 @@
+openapi: 3.0.3
+info:
+  title: XDC SkyNet Dashboard API
+  description: Fleet management and monitoring API for XDC Network nodes
+  version: 0.2.0
+  contact:
+    name: XDC NetOwn
+    url: https://github.com/AnilChinchawale/XDCNetOwn
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3005/api/v1
+    description: Local development
+  - url: https://net.xdc.network/api/v1
+    description: Production
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: API key passed as Bearer token
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+
+    NodeRole:
+      type: string
+      enum: [masternode, fullnode, archive, rpc]
+
+    NodeRegistration:
+      type: object
+      required: [name, host, role]
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+          pattern: '^[a-zA-Z0-9._-]+$'
+        host:
+          type: string
+          maxLength: 255
+        rpcUrl:
+          type: string
+          format: uri
+        role:
+          $ref: '#/components/schemas/NodeRole'
+        email:
+          type: string
+          format: email
+        telegram:
+          type: string
+          maxLength: 100
+        locationCity:
+          type: string
+          maxLength: 100
+        locationCountry:
+          type: string
+          maxLength: 5
+
+    Heartbeat:
+      type: object
+      required: [nodeId, blockHeight]
+      properties:
+        nodeId:
+          type: string
+          format: uuid
+        blockHeight:
+          type: integer
+          minimum: 0
+        syncing:
+          type: boolean
+          default: false
+        peerCount:
+          type: integer
+          minimum: 0
+        syncProgress:
+          type: number
+          minimum: 0
+          maximum: 100
+        gasPrice:
+          type: string
+        clientVersion:
+          type: string
+          maxLength: 200
+        clientType:
+          type: string
+          enum: [geth, erigon, geth-pr5, XDC, unknown]
+        nodeType:
+          type: string
+          enum: [masternode, standby, fullnode, full, archive, fast, snap]
+        ipv4:
+          type: string
+          format: ipv4
+        system:
+          type: object
+          properties:
+            cpuPercent:
+              type: number
+              minimum: 0
+              maximum: 100
+            memoryPercent:
+              type: number
+              minimum: 0
+              maximum: 100
+            diskPercent:
+              type: number
+              minimum: 0
+              maximum: 100
+            diskUsedGb:
+              type: number
+            diskTotalGb:
+              type: number
+
+    NetworkHealth:
+      type: object
+      properties:
+        totalNodes:
+          type: integer
+        healthyNodes:
+          type: integer
+        avgBlockHeight:
+          type: integer
+        maxBlockHeight:
+          type: integer
+        avgSyncPercent:
+          type: number
+        avgRpcLatencyMs:
+          type: number
+        totalPeers:
+          type: integer
+        nakamotoCoefficient:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+
+    Incident:
+      type: object
+      properties:
+        id:
+          type: integer
+        node_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [sync_stall, peer_drop, disk_pressure, block_drift, node_down, heartbeat_gap]
+        severity:
+          type: string
+          enum: [critical, warning, info]
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [active, acknowledged, resolved]
+        detected_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+
+    AlertNotify:
+      type: object
+      required: [alertId, channels]
+      properties:
+        alertId:
+          type: integer
+        channels:
+          type: array
+          items:
+            type: string
+            enum: [telegram, email, slack, webhook]
+
+    MasternodeStats:
+      type: object
+      properties:
+        totalMasternodes:
+          type: integer
+        activeMasternodes:
+          type: integer
+        averageUptime:
+          type: number
+
+paths:
+  /nodes/register:
+    get:
+      summary: Get registration form schema
+      operationId: getRegistrationSchema
+      security: []
+      responses:
+        '200':
+          description: Registration schema and role options
+    post:
+      summary: Register a new node
+      operationId: registerNode
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NodeRegistration'
+      responses:
+        '201':
+          description: Node registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      nodeId:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      apiKey:
+                        type: string
+                  setupCommand:
+                    type: string
+        '400':
+          description: Validation error
+
+  /nodes/{id}:
+    delete:
+      summary: Deactivate a node
+      operationId: deleteNode
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Node deactivated
+        '404':
+          description: Node not found
+
+  /nodes/heartbeat:
+    post:
+      summary: Submit node heartbeat and metrics
+      operationId: submitHeartbeat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Heartbeat'
+      responses:
+        '200':
+          description: Heartbeat accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      ok:
+                        type: boolean
+                      commands:
+                        type: array
+                        items:
+                          type: object
+                  incidentsDetected:
+                    type: integer
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /nodes/metrics:
+    post:
+      summary: Push batch metrics (Prometheus-style)
+      operationId: pushMetrics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nodeId, metrics]
+              properties:
+                nodeId:
+                  type: string
+                  format: uuid
+                metrics:
+                  type: array
+                  items:
+                    type: object
+                    required: [name, value]
+                    properties:
+                      name:
+                        type: string
+                      value:
+                        type: number
+                      labels:
+                        type: object
+                        additionalProperties:
+                          type: string
+      responses:
+        '200':
+          description: Metrics accepted
+        '400':
+          description: Validation error
+
+  /network/health:
+    get:
+      summary: Get aggregated network health
+      operationId: getNetworkHealth
+      responses:
+        '200':
+          description: Network health data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/NetworkHealth'
+
+  /network/stats:
+    get:
+      summary: Get network statistics
+      operationId: getNetworkStats
+      responses:
+        '200':
+          description: Network statistics
+
+  /network/epoch:
+    get:
+      summary: Get current epoch information
+      operationId: getNetworkEpoch
+      responses:
+        '200':
+          description: Epoch data
+
+  /alerts:
+    get:
+      summary: List alerts/incidents
+      operationId: listAlerts
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, acknowledged, resolved]
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [critical, warning, info]
+        - name: nodeId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: List of alerts
+
+  /alerts/notify:
+    post:
+      summary: Send notification for an alert
+      operationId: notifyAlert
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertNotify'
+      responses:
+        '200':
+          description: Notification sent
+        '404':
+          description: Alert not found
+
+  /alerts/rules:
+    get:
+      summary: List alert rules
+      operationId: listAlertRules
+      responses:
+        '200':
+          description: Alert rules
+    post:
+      summary: Create alert rule
+      operationId: createAlertRule
+      responses:
+        '201':
+          description: Rule created
+
+  /alerts/channels:
+    get:
+      summary: List alert channels
+      operationId: listAlertChannels
+      responses:
+        '200':
+          description: Alert channels
+    post:
+      summary: Create alert channel
+      operationId: createAlertChannel
+      responses:
+        '201':
+          description: Channel created
+
+  /alerts/history:
+    get:
+      summary: Get alert history
+      operationId: getAlertHistory
+      responses:
+        '200':
+          description: Alert history
+
+  /masternodes:
+    get:
+      summary: List masternodes
+      operationId: listMasternodes
+      responses:
+        '200':
+          description: List of masternodes
+
+  /masternodes/{address}:
+    get:
+      summary: Get masternode by address
+      operationId: getMasternode
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Masternode details
+        '404':
+          description: Not found
+
+  /masternodes/stats:
+    get:
+      summary: Get masternode statistics
+      operationId: getMasternodeStats
+      responses:
+        '200':
+          description: Masternode statistics
+
+  /analytics:
+    get:
+      summary: Get analytics data
+      operationId: getAnalytics
+      responses:
+        '200':
+          description: Analytics data
+
+  /issues:
+    get:
+      summary: List issues
+      operationId: listIssues
+      responses:
+        '200':
+          description: Issues list
+    post:
+      summary: Create issue
+      operationId: createIssue
+      responses:
+        '201':
+          description: Issue created
+
+  /issues/report:
+    post:
+      summary: Report a new issue
+      operationId: reportIssue
+      responses:
+        '201':
+          description: Issue reported
+
+  /issues/trends:
+    get:
+      summary: Get issue trends
+      operationId: getIssueTrends
+      responses:
+        '200':
+          description: Issue trends
+
+  /issues/resolution-stats:
+    get:
+      summary: Get resolution statistics
+      operationId: getResolutionStats
+      responses:
+        '200':
+          description: Resolution statistics
+
+  /fleet/status:
+    get:
+      summary: Get fleet status overview
+      operationId: getFleetStatus
+      responses:
+        '200':
+          description: Fleet status
+
+  /notifications:
+    get:
+      summary: List notifications
+      operationId: listNotifications
+      responses:
+        '200':
+          description: Notifications list
+    post:
+      summary: Create notification
+      operationId: createNotification
+      responses:
+        '201':
+          description: Notification created
+
+  /peers/healthy:
+    get:
+      summary: List healthy peers
+      operationId: getHealthyPeers
+      responses:
+        '200':
+          description: Healthy peers
+
+  /upgrades/check:
+    get:
+      summary: Check for available upgrades
+      operationId: checkUpgrades
+      responses:
+        '200':
+          description: Upgrade information

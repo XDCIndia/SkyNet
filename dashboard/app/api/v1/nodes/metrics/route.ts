@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { authenticateRequest, unauthorizedResponse, badRequestResponse, hasPermission } from '@/lib/auth';
+import { z } from 'zod';
+
+const MetricSchema = z.object({
+  name: z.string().max(100),
+  value: z.coerce.number(),
+  labels: z.record(z.string().max(50)).optional(),
+  timestamp: z.string().optional(),
+});
+
+const MetricsPushSchema = z.object({
+  nodeId: z.string().uuid(),
+  metrics: z.array(MetricSchema).min(1).max(1000),
+});
 
 interface Metric {
   name: string;

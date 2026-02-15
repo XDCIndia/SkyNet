@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, unauthorizedResponse, isDashboardReadRequest } from '@/lib/auth';
+import { z } from 'zod';
+
+const LogsBodySchema = z.object({
+  lines: z.coerce.number().int().min(1).max(10000).default(100),
+  filter: z.string().max(200).optional(),
+});
 
 /**
  * POST /api/v1/nodes/[id]/logs
@@ -21,7 +27,14 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const { lines = 100, filter } = body;
+    const validation = LogsBodySchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: validation.error.errors },
+        { status: 400 }
+      );
+    }
+    const { lines, filter } = validation.data;
 
     // Mock log data - in production, fetch from node via SSH or log aggregation
     const mockLogs = generateMockLogs(lines, filter);

@@ -48,7 +48,8 @@ interface PeerInfo {
   protocols: Record<string, { version: number; name: string }>;
 }
 
-// Track previous metrics for incident detection
+// Track previous metrics for incident detection (bounded to prevent memory leaks)
+const MAX_TRACKED_NODES = 1000;
 const previousMetrics = new Map<string, NodeMetric & { count: number }>();
 
 async function rpcCall(method: string, params: unknown[] = [], url: string = RPC_URL): Promise<unknown> {
@@ -278,6 +279,11 @@ async function updatePreviousMetrics(nodeId: string, metric: Partial<NodeMetric>
       prev.count = 0;
     }
   } else {
+    // Evict oldest entries if at capacity to prevent unbounded memory growth
+    if (previousMetrics.size >= MAX_TRACKED_NODES) {
+      const firstKey = previousMetrics.keys().next().value;
+      if (firstKey) previousMetrics.delete(firstKey);
+    }
     previousMetrics.set(nodeId, { ...metric as NodeMetric, count: 0 });
   }
 }
@@ -409,8 +415,9 @@ export function stopCollector(): void {
   }
 
   isRunning = false;
-  if (metricsInterval) clearInterval(metricsInterval);
-  if (healthInterval) clearInterval(healthInterval);
+  if (metricsInterval) { clearInterval(metricsInterval); metricsInterval = null; }
+  if (healthInterval) { clearInterval(healthInterval); healthInterval = null; }
+  previousMetrics.clear();
   console.log('[Collector] Stopped');
 }
 

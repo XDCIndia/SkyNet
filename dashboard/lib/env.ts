@@ -44,6 +44,9 @@ const envSchema = z.object({
   // Optional features
   ENABLE_WEBSOCKET: z.coerce.boolean().optional().default(true),
   ENABLE_METRICS_COLLECTION: z.coerce.boolean().optional().default(true),
+  ENABLE_AUTH: z.enum(['true', 'false']).optional().default('true'),
+  ENABLE_RATE_LIMIT: z.enum(['true', 'false']).optional().default('false'),
+  REQUIRE_WS_AUTH: z.enum(['true', 'false']).optional().default('true'),
   
   // Optional CORS
   CORS_ALLOWED_ORIGINS: z.string().optional(),

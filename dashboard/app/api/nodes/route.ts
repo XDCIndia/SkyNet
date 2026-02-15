@@ -1,11 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, Node } from '@/lib/db';
 import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
+import { z } from 'zod';
+
+const CreateNodeSchema = z.object({
+  name: z.string().min(1).max(100).transform(v => v.replace(/<[^>]*>/g, '').trim()),
+  host: z.string().min(1).max(255),
+  role: z.enum(['masternode', 'fullnode', 'archive', 'rpc']),
+  location_city: z.string().max(100).optional(),
+  location_country: z.string().max(5).optional(),
+  location_lat: z.coerce.number().min(-90).max(90).optional(),
+  location_lng: z.coerce.number().min(-180).max(180).optional(),
+  tags: z.array(z.string().max(50)).max(10).optional(),
+});
 
 // GET /api/nodes - List all nodes with latest metrics
 export async function GET() {
   try {
+    // Use CTE with DISTINCT ON to batch-fetch latest metrics for all nodes
+    // instead of per-node LATERAL join (fixes N+1 query pattern - Issue #26)
     const result = await query(`
+      WITH latest_metrics AS (
+        SELECT DISTINCT ON (node_id)
+          node_id, block_height, sync_percent, peer_count, cpu_percent,
+          memory_percent, disk_percent, rpc_latency_ms, is_syncing,
+          client_version, collected_at
+        FROM skynet.node_metrics
+        ORDER BY node_id, collected_at DESC
+      )
       SELECT 
         n.*,
         m.block_height,
@@ -19,12 +41,7 @@ export async function GET() {
         m.client_version,
         m.collected_at as last_seen
       FROM skynet.nodes n
-      LEFT JOIN LATERAL (
-        SELECT * FROM skynet.node_metrics
-        WHERE node_id = n.id
-        ORDER BY collected_at DESC
-        LIMIT 1
-      ) m ON true
+      LEFT JOIN latest_metrics m ON m.node_id = n.id
       ORDER BY n.created_at DESC
     `);
 
@@ -52,52 +69,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const {
-      name,
-      host,
-      role,
-      location_city,
-      location_country,
-      location_lat,
-      location_lng,
-      tags,
-    } = body;
-
-    // Validation
-    if (!name || !host || !role) {
+    const validation = CreateNodeSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, host, role' },
+        { error: 'Validation failed', details: validation.error.errors },
         { status: 400 }
       );
     }
 
-    // Input length validation
-    if (typeof name !== 'string' || name.length > 100) {
-      return NextResponse.json(
-        { error: 'name must be a string of max 100 characters' },
-        { status: 400 }
-      );
-    }
-    if (typeof host !== 'string' || host.length > 255) {
-      return NextResponse.json(
-        { error: 'host must be a string of max 255 characters' },
-        { status: 400 }
-      );
-    }
+    const { name, host, role, location_city, location_country, location_lat, location_lng, tags } = validation.data;
 
-    // Sanitize: strip HTML tags from name
-    const sanitizedName = name.replace(/<[^>]*>/g, '').trim();
-    if (!sanitizedName) {
+    if (!name) {
       return NextResponse.json(
         { error: 'name cannot be empty after sanitization' },
-        { status: 400 }
-      );
-    }
-
-    const validRoles = ['masternode', 'fullnode', 'archive', 'rpc'];
-    if (!validRoles.includes(role)) {
-      return NextResponse.json(
-        { error: `Invalid role. Must be one of: ${validRoles.join(', ')}` },
         { status: 400 }
       );
     }
@@ -107,7 +91,7 @@ export async function POST(request: NextRequest) {
        (name, host, role, location_city, location_country, location_lat, location_lng, tags)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [sanitizedName, host, role, location_city, location_country, location_lat, location_lng, tags || []]
+      [name, host, role, location_city, location_country, location_lat, location_lng, tags || []]
     );
 
     return NextResponse.json({

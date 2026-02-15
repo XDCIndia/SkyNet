@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { authenticateRequest, unauthorizedResponse, badRequestResponse, notFoundResponse } from '@/lib/auth';
+import { z } from 'zod';
 
-const VALID_COMMANDS = ['restart', 'update', 'add_peers', 'remove_peers', 'run_diagnostic'];
+const VALID_COMMANDS = ['restart', 'update', 'add_peers', 'remove_peers', 'run_diagnostic'] as const;
+
+const CommandBodySchema = z.object({
+  command: z.enum(VALID_COMMANDS),
+  params: z.record(z.unknown()).optional(),
+});
 
 /**
  * GET /api/v1/nodes/[id]/commands
@@ -85,16 +91,11 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { command, params: commandParams } = body;
-
-    // Validation
-    if (!command) {
-      return badRequestResponse('Missing required field: command');
+    const validation = CommandBodySchema.safeParse(body);
+    if (!validation.success) {
+      return badRequestResponse(`Validation failed: ${validation.error.errors.map(e => e.message).join(', ')}`);
     }
-
-    if (!VALID_COMMANDS.includes(command)) {
-      return badRequestResponse(`Invalid command. Must be one of: ${VALID_COMMANDS.join(', ')}`);
-    }
+    const { command, params: commandParams } = validation.data;
 
     // Queue the command
     const result = await query(

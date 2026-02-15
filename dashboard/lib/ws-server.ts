@@ -10,8 +10,11 @@ import { verify, sign } from 'jsonwebtoken';
 
 const WS_PORT = parseInt(process.env.WS_PORT || '3006');
 const JWT_SECRET = process.env.JWT_SECRET || process.env.API_KEYS?.split(',')[0] || 'dev-secret';
+const REQUIRE_WS_AUTH = process.env.REQUIRE_WS_AUTH !== 'false'; // default: require auth
+const AUTH_TIMEOUT = 10000; // 10 seconds to authenticate after connection
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 const CLIENT_TIMEOUT = 60000; // 60 seconds without pong = disconnect
+const MAX_CLIENTS = parseInt(process.env.WS_MAX_CLIENTS || '500');
 
 // =============================================================================
 // Types
@@ -22,6 +25,8 @@ interface AuthenticatedWebSocket extends WebSocket {
   nodeId?: string;
   permissions?: string[];
   isAlive: boolean;
+  authenticated: boolean;
+  authTimer?: NodeJS.Timeout;
   subscriptions: Set<string>;
   lastPong: number;
 }
@@ -111,12 +116,22 @@ async function getLatestHealth() {
 // =============================================================================
 
 function authenticateClient(token: string): { valid: boolean; userId?: string; nodeId?: string; permissions?: string[] } {
+  // Check JWT token first
   try {
     const decoded = verify(token, JWT_SECRET) as { userId?: string; nodeId?: string; permissions?: string[] };
     return { valid: true, ...decoded };
   } catch {
-    return { valid: false };
+    // Not a valid JWT, try API key
   }
+  
+  // Check against API_KEYS env var
+  const apiKeysEnv = process.env.API_KEYS || '';
+  const allowedKeys = apiKeysEnv.split(',').map(k => k.trim()).filter(Boolean);
+  if (allowedKeys.includes(token)) {
+    return { valid: true, userId: 'api-key-user', permissions: ['read'] };
+  }
+  
+  return { valid: false };
 }
 
 export function generateWsToken(userId: string, nodeId?: string, permissions: string[] = ['read']): string {
@@ -221,22 +236,41 @@ function handleClientMessage(ws: AuthenticatedWebSocket, message: string): void 
         ws.userId = auth.userId;
         ws.nodeId = auth.nodeId;
         ws.permissions = auth.permissions;
+        ws.authenticated = true;
+        if (ws.authTimer) {
+          clearTimeout(ws.authTimer);
+          ws.authTimer = undefined;
+        }
+        
+        // Grant default subscriptions after successful auth
+        ws.subscriptions = new Set(['metrics', 'incidents', 'peers', 'health']);
         
         ws.send(JSON.stringify({
           type: 'auth_success',
           data: { userId: auth.userId, permissions: auth.permissions },
           timestamp: new Date().toISOString(),
         }));
+        
+        // Send initial data after authentication
+        broadcastUpdates().catch(logger.error);
         break;
       }
       
       case 'subscribe': {
+        if (REQUIRE_WS_AUTH && !ws.authenticated) {
+          sendError(ws, 'Authentication required before subscribing');
+          return;
+        }
         data.channels?.forEach(ch => ws.subscriptions.add(ch));
         sendAck(ws, { subscribed: Array.from(ws.subscriptions) });
         break;
       }
       
       case 'unsubscribe': {
+        if (REQUIRE_WS_AUTH && !ws.authenticated) {
+          sendError(ws, 'Authentication required');
+          return;
+        }
         data.channels?.forEach(ch => ws.subscriptions.delete(ch));
         sendAck(ws, { subscribed: Array.from(ws.subscriptions) });
         break;
@@ -288,13 +322,32 @@ export function startWebSocketServer(): WebSocketServer {
   wss = new WebSocketServer({ port: WS_PORT });
 
   wss.on('connection', (ws: WebSocket) => {
+    // Enforce max client limit
+    if (clients.size >= MAX_CLIENTS) {
+      logger.warn('[WebSocket] Max clients reached, rejecting connection');
+      ws.close(1013, 'Max clients reached');
+      return;
+    }
+
     const client = ws as AuthenticatedWebSocket;
     client.isAlive = true;
     client.lastPong = Date.now();
-    client.subscriptions = new Set(['metrics', 'incidents', 'peers', 'health']);
+    client.authenticated = !REQUIRE_WS_AUTH; // auto-authenticated if auth not required
+    client.subscriptions = new Set(REQUIRE_WS_AUTH ? [] : ['metrics', 'incidents', 'peers', 'health']);
     
     clients.add(client);
-    logger.info('[WebSocket] Client connected', { total: clients.size });
+    logger.info('[WebSocket] Client connected', { total: clients.size, authRequired: REQUIRE_WS_AUTH });
+
+    // Set auth timeout - disconnect if not authenticated within AUTH_TIMEOUT
+    if (REQUIRE_WS_AUTH) {
+      client.authTimer = setTimeout(() => {
+        if (!client.authenticated) {
+          logger.info('[WebSocket] Auth timeout, disconnecting client');
+          sendError(client, 'Authentication timeout');
+          client.close(1008, 'Authentication timeout');
+        }
+      }, AUTH_TIMEOUT);
+    }
 
     client.on('pong', () => heartbeat(client));
 
@@ -303,17 +356,23 @@ export function startWebSocketServer(): WebSocketServer {
     });
 
     client.on('close', () => {
+      if (client.authTimer) clearTimeout(client.authTimer);
+      client.subscriptions.clear();
       clients.delete(client);
       logger.info('[WebSocket] Client disconnected', { total: clients.size });
     });
 
     client.on('error', (error) => {
       logger.error('[WebSocket] Client error', error);
+      if (client.authTimer) clearTimeout(client.authTimer);
+      client.subscriptions.clear();
       clients.delete(client);
     });
 
-    // Send initial data
-    broadcastUpdates().catch(logger.error);
+    // Send initial data only if no auth required
+    if (!REQUIRE_WS_AUTH) {
+      broadcastUpdates().catch(logger.error);
+    }
   });
 
   // Start periodic broadcasts

@@ -15,7 +15,8 @@
     "db:init": "psql $DATABASE_URL -f lib/db/schema.sql",
     "db:migrate": "node scripts/migrate.js",
     "test": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "sdk:generate": "npx openapi-typescript openapi.yaml -o lib/sdk/api-types.ts"
   },
   "dependencies": {
     "@amcharts/amcharts5": "^5.15.6",

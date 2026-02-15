@@ -13,6 +13,11 @@ export interface AuthResult {
  * Validates against API_KEYS env var (comma-separated list)
  */
 export async function authenticateRequest(req: NextRequest): Promise<AuthResult> {
+  // Auth bypass when ENABLE_AUTH is explicitly set to 'false'
+  if (process.env.ENABLE_AUTH === 'false') {
+    return { valid: true, permissions: ['*'] };
+  }
+
   const authHeader = req.headers.get('authorization');
   
   if (!authHeader) {
@@ -149,10 +154,9 @@ export function generateApiKey(): string {
 
 /**
  * For dashboard-facing GET routes: auth is optional.
- * Returns true always for GET without auth header (dashboard calls).
- * POST/PUT/DELETE still require auth.
+ * Returns true for GET without auth header (dashboard calls) or when auth is disabled.
  */
 export function isDashboardReadRequest(req: NextRequest): boolean {
-  // Auth disabled — all requests treated as dashboard reads
-  return true;
+  if (process.env.ENABLE_AUTH === 'false') return true;
+  return req.method === 'GET' && !req.headers.get('authorization');
 }
