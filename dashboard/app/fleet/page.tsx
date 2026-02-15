@@ -299,6 +299,8 @@ export default function FleetPage() {
           rpc_latency_ms: n.rpcLatencyMs || 0,
           is_syncing: n.isSyncing || false,
           client_version: n.clientVersion || 'Unknown',
+          client_type: n.clientType || 'unknown',
+          sentries: n.sentries || [],
           last_seen: n.lastSeen,
           status: getNodeStatus(n.lastSeen),
         }));
@@ -515,6 +517,8 @@ export default function FleetPage() {
                     <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">CPU</th>
                     <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Mem</th>
                     <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Disk</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Client</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Version</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -574,6 +578,16 @@ export default function FleetPage() {
                               <HardDrive className="w-3 h-3 text-[#64748B]" />
                               <span className={(node.disk_percent || 0) > 85 ? 'text-[#F59E0B]' : ''}>{Math.round(node.disk_percent || 0)}%</span>
                             </div>
+                          </td>
+                          {/* Client Type */}
+                          <td className="py-3 px-3">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#1E90FF]/10 text-[#1E90FF] border border-[#1E90FF]/20">
+                              {(node.client_type || 'unknown').toUpperCase()}
+                            </span>
+                          </td>
+                          {/* Client Version */}
+                          <td className="py-3 px-3 text-xs text-[#64748B]" title={node.client_version}>
+                            {node.client_version?.split('/')[0] || 'Unknown'}
                           </td>
                           {/* Erigon Sentry Indicator (Issue #14) */}
                           {node.client_type?.toLowerCase() === 'erigon' && node.sentries && (
