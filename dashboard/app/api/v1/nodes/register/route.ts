@@ -66,9 +66,10 @@ async function postHandler(request: NextRequest) {
       if (existingNode.rows.length > 0) {
         // Update existing node (re-registration)
         isUpdate = true;
+        const existingId = existingNode.rows[0].id;
         const updateResult = await client.query(
           `UPDATE skynet.nodes 
-           SET host = $2, role = $3, location_city = $4, location_country = $5,
+           SET name = $1, host = $2, role = $3, location_city = $4, location_country = $5,
                is_active = true, email = COALESCE(NULLIF($6, ''), email),
                telegram = COALESCE(NULLIF($7, ''), telegram), updated_at = NOW()
            WHERE id = $8
@@ -81,7 +82,7 @@ async function postHandler(request: NextRequest) {
             data.locationCountry || null,
             data.email || null,
             data.telegram || null,
-            existingNode.rows[0].id,
+            existingId,
           ]
         );
         node = updateResult.rows[0];
