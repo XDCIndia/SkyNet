@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { authenticateRequest, unauthorizedResponse, badRequestResponse, hasPermission } from '@/lib/auth';
+import { z } from 'zod';
+
+const NotificationBodySchema = z.object({
+  nodeId: z.string().uuid().optional(),
+  level: z.enum(['critical', 'warning', 'info']),
+  title: z.string().min(1).max(200),
+  message: z.string().max(2000).optional(),
+  type: z.string().max(50).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
 
 /**
  * POST /api/v1/notifications
@@ -26,24 +36,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const {
-      nodeId,
-      level,
-      title,
-      message,
-      type,
-      metadata,
-    } = body;
-
-    // Validation
-    if (!level || !title) {
-      return badRequestResponse('Missing required fields: level, title');
+    const validation = NotificationBodySchema.safeParse(body);
+    if (!validation.success) {
+      return badRequestResponse(`Validation failed: ${validation.error.errors.map(e => e.message).join(', ')}`);
     }
-
-    const validLevels = ['critical', 'warning', 'info'];
-    if (!validLevels.includes(level)) {
-      return badRequestResponse(`Invalid level. Must be one of: ${validLevels.join(', ')}`);
-    }
+    const { nodeId, level, title, message, type, metadata } = validation.data;
 
     // Use auth nodeId if not provided in body
     const targetNodeId = nodeId || auth.nodeId;

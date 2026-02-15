@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
+import { z } from 'zod';
+
+const BanPeerBodySchema = z.object({
+  enode: z.string().min(1).regex(/^enode:\/\//, 'Must be a valid enode URL'),
+  ip: z.string().max(45).optional(),
+  reason: z.string().max(200).optional(),
+});
 
 // POST /api/peers/ban - Ban a peer (protected)
 export async function POST(request: NextRequest) {
@@ -12,14 +19,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { enode, ip, reason } = body;
-
-    if (!enode) {
+    const validation = BanPeerBodySchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Missing required field: enode' },
+        { error: 'Validation failed', details: validation.error.errors },
         { status: 400 }
       );
     }
+    const { enode, ip, reason } = validation.data;
 
     const result = await query(`
       INSERT INTO skynet.banned_peers (enode, remote_ip, reason, banned_by)

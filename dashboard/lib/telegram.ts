@@ -97,13 +97,13 @@ export class TelegramBot {
 
       if (!res.ok) {
         const body = await res.text();
-        logger.error('Telegram API error', { status: res.status, body });
+        logger.error(`Telegram API error: ${res.status} ${body}`);
         return false;
       }
 
       return true;
     } catch (err) {
-      logger.error('Telegram send failed', { error: err });
+      logger.error(`Telegram send failed: ${err}`);
       return false;
     }
   }

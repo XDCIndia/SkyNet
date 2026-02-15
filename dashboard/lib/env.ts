@@ -105,9 +105,12 @@ export function validateEnvironment(): ValidatedEnv {
       DB_POOL_MAX: 20,
       DB_POOL_MIN: 5,
       DB_CONNECTION_TIMEOUT: 10000,
+      ENABLE_AUTH: 'true' as const,
+      ENABLE_RATE_LIMIT: 'false' as const,
+      REQUIRE_WS_AUTH: 'true' as const,
       ENABLE_WEBSOCKET: true,
       ENABLE_METRICS_COLLECTION: true,
-      LOG_LEVEL: 'info',
+      LOG_LEVEL: 'info' as const,
       SHUTDOWN_TIMEOUT: 30000,
     };
   }
