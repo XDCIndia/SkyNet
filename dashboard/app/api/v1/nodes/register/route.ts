@@ -71,7 +71,7 @@ async function postHandler(request: NextRequest) {
            SET host = $2, role = $3, location_city = $4, location_country = $5,
                is_active = true, email = COALESCE(NULLIF($6, ''), email),
                telegram = COALESCE(NULLIF($7, ''), telegram), updated_at = NOW()
-           WHERE name = $1
+           WHERE id = $8
            RETURNING id, name, host, role, created_at`,
           [
             data.name,
@@ -81,6 +81,7 @@ async function postHandler(request: NextRequest) {
             data.locationCountry || null,
             data.email || null,
             data.telegram || null,
+            existingNode.rows[0].id,
           ]
         );
         node = updateResult.rows[0];
