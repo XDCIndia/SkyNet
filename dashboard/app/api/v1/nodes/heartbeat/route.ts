@@ -62,6 +62,8 @@ const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
   // Stall tracking
   stallHours: z.number().min(0).optional(),
   stalledAtBlock: z.number().int().min(0).optional(),
+  // Node's own enode URL for peer discovery
+  enode: z.string().max(500).optional(),
 });
 
 /**
@@ -129,6 +131,7 @@ async function postHandler(request: NextRequest) {
     sentries,
     stallHours,
     stalledAtBlock,
+    enode,
   } = body;
 
   // Verify node ownership (if using node-specific key)
@@ -255,9 +258,10 @@ async function postHandler(request: NextRequest) {
            client_type = COALESCE($6, client_type),
            node_type = COALESCE($7, node_type),
            sync_mode = COALESCE($8, sync_mode),
-           os_info = COALESCE($9, os_info)
+           os_info = COALESCE($9, os_info),
+           enode = COALESCE(NULLIF($10, ''), enode)
        WHERE id = $1`,
-      [nodeId, nodeType || null, security?.score ?? null, ipv4 || null, clientVersion || null, clientType || null, nodeType || null, syncMode || null, os ? JSON.stringify(os) : null]
+      [nodeId, nodeType || null, security?.score ?? null, ipv4 || null, clientVersion || null, clientType || null, nodeType || null, syncMode || null, os ? JSON.stringify(os) : null, enode || null]
     );
   });
 

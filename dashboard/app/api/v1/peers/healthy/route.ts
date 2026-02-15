@@ -146,8 +146,44 @@ export async function GET(request: NextRequest) {
         ORDER BY ps.collected_at DESC`
       );
 
+      // 1b. Get registered node enodes (nodes that report their own enode via heartbeat)
+      const nodeEnodesResult = await query(
+        `SELECT n.enode, n.ipv4, n.name, n.client_type,
+                nm.peer_count, nm.block_height
+         FROM skynet.nodes n
+         LEFT JOIN LATERAL (
+           SELECT peer_count, block_height FROM skynet.node_metrics
+           WHERE node_id = n.id ORDER BY collected_at DESC LIMIT 1
+         ) nm ON true
+         WHERE n.is_active = true 
+           AND n.enode IS NOT NULL AND n.enode != ''
+           AND n.updated_at > NOW() - INTERVAL '10 minutes'`
+      );
+
       // Deduplicate peers by enode
       const peerMap = new Map<string, PeerData>();
+
+      // Add registered node enodes first (these are known-good nodes)
+      for (const row of nodeEnodesResult.rows) {
+        const enode = row.enode;
+        if (!enode || peerMap.has(enode)) continue;
+        
+        const match = enode.match(/@([^:]+):(\d+)$/);
+        if (!match) continue;
+        
+        peerMap.set(enode, {
+          enode,
+          ip: match[1],
+          port: parseInt(match[2], 10),
+          name: `${row.name} (${row.client_type || 'unknown'})`,
+          protocols: [],
+          direction: 'outbound',
+          country: null,
+          city: null,
+          connectedNodes: ['registered'],
+          lastSeen: new Date(),
+        });
+      }
       
       // Add peer_snapshots data
       for (const row of peersResult.rows) {
