@@ -28,8 +28,11 @@ import {
   Database,
   Zap,
   Layers,
-  FileBox
+  FileBox,
+  PieChart
 } from 'lucide-react';
+import ClientDiversityChart from './ClientDiversityChart';
+import NetworkFilter from './NetworkFilter';
 
 // Types
 interface FleetNode {
@@ -49,9 +52,13 @@ interface FleetNode {
   lastSeen: string;
   ip: string;
   syncPercent?: number;
+  syncColor?: string;
   isSyncing?: boolean;
-  // New fields
+  fleetMaxBlock?: number;
+  // Client diversity fields (Issue #68)
   clientType?: string;
+  clientIcon?: string;
+  clientColor?: string;
   nodeType?: string;
   syncMode?: string;
   chainDataSize?: number;
@@ -59,6 +66,25 @@ interface FleetNode {
   storageType?: string;
   iopsEstimate?: number;
   clientVersion?: string;
+  // Network fields (Issue #68)
+  network?: string;
+  chainId?: number;
+}
+
+// Client distribution for diversity chart
+interface ClientDistributionItem {
+  type: string;
+  count: number;
+  color: string;
+  icon?: string;
+  percentage?: number;
+}
+
+// Network distribution
+interface NetworkDistributionItem {
+  network: string;
+  count: number;
+  percentage?: number;
 }
 
 interface FleetData {
@@ -170,10 +196,10 @@ function ClientBadge({ clientType }: { clientType?: string }) {
     },
   };
   
-  const style = styles[clientType || ''] || { 
+  const style = styles[clientType?.toLowerCase() || ''] || { 
     bg: 'bg-gray-500/15', 
     text: 'text-gray-400',
-    icon: '●',
+    icon: '⚪',
     label: clientType || 'Unknown'
   };
   
@@ -257,6 +283,12 @@ export default function FleetOverview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // Client diversity state (Issue #68)
+  const [clientDistribution, setClientDistribution] = useState<ClientDistributionItem[]>([]);
+  const [networkDistribution, setNetworkDistribution] = useState<NetworkDistributionItem[]>([]);
+  const [filterNetwork, setFilterNetwork] = useState('all');
+  const [fleetMaxBlock, setFleetMaxBlock] = useState(0);
+  
   // Block height history for sparklines (rolling buffer of last 10 readings per node)
   const [blockHeightHistory, setBlockHeightHistory] = useState<BlockHeightHistory>({});
   
@@ -264,20 +296,65 @@ export default function FleetOverview() {
   const prevBlockDataRef = useRef<PreviousBlockData>({});
   const [blockIncreases, setBlockIncreases] = useState<{ [nodeId: string]: number }>({});
 
-  // Fetch nodes from API
+  // Fetch nodes from API with network filter (Issue #68)
   const fetchNodes = useCallback(async () => {
     try {
       setError(null);
-      const res = await fetch('/api/v1/fleet/status', { cache: 'no-store' });
+      // Use the new overview endpoint with network filter
+      const networkParam = filterNetwork !== 'all' ? `?network=${filterNetwork}` : '';
+      const res = await fetch(`/api/v1/fleet/overview${networkParam}`, { cache: 'no-store' });
       
       if (!res.ok) {
-        throw new Error(`Failed to fetch: ${res.status} ${res.statusText}`);
+        // Fallback to old endpoint if new one doesn't exist yet
+        const fallbackRes = await fetch('/api/v1/fleet/status', { cache: 'no-store' });
+        if (!fallbackRes.ok) {
+          throw new Error(`Failed to fetch: ${fallbackRes.status} ${fallbackRes.statusText}`);
+        }
+        const fallbackData = await fallbackRes.json();
+        const apiNodes = fallbackData.data?.nodes || [];
+        const apiIncidents = fallbackData.data?.incidents || { critical: 0, warning: 0, info: 0, total: 0 };
+        setIncidents(apiIncidents);
+        // Process nodes with old format...
+        const mappedNodes: FleetNode[] = apiNodes.map((node: any) => ({
+          id: node.id || '',
+          name: node.name || 'Unknown',
+          role: (node.role || 'fullnode') as FleetNode['role'],
+          region: node.region || 'unknown',
+          status: mapStatus(node.status),
+          version: node.clientVersion || node.client_version || 'Unknown',
+          blockHeight: node.blockHeight || 0,
+          peers: node.peerCount || 0,
+          cpuUsage: node.cpuPercent !== null ? node.cpuPercent : 0,
+          memoryUsage: node.memoryPercent !== null ? node.memoryPercent : 0,
+          diskUsage: node.diskPercent !== null ? node.diskPercent : 0,
+          uptime: node.uptime || 0,
+          tags: node.tags || [],
+          lastSeen: node.lastSeen || '',
+          ip: node.host || node.ipv4 || '',
+          syncPercent: node.syncPercent ?? 0,
+          isSyncing: node.status === 'syncing',
+          clientType: node.clientType || node.client_type || 'unknown',
+          nodeType: node.nodeType || node.node_type,
+          syncMode: node.syncMode || node.sync_mode,
+          chainDataSize: node.chainDataSize || node.chain_data_size,
+          databaseSize: node.databaseSize || node.database_size,
+          storageType: node.storageType || node.storage_type,
+          iopsEstimate: node.iopsEstimate || node.iops_estimate || 0,
+          clientVersion: node.clientVersion || node.client_version,
+        }));
+        setNodes(mappedNodes);
+        setLoading(false);
+        return;
       }
       
       const data = await res.json();
       const apiNodes = data.data?.nodes || [];
       const apiIncidents = data.data?.incidents || { critical: 0, warning: 0, info: 0, total: 0 };
       
+      // Set client diversity data (Issue #68)
+      setClientDistribution(data.data?.clientDistribution || []);
+      setNetworkDistribution(data.data?.networkDistribution || []);
+      setFleetMaxBlock(data.data?.fleetMaxBlock || 0);
       setIncidents(apiIncidents);
       
       const now = Date.now();
@@ -303,6 +380,7 @@ export default function FleetOverview() {
           status: mapStatus(node.status),
           version: node.clientVersion || node.client_version || 'Unknown',
           blockHeight: node.blockHeight || 0,
+          fleetMaxBlock: node.fleetMaxBlock || data.data?.fleetMaxBlock || 0,
           peers: node.peerCount || 0,
           cpuUsage: node.cpuPercent !== null ? node.cpuPercent : 0,
           memoryUsage: node.memoryPercent !== null ? node.memoryPercent : 0,
@@ -312,9 +390,12 @@ export default function FleetOverview() {
           lastSeen: node.lastSeen || '',
           ip: node.host || node.ipv4 || '',
           syncPercent: node.syncPercent ?? 0,
+          syncColor: node.syncColor || (node.syncPercent > 99 ? 'green' : node.syncPercent >= 90 ? 'yellow' : 'red'),
           isSyncing: node.status === 'syncing',
-          // New fields
-          clientType: node.clientType || node.client_type,
+          // Client diversity fields (Issue #68)
+          clientType: node.clientType || node.client_type || 'unknown',
+          clientIcon: node.clientIcon || '⚪',
+          clientColor: node.clientColor || '#6B7280',
           nodeType: node.nodeType || node.node_type,
           syncMode: node.syncMode || node.sync_mode,
           chainDataSize: node.chainDataSize || node.chain_data_size,
@@ -322,6 +403,9 @@ export default function FleetOverview() {
           storageType: node.storageType || node.storage_type,
           iopsEstimate: node.iopsEstimate || node.iops_estimate || 0,
           clientVersion: node.clientVersion || node.client_version,
+          // Network fields (Issue #68)
+          network: node.network || 'mainnet',
+          chainId: node.chainId,
         };
       });
       
@@ -352,7 +436,7 @@ export default function FleetOverview() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filterNetwork]);
 
   // Fetch network health
   const fetchNetworkHealth = useCallback(async () => {
@@ -685,6 +769,73 @@ export default function FleetOverview() {
         </div>
       )}
 
+      {/* Client Diversity Section (Issue #68) */}
+      {clientDistribution.length > 0 && (
+        <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Client Diversity Chart */}
+          <div className="p-4 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[var(--bg-card)]">
+            <div className="flex items-center gap-3 mb-4">
+              <PieChart className="w-5 h-5 text-[var(--accent-blue)]" />
+              <h3 className="text-sm font-semibold text-[#F9FAFB]">Client Diversity</h3>
+            </div>
+            <ClientDiversityChart
+              data={clientDistribution}
+              total={nodes.length}
+            />
+          </div>
+
+          {/* Network Distribution */}
+          <div className="p-4 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[var(--bg-card)]">
+            <div className="flex items-center gap-3 mb-4">
+              <Globe className="w-5 h-5 text-[var(--accent-blue)]" />
+              <h3 className="text-sm font-semibold text-[#F9FAFB]">Network Distribution</h3>
+            </div>
+            <div className="space-y-3">
+              {networkDistribution.map((item) => (
+                <div
+                  key={item.network}
+                  className="flex items-center justify-between p-3 rounded-lg bg-[rgba(255,255,255,0.03)]"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">
+                      {item.network === 'mainnet' ? '🔷' : item.network === 'apothem' ? '🧪' : '⚙️'}
+                    </span>
+                    <span className="text-sm text-[#F9FAFB] capitalize">
+                      {item.network === 'mainnet' ? 'XDC Mainnet' :
+                       item.network === 'apothem' ? 'Apothem Testnet' :
+                       item.network === 'devnet' ? 'Devnet' : item.network}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-[#F9FAFB]">{item.count}</span>
+                    <span className="text-xs text-[#6B7280]">
+                      {item.percentage?.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {networkDistribution.length === 0 && (
+                <div className="text-center py-4 text-[#6B7280] text-sm">
+                  No network data available
+                </div>
+              )}
+            </div>
+            
+            {/* Fleet Max Block */}
+            {fleetMaxBlock > 0 && (
+              <div className="mt-4 pt-4 border-t border-[rgba(255,255,255,0.06)]">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#6B7280]">Fleet Max Block</span>
+                  <span className="text-sm font-bold font-mono text-[#10B981]">
+                    {fleetMaxBlock.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex flex-col gap-3 mb-6 p-3 sm:p-4 rounded-xl bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)]">
         <div className="flex items-center gap-2 text-[#6B7280]">
@@ -732,6 +883,13 @@ export default function FleetOverview() {
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
             className="w-full sm:w-auto px-3 py-2 sm:py-1.5 rounded-lg bg-[var(--bg-body)] border border-[rgba(255,255,255,0.1)] text-sm text-[#F9FAFB] placeholder-[#6B7280] focus:outline-none focus:border-[var(--accent-blue)] min-h-[44px]"
+          />
+          
+          {/* Network Filter (Issue #68) */}
+          <NetworkFilter
+            value={filterNetwork}
+            onChange={setFilterNetwork}
+            className="w-full sm:w-auto"
           />
           
           <div className="flex items-center gap-2 ml-auto">
@@ -904,36 +1062,41 @@ export default function FleetOverview() {
                 </div>
                 
                 {/* Sync Progress with ETA and Blocks Behind */}
-                {node.isSyncing && (
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-[#6B7280]">Syncing</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#F59E0B] font-semibold">{node.syncPercent?.toFixed(1)}%</span>
-                        {blocksBehind > 0 && (
-                          <span className="text-[#6B7280]">{blocksBehind.toLocaleString()} behind</span>
-                        )}
-                        {syncInfo?.eta && (
-                          <span className="text-[#10B981]">~{syncInfo.eta} left</span>
-                        )}
-                        {isStalled && (
-                          <span className="text-[#EF4444]">Stalled</span>
-                        )}
-                      </div>
+                {/* Sync Progress Bar - Always visible with color coding (Issue #68) */}
+                <div className="mb-3">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-[#6B7280]">Sync Progress</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`font-semibold ${
+                        (node.syncPercent || 0) > 99 ? 'text-[#10B981]' :
+                        (node.syncPercent || 0) >= 90 ? 'text-[#F59E0B]' : 'text-[#EF4444]'
+                      }`}>{node.syncPercent?.toFixed(1)}%</span>
+                      {blocksBehind > 0 && (
+                        <span className="text-[#6B7280]">{blocksBehind.toLocaleString()} behind</span>
+                      )}
+                      {node.isSyncing && syncInfo?.eta && (
+                        <span className="text-[#10B981]">~{syncInfo.eta} left</span>
+                      )}
+                      {isStalled && (
+                        <span className="text-[#EF4444]">Stalled</span>
+                      )}
                     </div>
-                    <div className="w-full h-2 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full bg-gradient-to-r from-[#F59E0B] to-[#EF4444] transition-all" 
-                        style={{ width: `${Math.min(node.syncPercent || 0, 100)}%` }} 
-                      />
-                    </div>
-                    {blocksPerMin !== null && blocksPerMin > 0 && (
-                      <div className="text-xs text-[#6B7280] mt-1 text-right">
-                        {blocksPerMin.toFixed(0)} blocks/min
-                      </div>
-                    )}
                   </div>
-                )}
+                  <div className="w-full h-2 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all ${
+                        (node.syncPercent || 0) > 99 ? 'bg-[#10B981]' :
+                        (node.syncPercent || 0) >= 90 ? 'bg-[#F59E0B]' : 'bg-[#EF4444]'
+                      }`}
+                      style={{ width: `${Math.min(node.syncPercent || 0, 100)}%` }} 
+                    />
+                  </div>
+                  {node.isSyncing && blocksPerMin !== null && blocksPerMin > 0 && (
+                    <div className="text-xs text-[#6B7280] mt-1 text-right">
+                      {blocksPerMin.toFixed(0)} blocks/min
+                    </div>
+                  )}
+                </div>
                 
                 {/* Connected Peers - VISIBLE */}
                 <div className="mb-3 flex items-center justify-between p-2 rounded-lg bg-[rgba(255,255,255,0.02)]">
@@ -1112,37 +1275,35 @@ export default function FleetOverview() {
                         )}
                       </div>
                     </td>
+                    {/* Sync Progress with color coding (Issue #68) */}
                     <td className="py-3 px-4">
-                      {node.isSyncing ? (
-                        <div className="w-24">
-                          <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-[#F59E0B] font-semibold">{node.syncPercent?.toFixed(0)}%</span>
-                            {isStalled ? (
-                              <span className="text-[#EF4444] text-[12px]">Stalled</span>
-                            ) : syncInfo?.eta ? (
-                              <span className="text-[#10B981] text-[12px]">~{syncInfo.eta}</span>
-                            ) : null}
-                          </div>
-                          <div className="w-full h-1.5 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden mb-1">
-                            <div 
-                              className="h-full rounded-full bg-gradient-to-r from-[#F59E0B] to-[#EF4444] transition-all" 
-                              style={{ width: `${Math.min(node.syncPercent || 0, 100)}%` }} 
-                            />
-                          </div>
-                          {blocksBehind > 0 && (
-                            <div className="text-[12px] text-[#6B7280]">{blocksBehind.toLocaleString()} behind</div>
-                          )}
+                      <div className="w-28">
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className={`font-semibold ${
+                            (node.syncPercent || 0) > 99 ? 'text-[#10B981]' :
+                            (node.syncPercent || 0) >= 90 ? 'text-[#F59E0B]' : 'text-[#EF4444]'
+                          }`}>{node.syncPercent?.toFixed(1)}%</span>
+                          {node.isSyncing && isStalled ? (
+                            <span className="text-[#EF4444] text-[12px]">Stalled</span>
+                          ) : node.isSyncing && syncInfo?.eta ? (
+                            <span className="text-[#10B981] text-[12px]">~{syncInfo.eta}</span>
+                          ) : (node.syncPercent || 0) > 99 ? (
+                            <span className="text-[#10B981] text-[12px]">✓</span>
+                          ) : null}
                         </div>
-                      ) : blocksBehind > 100 ? (
-                        <div className="w-24">
-                          <div className="flex items-center gap-1 text-xs mb-1">
-                            <span className="text-[#10B981]">Synced ✓</span>
-                          </div>
+                        <div className="w-full h-1.5 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden mb-1">
+                          <div 
+                            className={`h-full rounded-full transition-all ${
+                              (node.syncPercent || 0) > 99 ? 'bg-[#10B981]' :
+                              (node.syncPercent || 0) >= 90 ? 'bg-[#F59E0B]' : 'bg-[#EF4444]'
+                            }`}
+                            style={{ width: `${Math.min(node.syncPercent || 0, 100)}%` }} 
+                          />
+                        </div>
+                        {blocksBehind > 0 && (
                           <div className="text-[12px] text-[#6B7280]">{blocksBehind.toLocaleString()} behind</div>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-[#10B981]">Synced ✓</span>
-                      )}
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
