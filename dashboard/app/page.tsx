@@ -85,6 +85,7 @@ interface Node {
   };
   client_type?: string;
   node_type?: string;
+  network?: string;
   email?: string | null;
   telegram?: string | null;
   security_score?: number;
@@ -1651,14 +1652,18 @@ export default function Home() {
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Fleet by Network</h3>
                 <div className="grid grid-cols-3 gap-3">
                   {['mainnet', 'apothem', 'devnet'].map(net => {
+                    // Count nodes for this network from the FULL nodes list (not filtered)
+                    // This shows actual counts per network regardless of current filter
                     const count = nodes.filter(n => (n as any).network === net || (net === 'mainnet' && !(n as any).network)).length;
+                    // Check if this network is currently selected
+                    const isActive = networkFilter === net;
                     return (
                       <div 
                         key={net} 
-                        onClick={() => setNetworkFilter(networkFilter === net ? 'all' : net)}
-                        className={`p-3 rounded-lg text-center cursor-pointer transition-all ${networkFilter === net ? 'bg-[var(--accent-blue)]/20 border border-[var(--accent-blue)]/30' : 'bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)]/80'}`}
+                        onClick={() => setNetworkFilter(isActive ? 'all' : net)}
+                        className={`p-3 rounded-lg text-center cursor-pointer transition-all ${isActive ? 'bg-[var(--accent-blue)]/20 border border-[var(--accent-blue)]/30' : 'bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)]/80 border border-transparent'}`}
                       >
-                        <div className="text-xl font-bold text-[var(--text-primary)] font-mono-nums">{count}</div>
+                        <div className={`text-xl font-bold font-mono-nums ${isActive ? 'text-[var(--accent-blue)]' : 'text-[var(--text-primary)]'}`}>{count}</div>
                         <div className="text-xs text-[var(--text-tertiary)] capitalize">{net}</div>
                       </div>
                     );
