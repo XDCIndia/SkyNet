@@ -19,7 +19,10 @@ const SentrySchema = z.object({
 // Extended schema for heartbeat with additional fields (Issue #71)
 const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
   fingerprint: z.string().min(1).max(100).optional(),
-  coinbase: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
+  coinbase: z.preprocess(
+    (val) => (typeof val === 'string' && /^0x[0-9a-fA-F]{40}$/.test(val) ? val : null),
+    z.string().regex(/^0x[0-9a-fA-F]{40}$/).nullable().optional()
+  ),
   syncProgress: z.number().min(0).max(100).optional(),
   peers: z.array(z.object({
     enode: z.string().nullable().optional(),
@@ -183,6 +186,18 @@ async function postHandler(request: NextRequest) {
      WHERE collected_at > NOW() - INTERVAL '5 minutes'`
   );
   const fleetMaxHeight = parseInt(fleetMaxResult[0]?.max_height || '0');
+
+  // Verify node exists before inserting metrics (prevent FK violations)
+  const nodeExists = await queryAll(
+    'SELECT id FROM skynet.nodes WHERE id = $1',
+    [nodeId]
+  );
+  if (nodeExists.length === 0) {
+    return NextResponse.json(
+      { error: 'Node not found. Please register first.', code: 'NOT_FOUND' },
+      { status: 404 }
+    );
+  }
 
   // Store metrics and peers in transaction
   await withTransaction(async (client) => {
