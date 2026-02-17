@@ -35,7 +35,10 @@ const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
     queued: z.number().int().min(0).optional(),
   }).optional(),
   clientVersion: z.string().max(200).optional(),
-  clientType: z.enum(['geth', 'erigon', 'geth-pr5', 'nethermind', 'XDC', 'unknown']).optional().default('unknown'),
+  clientType: z.preprocess(
+    (val) => (val === 'XDC' ? 'geth' : val),
+    z.enum(['geth', 'erigon', 'geth-pr5', 'nethermind', 'unknown']).optional().default('unknown')
+  ),
   isMasternode: z.boolean().optional(),
   nodeType: z.enum(['masternode', 'standby', 'fullnode', 'full', 'archive', 'fast', 'snap']).optional(),
   syncMode: z.enum(['full', 'fast', 'snap', 'archive']).optional().default('full'),
