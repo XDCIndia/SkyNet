@@ -1412,9 +1412,34 @@ export default function Home() {
     }
   }, [nodes.length]);
 
+  // Network-filtered nodes (global filter)
+  const globalFilteredNodes = useMemo(() => {
+    if (networkFilter === 'all') return nodes;
+    return nodes.filter(n => {
+      const network = (n as any).network || 'mainnet';
+      return network === networkFilter;
+    });
+  }, [nodes, networkFilter]);
+
+  // Client distribution for donut chart
+  const clientDistribution = useMemo(() => {
+    const clientColors: Record<string, string> = {
+      geth: '#1E90FF', nethermind: '#10B981', erigon: '#F59E0B', unknown: '#6B7280',
+    };
+    const counts: Record<string, number> = {};
+    globalFilteredNodes.forEach(n => {
+      const ct = (n.client_type || 'unknown').toLowerCase();
+      counts[ct] = (counts[ct] || 0) + 1;
+    });
+    return Object.entries(counts).map(([type, count]) => ({
+      type, count, color: clientColors[type] || '#6B7280',
+      percentage: globalFilteredNodes.length > 0 ? (count / globalFilteredNodes.length) * 100 : 0,
+    }));
+  }, [globalFilteredNodes]);
+
   // Filter and sort nodes
   const filteredNodes = useMemo(() => {
-    let result = nodes.filter(node => {
+    let result = globalFilteredNodes.filter(node => {
       // Status filter (stale nodes already filtered out at fetch time)
       switch (filter) {
         case 'healthy':
@@ -1436,12 +1461,6 @@ export default function Home() {
       // OS filter
       if (osFilter !== 'all') {
         if ((node.os_info?.type || '') !== osFilter) return false;
-      }
-      
-      // Network filter
-      if (networkFilter !== 'all') {
-        const network = (node as any).network || 'mainnet';
-        if (network !== networkFilter) return false;
       }
 
       // Search filter
@@ -1488,34 +1507,9 @@ export default function Home() {
     });
     
     return result;
-  }, [nodes, filter, debouncedSearch, sortField, sortDirection, clientFilter, osFilter, networkFilter]);
+  }, [globalFilteredNodes, filter, debouncedSearch, sortField, sortDirection, clientFilter, osFilter]);
 
   // Calculate filter counts (stale nodes already filtered out at fetch time)
-  // Client distribution for donut chart
-  const clientDistribution = useMemo(() => {
-    const clientColors: Record<string, string> = {
-      geth: '#1E90FF', nethermind: '#10B981', erigon: '#F59E0B', unknown: '#6B7280',
-    };
-    const counts: Record<string, number> = {};
-    nodes.forEach(n => {
-      const ct = (n.client_type || 'unknown').toLowerCase();
-      counts[ct] = (counts[ct] || 0) + 1;
-    });
-    return Object.entries(counts).map(([type, count]) => ({
-      type, count, color: clientColors[type] || '#6B7280',
-      percentage: nodes.length > 0 ? (count / nodes.length) * 100 : 0,
-    }));
-  }, [nodes]);
-
-  // Network-filtered nodes
-  const networkFilteredNodes = useMemo(() => {
-    if (networkFilter === 'all') return nodes;
-    return nodes.filter(n => {
-      const network = (n as any).network || 'mainnet';
-      return network === networkFilter;
-    });
-  }, [nodes, networkFilter]);
-
   // Unique client types and OS types for filter dropdowns
   const uniqueClients = useMemo(() => {
     const set = new Set(nodes.map(n => (n.client_type || 'unknown').toLowerCase()).filter(Boolean));
@@ -1528,10 +1522,10 @@ export default function Home() {
   }, [nodes]);
 
   const filterCounts: Record<FilterType, number> = {
-    all: nodes.length,
-    healthy: nodes.filter(n => n.status === 'healthy').length,
-    syncing: nodes.filter(n => n.status === 'syncing').length,
-    behind: nodes.filter(n => n.blocksBehind > 0).length,
+    all: globalFilteredNodes.length,
+    healthy: globalFilteredNodes.filter(n => n.status === 'healthy').length,
+    syncing: globalFilteredNodes.filter(n => n.status === 'syncing').length,
+    behind: globalFilteredNodes.filter(n => n.blocksBehind > 0).length,
   };
 
   const handleSort = (field: SortField) => {
@@ -1621,29 +1615,44 @@ export default function Home() {
           )}
 
           {fleet && (
+            <div className="flex items-center justify-between mb-2">
+              <div />
+              <NetworkFilter value={networkFilter} onChange={setNetworkFilter} />
+            </div>
+          )}
+
+          {fleet && (
             <NetworkHealthBanner 
-              fleet={fleet}
+              fleet={{
+                ...fleet,
+                totalNodes: globalFilteredNodes.length,
+                healthyNodes: globalFilteredNodes.filter(n => n.status === 'healthy').length,
+                syncingNodes: globalFilteredNodes.filter(n => n.status === 'syncing').length,
+                offlineNodes: globalFilteredNodes.filter(n => n.status === 'offline').length,
+                degradedNodes: globalFilteredNodes.filter(n => n.status === 'degraded').length,
+              }}
               lastUpdated={lastUpdated}
             />
           )}
 
-          {/* Client Distribution + Network Filter */}
-          {nodes.length > 0 && (
+          {/* Client Distribution + Fleet by Network */}
+          {globalFilteredNodes.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
               <div className="card-xdc lg:col-span-1">
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Client Distribution</h3>
-                <ClientDistributionChart data={clientDistribution} total={nodes.length} />
+                <ClientDistributionChart data={clientDistribution} total={globalFilteredNodes.length} />
               </div>
               <div className="card-xdc lg:col-span-2">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">Fleet by Network</h3>
-                  <NetworkFilter value={networkFilter} onChange={setNetworkFilter} />
-                </div>
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Fleet by Network</h3>
                 <div className="grid grid-cols-3 gap-3">
                   {['mainnet', 'apothem', 'devnet'].map(net => {
                     const count = nodes.filter(n => (n as any).network === net || (net === 'mainnet' && !(n as any).network)).length;
                     return (
-                      <div key={net} className={`p-3 rounded-lg text-center ${networkFilter === net ? 'bg-[var(--accent-blue)]/20 border border-[var(--accent-blue)]/30' : 'bg-[var(--bg-hover)]'}`}>
+                      <div 
+                        key={net} 
+                        onClick={() => setNetworkFilter(networkFilter === net ? 'all' : net)}
+                        className={`p-3 rounded-lg text-center cursor-pointer transition-all ${networkFilter === net ? 'bg-[var(--accent-blue)]/20 border border-[var(--accent-blue)]/30' : 'bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)]/80'}`}
+                      >
                         <div className="text-xl font-bold text-[var(--text-primary)] font-mono-nums">{count}</div>
                         <div className="text-xs text-[var(--text-tertiary)] capitalize">{net}</div>
                       </div>
@@ -1675,7 +1684,8 @@ export default function Home() {
                 <Server className="w-5 h-5 text-[var(--accent-blue)]" />
                 <h2 className="text-lg font-semibold text-[var(--text-primary)]">Nodes</h2>
                 <span className="px-2 py-0.5 bg-[var(--bg-hover)] text-[var(--text-tertiary)] rounded text-xs">
-                  {filteredNodes.length} of {nodes.length}
+                  {filteredNodes.length} of {globalFilteredNodes.length}
+                  {networkFilter !== 'all' && ` (${networkFilter})`}
                 </span>
               </div>
               
