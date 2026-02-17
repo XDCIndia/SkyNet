@@ -66,6 +66,8 @@ async function getHandler(request: NextRequest) {
         n.telegram,
         n.client_type,
         n.node_type,
+        n.network,
+        n.chain_id,
         n.sync_mode,
         m.block_height,
         m.sync_percent,
@@ -171,6 +173,8 @@ async function getHandler(request: NextRequest) {
       // New fields
       clientType: n.client_type || 'unknown',
       nodeType: n.node_type || 'fullnode',
+      network: n.network || 'mainnet',
+      chainId: n.chain_id || null,
       syncMode: n.sync_mode || 'full',
       chainDataSize: Number(n.chain_data_size) || 0,
       databaseSize: Number(n.database_size) || 0,
