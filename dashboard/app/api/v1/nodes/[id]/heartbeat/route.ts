@@ -19,7 +19,9 @@ export async function POST(
       version,
       network,
       chainId,
-      enode 
+      enode,
+      coinbase,
+      fingerprint
     } = body;
 
     // Check if node exists
@@ -51,6 +53,7 @@ export async function POST(
     );
 
     // Update node's last_seen and network info (Issue #68)
+    // Also update coinbase and fingerprint if provided (Issue #71)
     await query(
       `UPDATE skynet.nodes 
        SET last_seen = NOW(), 
@@ -58,9 +61,11 @@ export async function POST(
            client_type = COALESCE($2, client_type),
            client_version = COALESCE($3, client_version),
            network = COALESCE($4, network),
-           chain_id = COALESCE($5, chain_id)
+           chain_id = COALESCE($5, chain_id),
+           coinbase = COALESCE($6, coinbase),
+           fingerprint = COALESCE($7, fingerprint)
        WHERE id = $1`,
-      [nodeId, clientType || null, version || null, network || null, chainId ?? null]
+      [nodeId, clientType || null, version || null, network || null, chainId ?? null, coinbase || null, fingerprint || null]
     );
 
     // Update enode if provided
