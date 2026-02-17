@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
+import ClientDistributionChart from '@/components/ClientDistributionChart';
+import NetworkFilter from '@/components/NetworkFilter';
 import { 
   Server, 
   Activity, 
@@ -188,27 +190,31 @@ function NodeTypeBadge({ nodeType }: { nodeType?: string }) {
 function ClientTypeBadge({ clientType }: { clientType?: string }) {
   if (!clientType || clientType === 'Unknown') return null;
   
-  const styles: Record<string, { bg: string; icon: React.ReactNode }> = {
-    XDC: { 
+  const ct = clientType.toLowerCase();
+  const styles: Record<string, { bg: string; icon: React.ReactNode; label: string }> = {
+    geth: { 
       bg: 'bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border-[var(--accent-blue)]/20', 
-      icon: <Terminal className="w-3 h-3" /> 
+      icon: <Globe className="w-3 h-3" />,
+      label: 'Geth',
     },
-    Erigon: { 
+    erigon: { 
       bg: 'bg-[var(--purple)]/10 text-[var(--purple)] border-[#8B5CF6]/20', 
-      icon: <Layers className="w-3 h-3" /> 
+      icon: <Layers className="w-3 h-3" />,
+      label: 'Erigon',
     },
-    Geth: { 
+    nethermind: { 
       bg: 'bg-[var(--success)]/10 text-[var(--success)] border-[#10B981]/20', 
-      icon: <Globe className="w-3 h-3" /> 
+      icon: <Terminal className="w-3 h-3" />,
+      label: 'Nethermind',
     },
   };
   
-  const style = styles[clientType] || { bg: 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] border-[var(--border-subtle)]', icon: <Terminal className="w-3 h-3" /> };
+  const style = styles[ct] || { bg: 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] border-[var(--border-subtle)]', icon: <Terminal className="w-3 h-3" />, label: clientType };
   
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[12px] font-medium rounded border ${style.bg}`}>
       {style.icon}
-      {clientType}
+      {style.label}
     </span>
   );
 }
@@ -1270,6 +1276,7 @@ export default function Home() {
   const [lastUpdated, setLastUpdated] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [networkFilter, setNetworkFilter] = useState('all');
   
   // Sorting
   const [sortField, setSortField] = useState<SortField>('lastSeen');
@@ -1433,6 +1440,31 @@ export default function Home() {
   }, [nodes, filter, debouncedSearch, sortField, sortDirection]);
 
   // Calculate filter counts (stale nodes already filtered out at fetch time)
+  // Client distribution for donut chart
+  const clientDistribution = useMemo(() => {
+    const clientColors: Record<string, string> = {
+      geth: '#1E90FF', nethermind: '#10B981', erigon: '#F59E0B', unknown: '#6B7280',
+    };
+    const counts: Record<string, number> = {};
+    nodes.forEach(n => {
+      const ct = (n.client_type || 'unknown').toLowerCase();
+      counts[ct] = (counts[ct] || 0) + 1;
+    });
+    return Object.entries(counts).map(([type, count]) => ({
+      type, count, color: clientColors[type] || '#6B7280',
+      percentage: nodes.length > 0 ? (count / nodes.length) * 100 : 0,
+    }));
+  }, [nodes]);
+
+  // Network-filtered nodes
+  const networkFilteredNodes = useMemo(() => {
+    if (networkFilter === 'all') return nodes;
+    return nodes.filter(n => {
+      const network = (n as any).network || 'mainnet';
+      return network === networkFilter;
+    });
+  }, [nodes, networkFilter]);
+
   const filterCounts: Record<FilterType, number> = {
     all: nodes.length,
     healthy: nodes.filter(n => n.status === 'healthy').length,
@@ -1531,6 +1563,43 @@ export default function Home() {
               fleet={fleet}
               lastUpdated={lastUpdated}
             />
+          )}
+
+          {/* Client Distribution + Network Filter */}
+          {nodes.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+              <div className="card-xdc lg:col-span-1">
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Client Distribution</h3>
+                <ClientDistributionChart data={clientDistribution} total={nodes.length} />
+              </div>
+              <div className="card-xdc lg:col-span-2">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">Fleet by Network</h3>
+                  <NetworkFilter value={networkFilter} onChange={setNetworkFilter} />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {['mainnet', 'apothem', 'devnet'].map(net => {
+                    const count = nodes.filter(n => (n as any).network === net || (net === 'mainnet' && !(n as any).network)).length;
+                    return (
+                      <div key={net} className={`p-3 rounded-lg text-center ${networkFilter === net ? 'bg-[var(--accent-blue)]/20 border border-[var(--accent-blue)]/30' : 'bg-[var(--bg-hover)]'}`}>
+                        <div className="text-xl font-bold text-[var(--text-primary)] font-mono-nums">{count}</div>
+                        <div className="text-xs text-[var(--text-tertiary)] capitalize">{net}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-4 space-y-2">
+                  {clientDistribution.map(cd => (
+                    <div key={cd.type} className="flex items-center gap-3">
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: cd.color }} />
+                      <span className="text-sm text-[var(--text-primary)] capitalize flex-1">{cd.type}</span>
+                      <span className="text-sm font-mono-nums text-[var(--text-tertiary)]">{cd.count} node{cd.count !== 1 ? 's' : ''}</span>
+                      <span className="text-sm font-mono-nums text-[var(--text-primary)]">{cd.percentage.toFixed(0)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
 
           {incidents.length > 0 && (
