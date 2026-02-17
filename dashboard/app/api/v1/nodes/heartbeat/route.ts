@@ -16,8 +16,10 @@ const SentrySchema = z.object({
   peers: z.number().int().min(0),
 });
 
-// Extended schema for heartbeat with additional fields
+// Extended schema for heartbeat with additional fields (Issue #71)
 const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
+  fingerprint: z.string().min(1).max(100).optional(),
+  coinbase: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
   syncProgress: z.number().min(0).max(100).optional(),
   peers: z.array(z.object({
     enode: z.string().nullable().optional(),
@@ -29,7 +31,6 @@ const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
     pending: z.number().int().min(0).optional(),
     queued: z.number().int().min(0).optional(),
   }).optional(),
-  coinbase: z.string().optional(),
   clientVersion: z.string().max(200).optional(),
   clientType: z.enum(['geth', 'erigon', 'geth-pr5', 'nethermind', 'XDC', 'unknown']).optional().default('unknown'),
   isMasternode: z.boolean().optional(),
@@ -107,7 +108,7 @@ async function postHandler(request: NextRequest) {
 
   // Validate request body
   const body = await validateBody(request, ExtendedHeartbeatSchema);
-  const {
+  let {
     nodeId,
     blockHeight,
     syncing,
@@ -137,7 +138,25 @@ async function postHandler(request: NextRequest) {
     stallHours,
     stalledAtBlock,
     enode,
+    fingerprint,
   } = body;
+
+  // Issue #71: If no nodeId but fingerprint provided, lookup node by fingerprint
+  if (!nodeId && fingerprint) {
+    const fingerprintResult = await queryAll(
+      'SELECT id FROM skynet.nodes WHERE fingerprint = $1 AND is_active = true',
+      [fingerprint]
+    );
+    if (fingerprintResult.length > 0) {
+      nodeId = fingerprintResult[0].id;
+      logger.info('Node lookup by fingerprint successful', { nodeId, fingerprint });
+    } else {
+      return NextResponse.json(
+        { error: 'Node not found for fingerprint. Please register first.', code: 'NOT_FOUND' },
+        { status: 404 }
+      );
+    }
+  }
 
   // Verify node ownership (if using node-specific key)
   if (auth.nodeId && auth.nodeId !== nodeId) {
@@ -253,6 +272,7 @@ async function postHandler(request: NextRequest) {
     }
 
     // Update nodes table with latest info (including network and chainId - Issue #68)
+    // Also update coinbase and fingerprint if provided (Issue #71)
     await client.query(
       `UPDATE skynet.nodes 
        SET updated_at = NOW(),
@@ -266,9 +286,11 @@ async function postHandler(request: NextRequest) {
            os_info = COALESCE($9, os_info),
            enode = COALESCE(NULLIF($10, ''), enode),
            network = COALESCE($11, network),
-           chain_id = COALESCE($12, chain_id)
+           chain_id = COALESCE($12, chain_id),
+           coinbase = COALESCE($13, coinbase),
+           fingerprint = COALESCE($14, fingerprint)
        WHERE id = $1`,
-      [nodeId, nodeType || null, security?.score ?? null, ipv4 || null, clientVersion || null, clientType || null, nodeType || null, syncMode || null, os ? JSON.stringify(os) : null, enode || null, network || null, chainId ?? null]
+      [nodeId, nodeType || null, security?.score ?? null, ipv4 || null, clientVersion || null, clientType || null, nodeType || null, syncMode || null, os ? JSON.stringify(os) : null, enode || null, network || null, chainId ?? null, coinbase || null, fingerprint || null]
     );
   });
 
