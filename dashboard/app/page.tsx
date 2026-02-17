@@ -1339,8 +1339,13 @@ export default function Home() {
         const d = json.data || json;
         const counts = d.nodeCounts || d.nodes || {};
         
-        // Get nodes array from API and filter out stale nodes (>24h no heartbeat)
-        const nodeArr: Node[] = (Array.isArray(d.nodes) ? d.nodes : []).filter((n: Node) => !isNodeStale(n));
+        // Get nodes array from API, map camelCase→snake_case, filter stale
+        const nodeArr: Node[] = (Array.isArray(d.nodes) ? d.nodes : []).map((n: any) => ({
+          ...n,
+          client_type: n.client_type || n.clientType || 'unknown',
+          node_type: n.node_type || n.nodeType || 'fullnode',
+          network: n.network || 'mainnet',
+        })).filter((n: Node) => !isNodeStale(n));
         
         // Count nodes by status
         const countHealthy = nodeArr.filter(n => n.status === 'healthy').length;
