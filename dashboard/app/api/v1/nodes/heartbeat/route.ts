@@ -57,6 +57,9 @@ const ExtendedHeartbeatSchema = HeartbeatSchema.extend({
   databaseSize: z.number().min(0).optional(),
   mountPoint: z.string().max(255).optional(),
   mountPercent: z.coerce.number().int().min(0).max(100).optional(),
+  // Network and chain info (Issue #68)
+  network: z.enum(['mainnet', 'apothem', 'devnet', 'testnet']).optional().default('mainnet'),
+  chainId: z.number().int().optional(),
   // Erigon dual sentry monitoring (Issue #14)
   sentries: z.array(SentrySchema).optional(),
   // Stall tracking
@@ -128,6 +131,8 @@ async function postHandler(request: NextRequest) {
     databaseSize,
     mountPoint,
     mountPercent,
+    network,
+    chainId,
     sentries,
     stallHours,
     stalledAtBlock,
@@ -247,7 +252,7 @@ async function postHandler(request: NextRequest) {
       }
     }
 
-    // Update nodes table with latest info
+    // Update nodes table with latest info (including network and chainId - Issue #68)
     await client.query(
       `UPDATE skynet.nodes 
        SET updated_at = NOW(),
@@ -259,9 +264,11 @@ async function postHandler(request: NextRequest) {
            node_type = COALESCE($7, node_type),
            sync_mode = COALESCE($8, sync_mode),
            os_info = COALESCE($9, os_info),
-           enode = COALESCE(NULLIF($10, ''), enode)
+           enode = COALESCE(NULLIF($10, ''), enode),
+           network = COALESCE($11, network),
+           chain_id = COALESCE($12, chain_id)
        WHERE id = $1`,
-      [nodeId, nodeType || null, security?.score ?? null, ipv4 || null, clientVersion || null, clientType || null, nodeType || null, syncMode || null, os ? JSON.stringify(os) : null, enode || null]
+      [nodeId, nodeType || null, security?.score ?? null, ipv4 || null, clientVersion || null, clientType || null, nodeType || null, syncMode || null, os ? JSON.stringify(os) : null, enode || null, network || null, chainId ?? null]
     );
   });
 

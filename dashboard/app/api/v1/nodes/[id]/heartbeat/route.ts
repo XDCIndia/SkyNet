@@ -17,6 +17,8 @@ export async function POST(
       isSyncing, 
       clientType,
       version,
+      network,
+      chainId,
       enode 
     } = body;
 
@@ -48,12 +50,17 @@ export async function POST(
       ]
     );
 
-    // Update node's last_seen
+    // Update node's last_seen and network info (Issue #68)
     await query(
       `UPDATE skynet.nodes 
-       SET last_seen = NOW(), is_active = true 
+       SET last_seen = NOW(), 
+           is_active = true,
+           client_type = COALESCE($2, client_type),
+           client_version = COALESCE($3, client_version),
+           network = COALESCE($4, network),
+           chain_id = COALESCE($5, chain_id)
        WHERE id = $1`,
-      [nodeId]
+      [nodeId, clientType || null, version || null, network || null, chainId ?? null]
     );
 
     // Update enode if provided
