@@ -156,6 +156,12 @@ function ClientBadge({ clientType }: { clientType?: string }) {
       icon: '🟢',
       label: 'Geth PR5'
     },
+    nethermind: { 
+      bg: 'bg-purple-500/15', 
+      text: 'text-purple-400',
+      icon: '🟣',
+      label: 'Nethermind'
+    },
     XDC: { 
       bg: 'bg-[#1E90FF]/15', 
       text: 'text-[#1E90FF]',
