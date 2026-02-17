@@ -105,3 +105,39 @@ export interface PeersData {
   countries: Record<string, CountryInfo>;
   totalPeers: number;
 }
+
+// SkyNet Node Types (Issue #87)
+export interface SkyNetNode {
+  id: string;
+  name: string;
+  status: 'healthy' | 'syncing' | 'offline' | 'degraded';
+  clientType: string;
+  clientVersion: string;
+  blockHeight: number;
+  peerCount: number;
+  syncPercent: number;
+  network: string;
+  region: string;
+  lastSeen: string;
+  uptime: number;
+  cpuPercent: number;
+  memoryPercent: number;
+  diskPercent: number;
+}
+
+export interface ClientDistributionItem {
+  type: string;
+  count: number;
+  color: string;
+  icon?: string;
+  percentage?: number;
+}
+
+export interface FleetStatus {
+  totalNodes: number;
+  healthyNodes: number;
+  syncingNodes: number;
+  offlineNodes: number;
+  fleetMaxBlock: number;
+  clientDistribution: ClientDistributionItem[];
+}

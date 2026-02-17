@@ -21,6 +21,7 @@ import {
   Menu,
   X,
   AlertCircle,
+  Server,
 } from 'lucide-react';
 
 interface NavItem {
@@ -36,6 +37,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, path: '/', section: 'Overview' },
   { id: 'executive', label: 'Executive', icon: <Building2 className="w-5 h-5" />, path: '/executive', section: 'Overview' },
+  { id: 'nodes', label: 'SkyNet Nodes', icon: <Server className="w-5 h-5" />, path: '/nodes', section: 'Operations' },
   { id: 'fleet', label: 'Fleet', icon: <Wrench className="w-5 h-5" />, path: '/fleet', section: 'Operations' },
   { id: 'alerts', label: 'Alerts', icon: <Bell className="w-5 h-5" />, path: '/alerts', section: 'Operations' },
   { id: 'issues', label: 'Issues', icon: <AlertCircle className="w-5 h-5" />, path: '/issues', section: 'Operations' },
