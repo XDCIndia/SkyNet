@@ -1141,14 +1141,44 @@ function IncidentsStrip({ incidents }: { incidents: Incident[] }) {
 }
 
 // Filter Bar
+// Dropdown filter component
+function DropdownFilter({ label, value, options, onChange }: { 
+  label: string; value: string; options: string[]; onChange: (v: string) => void;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="px-2 py-1.5 rounded-lg text-sm bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-blue)]"
+    >
+      <option value="all">{label}: All</option>
+      {options.map(opt => (
+        <option key={opt} value={opt}>{opt}</option>
+      ))}
+    </select>
+  );
+}
+
 function FilterBar({ 
   activeFilter, 
   onFilterChange,
-  counts
+  counts,
+  clientFilter,
+  onClientFilterChange,
+  osFilter,
+  onOsFilterChange,
+  clients,
+  osList,
 }: { 
   activeFilter: FilterType;
   onFilterChange: (filter: FilterType) => void;
   counts: Record<FilterType, number>;
+  clientFilter: string;
+  onClientFilterChange: (v: string) => void;
+  osFilter: string;
+  onOsFilterChange: (v: string) => void;
+  clients: string[];
+  osList: string[];
 }) {
   const filters: { key: FilterType; label: string }[] = [
     { key: 'all', label: 'All' },
@@ -1158,8 +1188,8 @@ function FilterBar({
   ];
   
   return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-2">
-      <span className="text-sm text-[var(--text-tertiary)] mr-2">Filter:</span>
+    <div className="flex flex-wrap items-center gap-2 pb-2">
+      <span className="text-sm text-[var(--text-tertiary)] mr-1">Status:</span>
       {filters.map(({ key, label }) => (
         <button
           key={key}
@@ -1178,6 +1208,9 @@ function FilterBar({
           </span>
         </button>
       ))}
+      <span className="mx-1 text-[var(--border-subtle)]">|</span>
+      <DropdownFilter label="Client" value={clientFilter} options={clients} onChange={onClientFilterChange} />
+      <DropdownFilter label="OS" value={osFilter} options={osList} onChange={onOsFilterChange} />
     </div>
   );
 }
@@ -1277,9 +1310,11 @@ export default function Home() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [networkFilter, setNetworkFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState('all');
+  const [osFilter, setOsFilter] = useState('all');
   
   // Sorting
-  const [sortField, setSortField] = useState<SortField>('lastSeen');
+  const [sortField, setSortField] = useState<SortField>('blockHeight');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   
   // Selection
@@ -1393,6 +1428,22 @@ export default function Home() {
           break;
       }
       
+      // Client type filter
+      if (clientFilter !== 'all') {
+        if ((node.client_type || 'unknown').toLowerCase() !== clientFilter) return false;
+      }
+      
+      // OS filter
+      if (osFilter !== 'all') {
+        if ((node.os_info?.type || '') !== osFilter) return false;
+      }
+      
+      // Network filter
+      if (networkFilter !== 'all') {
+        const network = (node as any).network || 'mainnet';
+        if (network !== networkFilter) return false;
+      }
+
       // Search filter
       if (debouncedSearch) {
         const query = debouncedSearch.toLowerCase();
@@ -1437,7 +1488,7 @@ export default function Home() {
     });
     
     return result;
-  }, [nodes, filter, debouncedSearch, sortField, sortDirection]);
+  }, [nodes, filter, debouncedSearch, sortField, sortDirection, clientFilter, osFilter, networkFilter]);
 
   // Calculate filter counts (stale nodes already filtered out at fetch time)
   // Client distribution for donut chart
@@ -1464,6 +1515,17 @@ export default function Home() {
       return network === networkFilter;
     });
   }, [nodes, networkFilter]);
+
+  // Unique client types and OS types for filter dropdowns
+  const uniqueClients = useMemo(() => {
+    const set = new Set(nodes.map(n => (n.client_type || 'unknown').toLowerCase()).filter(Boolean));
+    return Array.from(set).sort();
+  }, [nodes]);
+
+  const uniqueOS = useMemo(() => {
+    const set = new Set(nodes.map(n => n.os_info?.type || '').filter(Boolean));
+    return Array.from(set).sort();
+  }, [nodes]);
 
   const filterCounts: Record<FilterType, number> = {
     all: nodes.length,
@@ -1662,6 +1724,12 @@ export default function Home() {
               activeFilter={filter}
               onFilterChange={setFilter}
               counts={filterCounts}
+              clientFilter={clientFilter}
+              onClientFilterChange={setClientFilter}
+              osFilter={osFilter}
+              onOsFilterChange={setOsFilter}
+              clients={uniqueClients}
+              osList={uniqueOS}
             />
             
             <BulkActionsBar 
