@@ -78,6 +78,7 @@ function CircularProgress({
 
 function getClientIcon(clientType?: string): string {
   const type = clientType?.toLowerCase() || '';
+  if (type.includes('nethermind')) return '🟣';
   if (type.includes('erigon')) return '🔶';
   if (type.includes('geth')) return '🟢';
   return '🔷';
@@ -85,6 +86,7 @@ function getClientIcon(clientType?: string): string {
 
 function getClientName(clientType?: string): string {
   const type = clientType?.toLowerCase() || '';
+  if (type.includes('nethermind')) return 'Nethermind';
   if (type.includes('erigon')) return 'Erigon';
   if (type.includes('geth')) return 'Geth';
   return 'XDC';

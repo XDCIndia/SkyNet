@@ -103,7 +103,7 @@ components:
           maxLength: 200
         clientType:
           type: string
-          enum: [geth, erigon, geth-pr5, XDC, unknown]
+          enum: [geth, erigon, geth-pr5, nethermind, XDC, unknown]
         nodeType:
           type: string
           enum: [masternode, standby, fullnode, full, archive, fast, snap]
