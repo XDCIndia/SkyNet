@@ -11,7 +11,7 @@ export async function POST(
     
     // Parse heartbeat data
     const body = await request.json();
-    const { 
+    let { 
       blockHeight, 
       peerCount, 
       isSyncing, 
@@ -23,6 +23,16 @@ export async function POST(
       coinbase,
       fingerprint
     } = body;
+
+    // Normalize clientType from version string if needed
+    if (clientType === 'XDC' || clientType === 'unknown' || !clientType) {
+      if (version) {
+        const v = version.toLowerCase();
+        if (v.includes('nethermind')) clientType = 'nethermind';
+        else if (v.includes('erigon')) clientType = 'erigon';
+        else if (v.includes('xdc') || v.includes('geth')) clientType = 'geth';
+      }
+    }
 
     // Check if node exists
     const nodeResult = await query(
