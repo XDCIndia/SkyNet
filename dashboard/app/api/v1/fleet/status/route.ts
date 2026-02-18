@@ -72,6 +72,10 @@ async function getHandler(request: NextRequest) {
           storage_type,
           iops_estimate,
           client_version,
+          os_type,
+          os_release,
+          os_arch,
+          kernel_version,
           stall_hours,
           stalled_at_block,
           collected_at
