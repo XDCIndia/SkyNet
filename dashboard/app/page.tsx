@@ -352,10 +352,25 @@ function isNodeStale(node: Node): boolean {
   return now - lastHeartbeat > STALE_THRESHOLD_MS;
 }
 
+// Parse OS info from client version string as fallback
+function parseOsFromClientVersion(clientVersion?: string): { type: string; arch: string } {
+  if (!clientVersion) return { type: '', arch: '' };
+  const match = clientVersion.match(/\/(linux|darwin|windows)-(amd64|arm64|x64|x86)/i);
+  return match ? { type: match[1].toLowerCase(), arch: match[2].toLowerCase() } : { type: '', arch: '' };
+}
+
 // Format OS info for display
-function formatOSInfo(os_info?: Node['os_info']): string {
-  if (!os_info) return '';
-  return os_info.release || '';
+function formatOSInfo(os_info?: Node['os_info'], clientVersion?: string): string {
+  if (os_info?.type && os_info.type !== 'unknown') {
+    const parts = [os_info.type];
+    if (os_info.arch) parts.push(os_info.arch);
+    if (os_info.release) parts.push(os_info.release);
+    return parts.join(' / ');
+  }
+  // Fallback: parse from client version
+  const parsed = parseOsFromClientVersion(clientVersion);
+  if (parsed.type) return `${parsed.type}${parsed.arch ? ' / ' + parsed.arch : ''}`;
+  return 'Unknown';
 }
 
 // OS Icon Component
@@ -613,7 +628,7 @@ function StatBox({
   );
 }
 
-// Node Card Component (Grid View)
+// Node Card Component (Grid View) with 3D styling
 function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
   const statusLabels = {
     healthy: 'Healthy',
@@ -625,11 +640,24 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
   return (
     <div 
       onClick={onClick}
-      className="card-xdc cursor-pointer hover:border-[var(--accent-blue)]/30 transition-all hover:bg-[var(--bg-card)]/80 group"
+      className="card-xdc cursor-pointer transition-all duration-300 [perspective:1000px] hover:[transform:translateY(-6px)_translateZ(20px)_rotateX(2deg)] hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5),0_10px_20px_-10px_rgba(0,0,0,0.3)] hover:border-[var(--accent-blue)]/30 group"
+      style={{
+        transformStyle: 'preserve-3d',
+      }}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <StatusDot status={node.status} />
+          <div className="relative">
+            <StatusDot status={node.status} />
+            {/* Glow effect for status */}
+            <div 
+              className={`absolute inset-0 rounded-full blur-sm ${
+                node.status === 'healthy' ? 'bg-[var(--success)]' :
+                node.status === 'syncing' ? 'bg-[var(--warning)]' :
+                'bg-[var(--critical)]'
+              } opacity-50`}
+            />
+          </div>
           <div>
             <h3 className="font-semibold text-[var(--text-primary)] text-sm truncate max-w-[140px]">{node.name}</h3>
             <p className="text-xs text-[var(--text-tertiary)] truncate max-w-[140px]">{node.host}</p>
@@ -656,7 +684,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
       {node.os_info && (
         <div className="text-[12px] text-[var(--text-tertiary)] mb-2 flex items-center gap-1">
           <span>{OSIcon({ osType: node.os_info.type })}</span>
-          <span className="truncate">{formatOSInfo(node.os_info)}</span>
+          <span className="truncate">{formatOSInfo(node.os_info, node.clientVersion)}</span>
         </div>
       )}
       
@@ -993,7 +1021,7 @@ function TableRow({
         <div className="flex items-center gap-1">
           <span>{OSIcon({ osType: node.os_info?.type })}</span>
           <span className="text-xs text-[var(--text-tertiary)] truncate max-w-[100px]">
-            {formatOSInfo(node.os_info)}
+            {formatOSInfo(node.os_info, node.clientVersion)}
           </span>
         </div>
       </td>
@@ -1552,7 +1580,10 @@ function HomeContent() {
     };
     const counts: Record<string, number> = {};
     globalFilteredNodes.forEach(n => {
-      const os = (n.os_info?.type || 'unknown').toLowerCase();
+      let os = (n.os_info?.type || '').toLowerCase();
+      if (!os || os === 'unknown') {
+        os = parseOsFromClientVersion(n.clientVersion).type || 'unknown';
+      }
       counts[os] = (counts[os] || 0) + 1;
     });
     return Object.entries(counts).map(([type, count]) => ({
@@ -1598,7 +1629,8 @@ function HomeContent() {
       
       // OS filter
       if (osFilter !== 'all') {
-        if ((node.os_info?.type || '') !== osFilter) return false;
+        const nodeOs = (node.os_info?.type && node.os_info.type !== 'unknown') ? node.os_info.type : (parseOsFromClientVersion(node.clientVersion).type || '');
+        if (nodeOs !== osFilter) return false;
       }
 
       // Search filter
@@ -1612,7 +1644,7 @@ function HomeContent() {
           node.clientVersion,
           node.client_type,
           node.node_type,
-          formatOSInfo(node.os_info),
+          formatOSInfo(node.os_info, node.clientVersion),
         ].filter(Boolean).join(' ').toLowerCase();
         
         if (!searchable.includes(query)) return false;
@@ -1655,7 +1687,10 @@ function HomeContent() {
   }, [nodes]);
 
   const uniqueOS = useMemo(() => {
-    const set = new Set(nodes.map(n => n.os_info?.type || '').filter(Boolean));
+    const set = new Set(nodes.map(n => {
+      const os = n.os_info?.type && n.os_info.type !== 'unknown' ? n.os_info.type : parseOsFromClientVersion(n.clientVersion).type;
+      return os || '';
+    }).filter(Boolean));
     return Array.from(set).sort();
   }, [nodes]);
 
@@ -1776,59 +1811,109 @@ function HomeContent() {
           {/* Client Distribution + OS Distribution + Fleet by Network */}
           {globalFilteredNodes.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-              {/* Client Distribution */}
-              <div className="card-xdc">
-                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Client Distribution</h3>
-                <ClientDistributionChart data={clientDistribution} total={globalFilteredNodes.length} />
+              {/* Client Distribution with 3D styling */}
+              <div className="card-xdc [perspective:1000px] hover:[transform:translateY(-2px)_rotateX(2deg)] transition-all duration-300">
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[var(--accent-blue)]" />
+                  Client Distribution
+                </h3>
+                <ClientDistributionChart 
+                  data={clientDistribution} 
+                  total={globalFilteredNodes.length}
+                  variant="3d-donut"
+                />
                 <div className="mt-4 space-y-2">
                   {clientDistribution.map(cd => (
-                    <div key={cd.type} className="flex items-center gap-3">
-                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: cd.color }} />
-                      <span className="text-sm text-[var(--text-primary)] capitalize flex-1">{getClientDisplayName(cd.type, '')}</span>
-                      <span className="text-sm font-mono-nums text-[var(--text-tertiary)]">{cd.count}</span>
-                      <span className="text-sm font-mono-nums text-[var(--text-primary)]">{cd.percentage.toFixed(0)}%</span>
+                    <div key={cd.type} className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors">
+                      <span 
+                        className="w-4 h-4 rounded-full shadow-lg" 
+                        style={{ 
+                          backgroundColor: cd.color,
+                          boxShadow: `0 0 10px ${cd.color}60`
+                        }} 
+                      />
+                      <span className="text-sm text-[var(--text-primary)] capitalize flex-1 font-medium">{getClientDisplayName(cd.type, '')}</span>
+                      <span className="text-sm font-mono-nums text-[var(--text-tertiary)] bg-[var(--bg-hover)] px-2 py-0.5 rounded">{cd.count}</span>
+                      <span className="text-sm font-mono-nums text-[var(--text-primary)] font-semibold min-w-[40px] text-right">{cd.percentage.toFixed(0)}%</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* OS Distribution - same donut chart style */}
-              <div className="card-xdc">
-                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">OS Distribution</h3>
+              {/* OS Distribution with 3D styling */}
+              <div className="card-xdc [perspective:1000px] hover:[transform:translateY(-2px)_rotateX(2deg)] transition-all duration-300">
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[var(--warning)]" />
+                  OS Distribution
+                </h3>
                 <ClientDistributionChart 
                   data={osDistribution.map(os => ({ type: os.type, count: os.count, color: os.color, icon: os.icon }))} 
-                  total={globalFilteredNodes.length} 
+                  total={globalFilteredNodes.length}
+                  variant="3d-donut"
                 />
-                {/* Version breakdown */}
-                {versionDistribution.length > 0 && (
-                  <div className="mt-4 pt-3 border-t border-[var(--border-subtle)]">
-                    <span className="text-xs text-[var(--text-tertiary)] mb-2 block">Client Versions</span>
-                    {versionDistribution.slice(0, 5).map(v => (
-                      <div key={v.version} className="flex items-center justify-between py-1">
-                        <span className="text-xs text-[var(--text-secondary)] truncate flex-1 mr-2">{v.version}</span>
-                        <span className="text-xs font-mono-nums text-[var(--text-tertiary)]">{v.count}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {/* OS Details breakdown */}
+                <div className="mt-4 space-y-2">
+                  {osDistribution.map(os => (
+                    <div key={os.type} className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors">
+                      <span className="text-lg">{os.icon}</span>
+                      <span className="text-sm text-[var(--text-primary)] capitalize flex-1 font-medium">{os.type}</span>
+                      <span className="text-sm font-mono-nums text-[var(--text-tertiary)] bg-[var(--bg-hover)] px-2 py-0.5 rounded">{os.count}</span>
+                      <span className="text-sm font-mono-nums text-[var(--text-primary)] font-semibold min-w-[40px] text-right">{os.percentage.toFixed(0)}%</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {/* Fleet by Network */}
+              {/* Fleet by Network with 3D bar chart style */}
               <div className="card-xdc lg:col-span-2">
-                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Fleet by Network</h3>
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[var(--success)]" />
+                  Fleet by Network
+                </h3>
                 <div className="grid grid-cols-3 gap-3">
                   {['mainnet', 'apothem', 'devnet'].map(net => {
                     const count = nodes.filter(n => (n as any).network === net || (net === 'mainnet' && !(n as any).network)).length;
                     const isActive = networkFilter === net;
                     const netHeight = net === 'mainnet' ? (fleet?.mainnetHead || 0) : net === 'apothem' ? (fleet?.apothemHead || 0) : 0;
+                    const maxCount = Math.max(...['mainnet', 'apothem', 'devnet'].map(n => 
+                      nodes.filter(node => (node as any).network === n || (n === 'mainnet' && !(node as any).network)).length
+                    )) || 1;
+                    const barHeight = count > 0 ? Math.max(20, (count / maxCount) * 60) : 4;
                     return (
                       <div 
                         key={net} 
                         onClick={() => setNetworkFilter(isActive ? 'all' : net)}
-                        className={`p-3 rounded-lg text-center cursor-pointer transition-all ${isActive ? 'bg-[var(--accent-blue)]/20 border border-[var(--accent-blue)]/30' : 'bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)]/80 border border-transparent'}`}
+                        className={`relative p-4 rounded-xl text-center cursor-pointer transition-all duration-300 [perspective:500px] hover:[transform:translateZ(10px)_rotateX(-5deg)] ${
+                          isActive 
+                            ? 'bg-gradient-to-b from-[var(--accent-blue)]/20 to-[var(--accent-blue)]/5 border border-[var(--accent-blue)]/40 shadow-[0_8px_24px_rgba(30,144,255,0.2)]' 
+                            : 'bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)]/80 border border-transparent hover:shadow-lg'
+                        }`}
                       >
-                        <div className={`text-xl font-bold font-mono-nums ${isActive ? 'text-[var(--accent-blue)]' : 'text-[var(--text-primary)]'}`}>{count}</div>
-                        <div className="text-xs text-[var(--text-tertiary)] capitalize">{net}</div>
+                        {/* 3D Bar effect */}
+                        <div className="relative h-16 mb-3 flex items-end justify-center">
+                          <div 
+                            className="w-12 rounded-t-lg transition-all duration-500 relative"
+                            style={{ 
+                              height: `${barHeight}px`,
+                              background: isActive 
+                                ? 'linear-gradient(180deg, var(--accent-blue) 0%, var(--accent-blue)40 100%)'
+                                : 'linear-gradient(180deg, var(--text-tertiary) 0%, var(--text-tertiary)40 100%)',
+                              boxShadow: isActive 
+                                ? '0 4px 16px rgba(30,144,255,0.4), inset 0 1px 0 rgba(255,255,255,0.3)'
+                                : '0 2px 8px rgba(0,0,0,0.3)',
+                            }}
+                          >
+                            {/* Top highlight */}
+                            <div 
+                              className="absolute top-0 left-0 right-0 h-1 rounded-t-lg"
+                              style={{
+                                background: 'linear-gradient(90deg, rgba(255,255,255,0.4) 0%, transparent 50%, rgba(255,255,255,0.2) 100%)'
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className={`text-2xl font-bold font-mono-nums ${isActive ? 'text-[var(--accent-blue)]' : 'text-[var(--text-primary)]'}`}>{count}</div>
+                        <div className="text-xs text-[var(--text-tertiary)] capitalize font-medium">{net}</div>
                         {netHeight > 0 && (
                           <div className="text-[10px] font-mono-nums text-[var(--text-tertiary)] mt-1">
                             #{netHeight.toLocaleString()}

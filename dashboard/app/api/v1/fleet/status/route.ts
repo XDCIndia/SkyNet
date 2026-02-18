@@ -4,6 +4,30 @@ import { withErrorHandling } from '@/lib/errors';
 import { withCache, CACHE_TTLS, generateCacheKey } from '@/lib/cache';
 import { z } from 'zod';
 
+// Parse OS info from client_version string
+function parseOsFromVersion(clientVersion: string | null): string {
+  if (!clientVersion) return 'unknown';
+  const match = clientVersion.match(/\/(linux|darwin|windows)-/i);
+  return match ? match[1].toLowerCase() : 'unknown';
+}
+
+function parseArchFromVersion(clientVersion: string | null): string {
+  if (!clientVersion) return '';
+  const match = clientVersion.match(/\/(?:linux|darwin|windows)-(amd64|arm64|x64|x86|386|armv7)/i);
+  return match ? match[1].toLowerCase() : '';
+}
+
+// Build os_info from DB fields or parse from client_version
+function parseOsInfo(n: any): { type: string; release: string; arch: string; kernel: string } {
+  const cv = n.client_version || '';
+  return {
+    type: n.os_type || parseOsFromVersion(cv) || 'unknown',
+    release: n.os_release || '',
+    arch: n.os_arch || parseArchFromVersion(cv) || '',
+    kernel: n.kernel_version || '',
+  };
+}
+
 // Query params schema
 const FleetStatusQuerySchema = z.object({
   includeMetrics: z.coerce.boolean().default(true),
@@ -93,6 +117,10 @@ async function getHandler(request: NextRequest) {
         m.storage_type,
         m.iops_estimate,
         m.client_version,
+        m.os_type,
+        m.os_release,
+        m.os_arch,
+        m.kernel_version,
         m.stall_hours,
         m.stalled_at_block,
         m.collected_at,
@@ -243,6 +271,7 @@ async function getHandler(request: NextRequest) {
       storageType: n.storage_type || null,
       iopsEstimate: Number(n.iops_estimate) || 0,
       clientVersion: n.client_version || 'Unknown',
+      os_info: parseOsInfo(n),
       stallHours: Number(n.stall_hours) || 0,
       stalledAtBlock: Number(n.stalled_at_block) || 0,
       // Block diff tracking
