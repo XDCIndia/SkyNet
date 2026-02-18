@@ -130,6 +130,7 @@ export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus | null>(null);
   const [lastFetched, setLastFetched] = useState<number>(0);
   const [openIssueCount, setOpenIssueCount] = useState<number>(0);
