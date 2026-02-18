@@ -92,6 +92,13 @@ async function getHandler(request: NextRequest) {
         WHERE collected_at > NOW() - INTERVAL '10 minutes'
           AND collected_at < NOW() - INTERVAL '5 minutes'
         ORDER BY node_id, collected_at DESC
+      ),
+      peak_metrics AS (
+        SELECT
+          node_id,
+          MAX(block_height) as peak_block_height
+        FROM skynet.node_metrics
+        GROUP BY node_id
       )
       SELECT
         n.id,
@@ -129,6 +136,7 @@ async function getHandler(request: NextRequest) {
         m.stalled_at_block,
         m.collected_at,
         pm.prev_block_height,
+        pk.peak_block_height,
         CASE WHEN pm.prev_block_height IS NOT NULL AND m.block_height IS NOT NULL
           THEN m.block_height - pm.prev_block_height
           ELSE 0
@@ -142,6 +150,7 @@ async function getHandler(request: NextRequest) {
       FROM skynet.nodes n
       LEFT JOIN latest_metrics m ON n.id = m.node_id
       LEFT JOIN prev_metrics pm ON n.id = pm.node_id
+      LEFT JOIN peak_metrics pk ON n.id = pk.node_id
       WHERE n.is_active = true
     `);
 
@@ -252,6 +261,7 @@ async function getHandler(request: NextRequest) {
       createdAt: n.created_at,
       status: n.status,
       blockHeight: nodeBlock,
+      peakBlock: Number(n.peak_block_height) || 0,
       networkHeight: netHeight,
       syncPercent: accurateSync,
       peerCount: n.peer_count ?? 0,

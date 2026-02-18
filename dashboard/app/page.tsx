@@ -99,6 +99,7 @@ interface Node {
   prevBlock?: number;
   blockDiff?: number;
   networkHeight?: number;
+  peakBlock?: number;
 }
 
 interface Incident {
@@ -765,6 +766,17 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
           />
         )}
         
+        {/* Peak Block */}
+        {node.peakBlock && node.peakBlock > 0 && (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-[var(--text-tertiary)]">Peak Block</span>
+            <span className={`text-xs font-mono-nums ${node.peakBlock > node.blockHeight ? 'text-[var(--warning)]' : 'text-[var(--text-secondary)]'}`}>
+              {node.peakBlock.toLocaleString()}
+              {node.peakBlock > node.blockHeight && ' ⚠'}
+            </span>
+          </div>
+        )}
+
         {/* Peers */}
         <div className="flex items-center justify-between">
           <span className="text-xs text-[var(--text-tertiary)]">Peers</span>
@@ -995,6 +1007,20 @@ function TableRow({
           )}
         </div>
       </td>
+
+      {/* Peak Block */}
+      <td className="py-2 px-3">
+        <div className="flex flex-col">
+          <span className="text-xs font-mono-nums text-[var(--text-secondary)]">
+            {node.peakBlock ? node.peakBlock.toLocaleString() : '—'}
+          </span>
+          {node.peakBlock && node.peakBlock > node.blockHeight && (
+            <span className="text-[11px] text-[var(--warning)]" title="Node regressed from peak - possible roadblock">
+              ⚠ was higher
+            </span>
+          )}
+        </div>
+      </td>
       
       {/* Peers */}
       <td className="py-2 px-3">
@@ -1143,6 +1169,7 @@ function VirtualTable({
               <TableHeader label="Client" field="client_type" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="Block" field="blockHeight" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="Behind" field="blocksBehind" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="Peak" field="peakBlock" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="Peers" field="peerCount" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="CPU" field="cpuPercent" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="Mem" field="memoryPercent" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
