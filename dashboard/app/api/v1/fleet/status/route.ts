@@ -54,6 +54,16 @@ async function getHandler(request: NextRequest) {
         FROM skynet.node_metrics
         WHERE collected_at > NOW() - INTERVAL '5 minutes'
         ORDER BY node_id, collected_at DESC
+      ),
+      prev_metrics AS (
+        SELECT DISTINCT ON (node_id)
+          node_id,
+          block_height as prev_block_height,
+          collected_at as prev_collected_at
+        FROM skynet.node_metrics
+        WHERE collected_at > NOW() - INTERVAL '10 minutes'
+          AND collected_at < NOW() - INTERVAL '5 minutes'
+        ORDER BY node_id, collected_at DESC
       )
       SELECT
         n.id,
@@ -69,6 +79,8 @@ async function getHandler(request: NextRequest) {
         n.network,
         n.chain_id,
         n.sync_mode,
+        n.ipv4,
+        n.ipv6,
         m.block_height,
         m.sync_percent,
         m.peer_count,
@@ -84,6 +96,11 @@ async function getHandler(request: NextRequest) {
         m.stall_hours,
         m.stalled_at_block,
         m.collected_at,
+        pm.prev_block_height,
+        CASE WHEN pm.prev_block_height IS NOT NULL AND m.block_height IS NOT NULL
+          THEN m.block_height - pm.prev_block_height
+          ELSE 0
+        END as block_diff,
         CASE
           WHEN m.collected_at IS NULL OR m.collected_at < NOW() - INTERVAL '2 minutes' THEN 'offline'
           WHEN m.is_syncing = true OR m.sync_percent < 100 THEN 'syncing'
@@ -92,6 +109,7 @@ async function getHandler(request: NextRequest) {
         END as status
       FROM skynet.nodes n
       LEFT JOIN latest_metrics m ON n.id = m.node_id
+      LEFT JOIN prev_metrics pm ON n.id = pm.node_id
       WHERE n.is_active = true
     `);
 
@@ -170,6 +188,9 @@ async function getHandler(request: NextRequest) {
       lastSeen: n.collected_at || n.created_at,
       email: mask(n.email),
       telegram: mask(n.telegram),
+      // Network info
+      ipv4: n.ipv4 || null,
+      ipv6: n.ipv6 || null,
       // New fields
       clientType: n.client_type || 'unknown',
       nodeType: n.node_type || 'fullnode',
@@ -183,6 +204,9 @@ async function getHandler(request: NextRequest) {
       clientVersion: n.client_version || 'Unknown',
       stallHours: Number(n.stall_hours) || 0,
       stalledAtBlock: Number(n.stalled_at_block) || 0,
+      // Block diff tracking
+      prevBlock: Number(n.prev_block_height) || 0,
+      blockDiff: Number(n.block_diff) || 0,
     };});
 
     return {

@@ -75,6 +75,11 @@ export default function NodesPageContent() {
         cpuPercent: node.cpuPercent ?? 0,
         memoryPercent: node.memoryPercent ?? 0,
         diskPercent: node.diskPercent ?? 0,
+        ipv4: node.ipv4 || undefined,
+        ipv6: node.ipv6 || undefined,
+        networkHeight: node.networkHeight || undefined,
+        prevBlock: node.prevBlock || undefined,
+        blockDiff: node.blockDiff || undefined,
       }));
       
       setNodes(mappedNodes);
@@ -176,6 +181,20 @@ export default function NodesPageContent() {
       default:
         return 'bg-[rgba(107,114,128,0.15)] text-[#6B7280] border-[rgba(107,114,128,0.3)]';
     }
+  };
+
+  // Helper: Determine client display name
+  const getClientDisplayName = (clientType: string, clientVersion: string): string => {
+    const ct = clientType.toLowerCase();
+    const version = clientVersion.toLowerCase();
+    
+    // Check if geth with XDC Client version (v2.6.x or XDC/v2.x)
+    if (ct === 'geth' && (version.includes('v2.6.') || version.includes('xdc/v2.'))) {
+      return 'XDC Client';
+    }
+    
+    // Otherwise return normal client type
+    return clientType.charAt(0).toUpperCase() + clientType.slice(1);
   };
 
   // Get client badge color
@@ -405,6 +424,13 @@ export default function NodesPageContent() {
                   </span>
                 </div>
 
+                {/* IPv4 Address */}
+                {node.ipv4 && (
+                  <div className="mb-2 text-xs font-mono text-[#1E90FF]">
+                    {node.ipv4}
+                  </div>
+                )}
+
                 {/* Client Badge */}
                 <div className="mb-3">
                   <span
@@ -412,9 +438,11 @@ export default function NodesPageContent() {
                       node.clientType
                     )}`}
                   >
-                    {node.clientType}
+                    {getClientDisplayName(node.clientType, node.clientVersion)}
                   </span>
-                  <span className="ml-2 text-xs text-[#6B7280]">{node.clientVersion}</span>
+                  <span className="ml-2 text-xs text-[#6B7280]">
+                    {node.clientVersion.split('/')[1]?.split('-')[0] || node.clientVersion}
+                  </span>
                 </div>
 
                 {/* Block Height */}
@@ -430,7 +458,7 @@ export default function NodesPageContent() {
                   <div className="flex items-center justify-between text-xs mb-1">
                     <span className="text-[#6B7280]">Sync Progress</span>
                     <span className="text-[#F9FAFB] font-semibold">
-                      {node.syncPercent.toFixed(1)}%
+                      {node.syncPercent.toFixed(2)}%
                     </span>
                   </div>
                   <div className="w-full h-2 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
@@ -445,7 +473,20 @@ export default function NodesPageContent() {
                       style={{ width: `${Math.min(node.syncPercent, 100)}%` }}
                     />
                   </div>
+                  {node.syncPercent < 100 && (
+                    <div className="text-xs text-[#6B7280] mt-1">
+                      Behind: {(100 - node.syncPercent).toFixed(2)}%
+                    </div>
+                  )}
                 </div>
+
+                {/* Block Diff */}
+                {node.blockDiff !== undefined && node.blockDiff > 0 && (
+                  <div className="mb-3 flex items-center gap-1.5 text-xs text-[#10B981]">
+                    <TrendingUp className="w-3 h-3" />
+                    <span>↑{node.blockDiff.toLocaleString()} blocks since last update</span>
+                  </div>
+                )}
 
                 {/* Peers */}
                 <div className="flex items-center justify-between text-xs text-[#6B7280] mb-2">

@@ -123,6 +123,11 @@ export interface SkyNetNode {
   cpuPercent: number;
   memoryPercent: number;
   diskPercent: number;
+  ipv4?: string;
+  ipv6?: string;
+  networkHeight?: number;
+  prevBlock?: number;
+  blockDiff?: number;
 }
 
 export interface ClientDistributionItem {

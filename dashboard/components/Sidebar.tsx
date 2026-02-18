@@ -45,6 +45,7 @@ const navItems: NavItem[] = [
   { id: 'network', label: 'Network Stats', icon: <BarChart3 className="w-5 h-5" />, path: '/network', section: 'Network' },
   { id: 'peers', label: 'Peers', icon: <Globe className="w-5 h-5" />, path: '/peers', section: 'Network' },
   { id: 'masternodes', label: 'Masternodes', icon: <Pickaxe className="w-5 h-5" />, path: '/masternodes', section: 'Network' },
+  { id: 'skyone', label: 'SkyOne Dashboard', icon: <Monitor className="w-5 h-5" />, path: '/skyone', section: 'Tools' },
   { id: 'explorer', label: 'Explorer', icon: <Globe className="w-5 h-5" />, path: '/explorer', section: 'Public', isPublic: true },
   { id: 'register', label: 'Register Node', icon: <ServerCog className="w-5 h-5" />, path: '/register', section: 'Public', isPublic: true },
 ];

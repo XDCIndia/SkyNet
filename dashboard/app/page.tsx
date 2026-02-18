@@ -93,6 +93,9 @@ interface Node {
   security_issues?: string;
   stallHours?: number;
   stalledAtBlock?: number;
+  prevBlock?: number;
+  blockDiff?: number;
+  networkHeight?: number;
 }
 
 interface Incident {
@@ -188,35 +191,53 @@ function NodeTypeBadge({ nodeType }: { nodeType?: string }) {
   );
 }
 
-// Client Type Badge (XDC/Erigon/Geth)
-function ClientTypeBadge({ clientType }: { clientType?: string }) {
-  if (!clientType || clientType === 'Unknown') return null;
+// Helper: Determine client display name
+function getClientDisplayName(clientType?: string, clientVersion?: string): string {
+  if (!clientType) return 'Unknown';
   
   const ct = clientType.toLowerCase();
-  const styles: Record<string, { bg: string; icon: React.ReactNode; label: string }> = {
+  const version = clientVersion?.toLowerCase() || '';
+  
+  // Check if geth with XDC Client version (v2.6.x or XDC/v2.x)
+  if (ct === 'geth' && (version.includes('v2.6.') || version.includes('xdc/v2.'))) {
+    return 'XDC Client';
+  }
+  
+  // Otherwise return normal client type
+  return clientType.charAt(0).toUpperCase() + clientType.slice(1);
+}
+
+// Client Type Badge (XDC/Erigon/Geth)
+function ClientTypeBadge({ clientType, clientVersion }: { clientType?: string; clientVersion?: string }) {
+  if (!clientType || clientType === 'Unknown') return null;
+  
+  const displayName = getClientDisplayName(clientType, clientVersion);
+  const ct = clientType.toLowerCase();
+  
+  const styles: Record<string, { bg: string; icon: React.ReactNode }> = {
     geth: { 
       bg: 'bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border-[var(--accent-blue)]/20', 
       icon: <Globe className="w-3 h-3" />,
-      label: 'Geth',
     },
     erigon: { 
       bg: 'bg-[var(--purple)]/10 text-[var(--purple)] border-[#8B5CF6]/20', 
       icon: <Layers className="w-3 h-3" />,
-      label: 'Erigon',
     },
     nethermind: { 
       bg: 'bg-[var(--success)]/10 text-[var(--success)] border-[#10B981]/20', 
       icon: <Terminal className="w-3 h-3" />,
-      label: 'Nethermind',
     },
   };
   
-  const style = styles[ct] || { bg: 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] border-[var(--border-subtle)]', icon: <Terminal className="w-3 h-3" />, label: clientType };
+  const style = styles[ct] || { 
+    bg: 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] border-[var(--border-subtle)]', 
+    icon: <Terminal className="w-3 h-3" />
+  };
   
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[12px] font-medium rounded border ${style.bg}`}>
       {style.icon}
-      {style.label}
+      {displayName}
     </span>
   );
 }
@@ -610,15 +631,16 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
       
       {/* IPv4 Display */}
       {node.ipv4 && (
-        <div className="mb-2 text-xs">
-          <span className="font-mono text-[var(--accent-blue)]">{node.ipv4}</span>
+        <div className="mb-2 flex items-center gap-1.5">
+          <Globe className="w-3 h-3 text-[var(--text-tertiary)]" />
+          <span className="text-xs font-mono text-[var(--accent-blue)]">{node.ipv4}</span>
         </div>
       )}
       
       {/* Node Type and Client Type Badges */}
       <div className="flex flex-wrap gap-1.5 mb-2">
         <NodeTypeBadge nodeType={node.node_type} />
-        <ClientTypeBadge clientType={node.client_type} />
+        <ClientTypeBadge clientType={node.client_type} clientVersion={node.clientVersion} />
       </div>
       
       {/* OS Info */}
@@ -652,6 +674,37 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
             )}
           </div>
         </div>
+        
+        {/* Sync Percentage */}
+        {node.networkHeight && node.networkHeight > 0 && (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-[var(--text-tertiary)]">Sync</span>
+            <div className="text-right">
+              <span className={`text-sm font-mono-nums font-medium ${
+                node.syncPercent >= 99.9 ? 'text-[var(--success)]' :
+                node.syncPercent >= 95 ? 'text-[var(--warning)]' :
+                'text-[var(--critical)]'
+              }`}>
+                {node.syncPercent.toFixed(2)}%
+              </span>
+              {node.syncPercent < 100 && (
+                <div className="text-xs text-[var(--text-tertiary)] mt-0.5">
+                  Behind: {(100 - node.syncPercent).toFixed(2)}%
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Block Increase Since Last Update */}
+        {node.blockDiff !== undefined && node.blockDiff > 0 && (
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--success)]/10 border border-[var(--success)]/20">
+            <TrendingUp className="h-3 w-3 text-[var(--success)]" />
+            <span className="text-xs text-[var(--success)] font-medium">
+              ↑{node.blockDiff.toLocaleString()} blocks since last update
+            </span>
+          </div>
+        )}
         
         {/* Sync Stall Warning */}
         {node.stallHours && node.stallHours > 0 && (
@@ -728,7 +781,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
           </div>
         )}
         
-        {/* Last Heartbeat */}
+        {/* Last Block Update Time */}
         <div className="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)]">
           <div className="flex items-center gap-1.5 text-[12px] text-[var(--text-tertiary)]">
             <span className={`w-1.5 h-1.5 rounded-full ${
@@ -737,7 +790,7 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
               'bg-[var(--critical)]'
             }`} />
             <Clock className="w-3 h-3" />
-            <span>Heartbeat</span>
+            <span>Last update</span>
           </div>
           <span className={`text-[12px] font-medium ${
             node.status === 'healthy' ? 'text-[var(--success)]' :
@@ -852,7 +905,7 @@ function TableRow({
       {/* Client */}
       <td className="py-2 px-3">
         <div className="flex items-center gap-1">
-          <ClientTypeBadge clientType={node.client_type} />
+          <ClientTypeBadge clientType={node.client_type} clientVersion={node.clientVersion} />
           <span className="text-[12px] text-[var(--text-tertiary)]">
             {node.clientVersion?.split('/')[1]?.split('-')[0] || ''}
           </span>
@@ -865,8 +918,19 @@ function TableRow({
           <span className="text-sm font-mono-nums">
             {node.blockHeight > 0 ? node.blockHeight.toLocaleString() : '—'}
           </span>
-          {node.blocksBehind > 0 && (
-            <span className="text-[12px] text-[var(--warning)]">-{node.blocksBehind}</span>
+          {node.syncPercent < 100 && node.networkHeight && (
+            <span className={`text-[11px] font-mono-nums ${
+              node.syncPercent >= 99 ? 'text-[var(--success)]' : 
+              node.syncPercent >= 95 ? 'text-[var(--warning)]' : 
+              'text-[var(--critical)]'
+            }`}>
+              {node.syncPercent.toFixed(2)}% synced
+            </span>
+          )}
+          {node.blockDiff !== undefined && node.blockDiff > 0 && (
+            <span className="text-[11px] text-[var(--success)]">
+              ↑{node.blockDiff.toLocaleString()}
+            </span>
           )}
           {node.stallHours && node.stallHours > 0 && (
             <div className="flex items-center gap-1 mt-0.5" title={`Stuck at block ${node.stalledAtBlock?.toLocaleString()}`}>
@@ -879,9 +943,16 @@ function TableRow({
       
       {/* Behind */}
       <td className="py-2 px-3">
-        <span className={`text-xs font-mono-nums ${node.blocksBehind > 100 ? 'text-[var(--critical)]' : node.blocksBehind > 10 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}`}>
-          {node.blocksBehind || 0}
-        </span>
+        <div className="flex flex-col">
+          <span className={`text-xs font-mono-nums ${node.blocksBehind > 100 ? 'text-[var(--critical)]' : node.blocksBehind > 10 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}`}>
+            {node.blocksBehind || 0}
+          </span>
+          {node.blocksBehind > 0 && node.networkHeight && (
+            <span className="text-[11px] text-[var(--text-tertiary)]">
+              {((node.blockHeight / node.networkHeight) * 100).toFixed(1)}%
+            </span>
+          )}
+        </div>
       </td>
       
       {/* Peers */}
