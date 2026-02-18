@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import ClientDistributionChart from '@/components/ClientDistributionChart';
 import NetworkFilter from '@/components/NetworkFilter';
@@ -1297,6 +1297,7 @@ function LoadingState() {
 
 export default function Home() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [fleet, setFleet] = useState<FleetData | null>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -1310,13 +1311,23 @@ export default function Home() {
   const [lastUpdated, setLastUpdated] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [networkFilter, setNetworkFilter] = useState('all');
-  const [clientFilter, setClientFilter] = useState('all');
+  const [networkFilter, setNetworkFilter] = useState(() => searchParams.get('network') || 'all');
+  const [clientFilter, setClientFilter] = useState(() => searchParams.get('client') || 'all');
   const [osFilter, setOsFilter] = useState('all');
   
   // Sorting
   const [sortField, setSortField] = useState<SortField>('blockHeight');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  // Sync filters to URL query string
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (networkFilter !== 'all') params.set('network', networkFilter);
+    if (clientFilter !== 'all') params.set('client', clientFilter);
+    const qs = params.toString();
+    const newUrl = qs ? `?${qs}` : window.location.pathname;
+    window.history.replaceState(null, '', newUrl);
+  }, [networkFilter, clientFilter]);
   
   // Selection
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());

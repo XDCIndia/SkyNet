@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   Server, 
   RefreshCw, 
@@ -24,11 +25,20 @@ import type { SkyNetNode, FleetStatus } from '@/lib/types';
  */
 export default function NodesPageContent() {
   const [nodes, setNodes] = useState<SkyNetNode[]>([]);
+  const searchParams = useSearchParams();
   const [fleetStatus, setFleetStatus] = useState<FleetStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filterNetwork, setFilterNetwork] = useState('all');
+  const [filterNetwork, setFilterNetwork] = useState(() => searchParams.get('network') || 'all');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Sync filter to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filterNetwork !== 'all') params.set('network', filterNetwork);
+    const qs = params.toString();
+    window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
+  }, [filterNetwork]);
 
   // Fetch fleet status
   const fetchFleetStatus = useCallback(async () => {
