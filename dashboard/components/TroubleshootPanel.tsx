@@ -456,7 +456,7 @@ export default function TroubleshootPanel() {
             <Wrench className="w-5 h-5 text-[var(--critical)]" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-[#F9FAFB]">DevOps Troubleshooting</h2>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">DevOps Troubleshooting</h2>
             <p className="text-sm text-[#6B7280]">Diagnose and fix issues in seconds</p>
           </div>
         </div>

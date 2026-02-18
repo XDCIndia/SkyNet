@@ -47,7 +47,7 @@ function CircularProgress({ percentage, size = 120, strokeWidth = 8 }: { percent
         <span className="text-2xl font-bold font-mono-nums" style={{ color }}>
           {percentage.toFixed(1)}%
         </span>
-        <span className="text-xs text-[#6B7280]">Sync</span>
+        <span className="text-xs text-[var(--text-tertiary)]">Sync</span>
       </div>
     </div>
   );
@@ -105,12 +105,12 @@ export default function HeroSection({ data }: HeroSectionProps) {
         {/* Left: Block Height */}
         <div className="lg:col-span-4 flex flex-col justify-center">
           <div className="section-header mb-2">Current Block Height</div>
-          <div className="text-4xl lg:text-5xl font-bold font-mono-nums text-[#F9FAFB] mb-2">
+          <div className="text-4xl lg:text-5xl font-bold font-mono-nums text-[var(--text-primary)] mb-2">
             {data.blockHeight > 0 ? displayBlockHeight.toLocaleString() : '—'}
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-[#6B7280]">Highest:</span>
-            <span className="font-mono-nums text-[#9CA3AF]">
+            <span className="text-[var(--text-tertiary)]">Highest:</span>
+            <span className="font-mono-nums text-[var(--text-secondary)]">
               {data.highestBlock > 0 ? data.highestBlock.toLocaleString() : '—'}
             </span>
           </div>
@@ -118,7 +118,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
           {/* Coinbase Address */}
           {data.coinbase && (
             <div className="mt-2 flex items-center gap-2">
-              <span className="text-[12px] uppercase tracking-wider text-[#6B7280]">Coinbase</span>
+              <span className="text-[12px] uppercase tracking-wider text-[var(--text-tertiary)]">Coinbase</span>
               <span className="font-mono text-xs text-[var(--accent-blue)] bg-[rgba(30,144,255,0.08)] px-2 py-0.5 rounded" title={data.coinbase}>
                 {data.coinbase}
               </span>
@@ -128,7 +128,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
           {/* Ethstats Name */}
           {data.ethstatsName && (
             <div className="mt-1 flex items-center gap-2">
-              <span className="text-[12px] uppercase tracking-wider text-[#6B7280]">Ethstats</span>
+              <span className="text-[12px] uppercase tracking-wider text-[var(--text-tertiary)]">Ethstats</span>
               <span className="text-xs text-[var(--success)] font-medium bg-[rgba(16,185,129,0.08)] px-2 py-0.5 rounded flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
                 {data.ethstatsName}
@@ -148,7 +148,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
           
           {data.isSyncing && data.syncPercent < 99.9 && (
             <div className="mt-3 text-center">
-              <span className="text-xs text-[#6B7280]">Syncing in progress...</span>
+              <span className="text-xs text-[var(--text-tertiary)]">Syncing in progress...</span>
             </div>
           )}
         </div>
@@ -171,14 +171,14 @@ export default function HeroSection({ data }: HeroSectionProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.02)]">
               <div className="section-header mb-1">Uptime</div>
-              <div className="text-lg font-semibold text-[#F9FAFB]">
+              <div className="text-lg font-semibold text-[var(--text-primary)]">
                 {data.uptime > 0 ? formatDurationLong(data.uptime) : '—'}
               </div>
             </div>
             
             <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.02)]">
               <div className="section-header mb-1">Network ID</div>
-              <div className="text-lg font-semibold font-mono-nums text-[#F9FAFB]">
+              <div className="text-lg font-semibold font-mono-nums text-[var(--text-primary)]">
                 {data.chainId || '50'}
               </div>
             </div>

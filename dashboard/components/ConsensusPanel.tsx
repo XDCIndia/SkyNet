@@ -14,7 +14,7 @@ function EpochProgressBar({ progress }: { progress: number }) {
     <div className="w-full">
       <div className="flex items-center justify-between mb-2">
         <span className="section-header">Epoch Progress</span>
-        <span className="text-sm font-medium text-[#F9FAFB]">{progress.toFixed(1)}%</span>
+        <span className="text-sm font-medium text-[var(--text-primary)]">{progress.toFixed(1)}%</span>
       </div>
       <div className="w-full h-2 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
         <div 
@@ -116,8 +116,8 @@ export default function ConsensusPanel({ data }: ConsensusPanelProps) {
             <Crown className="w-5 h-5 text-[var(--warning)]" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-[#F9FAFB]">XDPoS Consensus</h2>
-            <div className="text-sm font-mono-nums text-[#6B7280]">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">XDPoS Consensus</h2>
+            <div className="text-sm font-mono-nums text-[var(--text-tertiary)]">
               Epoch #{formatNumber(displayEpoch)}
             </div>
           </div>
@@ -152,14 +152,14 @@ export default function ConsensusPanel({ data }: ConsensusPanelProps) {
           <ParticipationRing rate={data.signingRate} />
           <div>
             <div className="section-header mb-1">Participation</div>
-            <div className="text-sm text-[#9CA3AF]">Network health</div>
+            <div className="text-sm text-[var(--text-secondary)]">Network health</div>
           </div>
         </div>
         
         {/* Stake Amount */}
         <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.02)]">
           <div className="section-header mb-2">Stake Amount</div>
-          <div className="text-lg font-semibold text-[#F9FAFB]">
+          <div className="text-lg font-semibold text-[var(--text-primary)]">
             {formatXDC(data.stakeAmount)}
           </div>
         </div>

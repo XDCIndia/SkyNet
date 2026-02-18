@@ -44,21 +44,21 @@ export default function Header({
             <img src="/xdc-logo.png" alt="XDC" width={40} height={40} className="rounded-full" />
           </div>
           <div>
-            <h1 className="text-lg lg:text-xl font-semibold text-[#F9FAFB]" style={{ fontFamily: 'var(--font-fira-sans)' }}>
+            <h1 className="text-lg lg:text-xl font-semibold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-fira-sans)' }}>
               Node Dashboard
             </h1>
             <div className="hidden sm:flex items-center gap-2 text-xs flex-wrap">
               {ethstatsName && (
                 <>
                   <span className="text-[var(--success)] font-medium">{ethstatsName}</span>
-                  <span className="text-[#6B7280]">·</span>
+                  <span className="text-[var(--text-tertiary)]">·</span>
                 </>
               )}
-              <span className="text-[#6B7280]">XDC Mainnet</span>
+              <span className="text-[var(--text-tertiary)]">XDC Mainnet</span>
               {coinbase && (
                 <>
-                  <span className="text-[#6B7280]">·</span>
-                  <span className="text-[#9CA3AF] font-mono text-[12px]" title={coinbase}>
+                  <span className="text-[var(--text-tertiary)]">·</span>
+                  <span className="text-[var(--text-secondary)] font-mono text-[12px]" title={coinbase}>
                     {coinbase.slice(0, 8)}...{coinbase.slice(-6)}
                   </span>
                 </>
@@ -77,8 +77,8 @@ export default function Header({
           </div>
           {blockHeight > 0 && (
             <>
-              <span className="text-[#6B7280]">|</span>
-              <span className="text-sm font-mono-nums text-[#F9FAFB]">
+              <span className="text-[var(--text-tertiary)]">|</span>
+              <span className="text-sm font-mono-nums text-[var(--text-primary)]">
                 #{blockHeight.toLocaleString()}
               </span>
             </>
@@ -99,7 +99,7 @@ export default function Header({
                 style={{ animationDuration: isSpinning ? '1s' : '10s' }}
               />
             </button>
-            <span className="hidden sm:block text-xs text-[#6B7280]">
+            <span className="hidden sm:block text-xs text-[var(--text-tertiary)]">
               {nextRefresh}s
             </span>
           </div>
@@ -107,7 +107,7 @@ export default function Header({
           {/* Peers badge */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-card)] border border-[rgba(255,255,255,0.06)]">
             <Users className="w-4 h-4 text-[var(--accent-blue)]" />
-            <span className="text-sm font-medium text-[#F9FAFB]">{peers || '—'}</span>
+            <span className="text-sm font-medium text-[var(--text-primary)]">{peers || '—'}</span>
           </div>
 
           {/* Mobile status dot */}

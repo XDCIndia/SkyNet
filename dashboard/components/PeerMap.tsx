@@ -227,7 +227,7 @@ export default function PeerMap({ peers }: PeerMapProps) {
             <Globe className="w-5 h-5 text-[var(--success)]" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-[#F9FAFB]">Global Peer Distribution</h2>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Global Peer Distribution</h2>
             <div className="flex items-center gap-2">
               <span className="status-dot active" />
               <span className="text-sm text-[#6B7280]">Real-time peer locations</span>
@@ -326,7 +326,7 @@ export default function PeerMap({ peers }: PeerMapProps) {
       {showAddPeerModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-[var(--bg-card)] rounded-2xl p-6 max-w-lg w-full border border-[rgba(255,255,255,0.1)]">
-            <h3 className="text-lg font-semibold text-[#F9FAFB] mb-4">Add Static Peer</h3>
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Add Static Peer</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-[#6B7280] mb-2">Enode URL</label>

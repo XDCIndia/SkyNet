@@ -372,12 +372,34 @@ export default function Sidebar() {
             </div>
           </div>
           
-          {networkStatus && (
-            <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${networkStatus.online ? 'bg-[var(--success)]' : 'bg-[var(--critical)]'}`} />
-              <span className="text-xs text-[var(--text-tertiary)]">#{formatBlock(networkStatus.bestBlock)}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {/* Mobile Theme Toggle */}
+            <button
+              onClick={() => {
+                const themes = ['dark', 'light', 'system'];
+                const currentIndex = themes.indexOf(theme || 'system');
+                const nextTheme = themes[(currentIndex + 1) % themes.length];
+                setTheme(nextTheme);
+              }}
+              className="p-2 hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
+              aria-label={`Current theme: ${theme}. Click to change.`}
+            >
+              {theme === 'dark' ? (
+                <Moon className="w-5 h-5 text-[var(--text-secondary)]" />
+              ) : theme === 'light' ? (
+                <Sun className="w-5 h-5 text-[var(--warning)]" />
+              ) : (
+                <Monitor className="w-5 h-5 text-[var(--text-secondary)]" />
+              )}
+            </button>
+            
+            {networkStatus && (
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${networkStatus.online ? 'bg-[var(--success)]' : 'bg-[var(--critical)]'}`} />
+                <span className="text-xs text-[var(--text-tertiary)]">#{formatBlock(networkStatus.bestBlock)}</span>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
