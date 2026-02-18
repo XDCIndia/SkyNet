@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
       const incidents = await query(`
         SELECT COUNT(*) as count FROM skynet.incidents
-        WHERE status != 'active' AND created_at < NOW() - INTERVAL '30 days'
+        WHERE status != 'active' AND detected_at < NOW() - INTERVAL '30 days'
       `);
       results.incidents = parseInt(incidents.rows[0].count);
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
       const alerts = await query(`
         SELECT COUNT(*) as count FROM skynet.alert_history
-        WHERE created_at < NOW() - INTERVAL '30 days'
+        WHERE triggered_at < NOW() - INTERVAL '30 days'
       `);
       results.alert_history = parseInt(alerts.rows[0].count);
 
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     const incidentsResult = await query(`
       DELETE FROM skynet.incidents
-      WHERE status != 'active' AND created_at < NOW() - INTERVAL '30 days'
+      WHERE status != 'active' AND detected_at < NOW() - INTERVAL '30 days'
     `);
     results.incidents = incidentsResult.rowCount;
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     const alertsResult = await query(`
       DELETE FROM skynet.alert_history
-      WHERE created_at < NOW() - INTERVAL '30 days'
+      WHERE triggered_at < NOW() - INTERVAL '30 days'
     `);
     results.alert_history = alertsResult.rowCount;
 
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
         (SELECT COUNT(*) FROM skynet.node_metrics WHERE collected_at < NOW() - INTERVAL '7 days') as stale_metrics,
         (SELECT pg_size_pretty(pg_total_relation_size('skynet.node_metrics'))) as metrics_size,
         (SELECT COUNT(*) FROM skynet.incidents) as total_incidents,
-        (SELECT COUNT(*) FROM skynet.incidents WHERE status != 'active' AND created_at < NOW() - INTERVAL '30 days') as stale_incidents,
+        (SELECT COUNT(*) FROM skynet.incidents WHERE status != 'active' AND detected_at < NOW() - INTERVAL '30 days') as stale_incidents,
         (SELECT MIN(collected_at) FROM skynet.node_metrics) as oldest_metric,
         (SELECT pg_database_size(current_database())) as db_size_bytes
     `);
