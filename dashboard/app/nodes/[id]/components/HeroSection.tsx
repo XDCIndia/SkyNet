@@ -84,11 +84,16 @@ function getClientIcon(clientType?: string): string {
   return '🔷';
 }
 
-function getClientName(clientType?: string): string {
+function getClientName(clientType?: string, clientVersion?: string): string {
   const type = clientType?.toLowerCase() || '';
+  const ver = clientVersion?.toLowerCase() || '';
   if (type.includes('nethermind')) return 'Nethermind';
   if (type.includes('erigon')) return 'Erigon';
-  if (type.includes('geth')) return 'Geth';
+  if (type.includes('geth')) {
+    // v2.6.x or XDC/v2.x is the official XDC client
+    if (ver.includes('v2.6.') || ver.includes('xdc/v2.')) return 'XDC';
+    return 'Geth';
+  }
   return 'XDC';
 }
 
@@ -172,7 +177,7 @@ export default function HeroSection({ node, status, metrics }: HeroSectionProps)
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--accent-blue-glow)] border border-[var(--border-blue-glow)]">
           <span className="text-xl">{getClientIcon(status.clientType || node.client_type)}</span>
-          <span className="text-sm font-semibold text-[var(--accent-blue)]">{getClientName(status.clientType || node.client_type)}</span>
+          <span className="text-sm font-semibold text-[var(--accent-blue)]">{getClientName(status.clientType || node.client_type, status.clientVersion || node.client_version)}</span>
         </div>
         <div className="px-4 py-2 rounded-xl bg-[var(--bg-hover)] border border-[var(--border-subtle)]">
           <span className="text-sm font-medium text-[var(--text-secondary)]">

@@ -24,6 +24,7 @@ export interface NodeDetail {
     kernel?: string;
   };
   client_type?: string;
+  client_version?: string;
   node_type?: string;
   sync_mode?: string;
   security_score?: number;

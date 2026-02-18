@@ -13,11 +13,11 @@ interface SkyOneClient {
 
 const clients: SkyOneClient[] = [
   {
-    name: 'Geth XDC',
+    name: 'XDC (v2.6.8)',
     port: 7070,
     color: '#1E90FF',
     icon: '🔷',
-    description: 'XDC Geth client metrics and monitoring',
+    description: 'XDC official client metrics and monitoring',
   },
   {
     name: 'Erigon XDC',

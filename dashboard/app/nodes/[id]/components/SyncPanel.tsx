@@ -161,6 +161,9 @@ export default function SyncPanel({ status, metrics }: SyncPanelProps) {
           </div>
           <div className="flex justify-between mt-2 text-xs text-[var(--text-tertiary)]">
             <span className="font-mono-nums">{formatNumber(status.blockHeight || 0)}</span>
+            <span className="font-mono-nums" style={{ color: syncColor }}>
+              Behind: {(100 - (status.syncPercent || 0)).toFixed(2)}%
+            </span>
             <span className="font-mono-nums">{formatNumber(status.highestBlock || 0)}</span>
           </div>
         </div>

@@ -81,7 +81,7 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 // Client Logo Component
-function ClientLogo({ clientType, size = 'md' }: { clientType?: string; size?: 'sm' | 'md' | 'lg' }) {
+function ClientLogo({ clientType, clientVersion, size = 'md' }: { clientType?: string; clientVersion?: string; size?: 'sm' | 'md' | 'lg' }) {
   const sizeClasses = {
     sm: 'w-6 h-6 text-xs',
     md: 'w-8 h-8 text-sm',
@@ -90,11 +90,26 @@ function ClientLogo({ clientType, size = 'md' }: { clientType?: string; size?: '
   
   const styles: Record<string, { bg: string; color: string; letter: string }> = {
     XDC: { bg: 'bg-[#1E90FF]/20', color: 'text-[#1E90FF]', letter: 'X' },
+    Nethermind: { bg: 'bg-purple-500/20', color: 'text-purple-400', letter: 'N' },
     Erigon: { bg: 'bg-orange-500/20', color: 'text-orange-400', letter: 'E' },
     Geth: { bg: 'bg-gray-500/20', color: 'text-gray-400', letter: 'G' },
   };
   
-  const style = styles[clientType || 'Unknown'] || { bg: 'bg-white/10', color: 'text-[#64748B]', letter: '?' };
+  // Determine display name: v2.6.x geth = XDC
+  let displayType = clientType || 'Unknown';
+  const ct = (clientType || '').toLowerCase();
+  const cv = (clientVersion || '').toLowerCase();
+  if (ct.includes('geth') && (cv.includes('v2.6.') || cv.includes('xdc/v2.'))) {
+    displayType = 'XDC';
+  } else if (ct.includes('nethermind')) {
+    displayType = 'Nethermind';
+  } else if (ct.includes('erigon')) {
+    displayType = 'Erigon';
+  } else if (ct.includes('geth')) {
+    displayType = 'Geth';
+  }
+  
+  const style = styles[displayType] || { bg: 'bg-white/10', color: 'text-[#64748B]', letter: '?' };
   
   return (
     <div className={`${sizeClasses[size]} ${style.bg} ${style.color} rounded-lg flex items-center justify-center font-bold border border-white/10`}>
@@ -685,7 +700,7 @@ export default function NodeDetailPage() {
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <ClientLogo clientType={status.clientType || node.client_type} size="lg" />
+            <ClientLogo clientType={status.clientType || node.client_type} clientVersion={status.clientVersion || node.client_version} size="lg" />
             <div>
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl font-semibold text-[#F1F5F9]">{node.name}</h1>
