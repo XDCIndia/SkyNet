@@ -190,7 +190,7 @@ async function getHandler(request: NextRequest) {
     const totalNodes = nodeStatusRows.length || 1;
     const healthScore = Math.round(
       ((statusCounts.healthy * 100) +
-       (statusCounts.syncing * 70) +
+       (statusCounts.syncing * 90) +
        (statusCounts.degraded * 40) +
        (statusCounts.offline * 0)) / totalNodes
     );
