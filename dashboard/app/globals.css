@@ -691,3 +691,145 @@ input::placeholder, textarea::placeholder {
   background: rgba(59, 130, 246, 0.1);
   border-left-color: #3B82F6;
 }
+
+/* ============================================
+   3D CHART STYLES
+   ============================================ */
+
+/* 3D Container Perspective */
+.chart-3d-container {
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+
+/* 3D Donut Chart */
+.chart-3d-donut {
+  transform: rotateX(20deg) rotateY(-15deg);
+  transform-origin: center center;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.5));
+}
+
+.chart-3d-donut:hover {
+  transform: rotateX(15deg) rotateY(-10deg) scale(1.02);
+}
+
+/* 3D Bar Chart */
+.chart-3d-bar {
+  transform: rotateX(-10deg);
+  transform-origin: bottom center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.chart-3d-bar:hover {
+  transform: rotateX(-5deg) scaleY(1.05);
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
+}
+
+/* 3D Card Hover Effect */
+.card-3d-hover {
+  transform-style: preserve-3d;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-3d-hover:hover {
+  transform: translateY(-6px) translateZ(20px) rotateX(2deg);
+  box-shadow: 
+    0 20px 40px -10px rgba(0, 0, 0, 0.5),
+    0 10px 20px -10px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* 3D Depth shadows */
+.depth-shadow {
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -2px rgba(0, 0, 0, 0.3),
+    0 8px 16px -4px rgba(0, 0, 0, 0.2);
+}
+
+.depth-shadow-lg {
+  box-shadow: 
+    0 10px 15px -3px rgba(0, 0, 0, 0.4),
+    0 4px 6px -4px rgba(0, 0, 0, 0.4),
+    0 20px 40px -10px rgba(0, 0, 0, 0.3);
+}
+
+/* Gradient overlays for 3D depth */
+.gradient-3d-top {
+  background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+}
+
+.gradient-3d-bottom {
+  background: linear-gradient(0deg, rgba(0,0,0,0.3) 0%, transparent 50%);
+}
+
+.gradient-3d-side {
+  background: linear-gradient(90deg, rgba(0,0,0,0.2) 0%, transparent 50%, rgba(255,255,255,0.05) 100%);
+}
+
+/* Glow effects */
+.glow-accent {
+  box-shadow: 0 0 20px var(--accent-blue-glow);
+}
+
+.glow-success {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+.glow-warning {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+}
+
+.glow-critical {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
+/* Chart segment animations */
+@keyframes segment-float {
+  0%, 100% { transform: translateZ(0); }
+  50% { transform: translateZ(8px); }
+}
+
+.chart-segment-active {
+  animation: segment-float 2s ease-in-out infinite;
+}
+
+/* Metallic shine effect */
+.metallic-shine {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    transparent 40%,
+    transparent 60%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+}
+
+/* Status dot glow */
+.status-glow {
+  position: relative;
+}
+
+.status-glow::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  filter: blur(4px);
+  opacity: 0.5;
+  z-index: -1;
+}
+
+.status-glow.healthy::after {
+  background: var(--success);
+}
+
+.status-glow.warning::after {
+  background: var(--warning);
+}
+
+.status-glow.critical::after {
+  background: var(--critical);
+}

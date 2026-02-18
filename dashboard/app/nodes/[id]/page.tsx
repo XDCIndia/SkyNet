@@ -345,13 +345,24 @@ function OSIcon({ osType }: { osType?: string }) {
   return <span className="text-xl">{getIcon()}</span>;
 }
 
-// Parse client version string
+// Parse client version string - extracts OS and architecture info
 function parseClientVersion(version: string) {
+  if (!version) return null;
+  
   const parts = version.split('/');
+  const platform = parts[2] || 'Unknown';
+  
+  // Parse platform part (e.g., linux-amd64, windows-x64)
+  const platformMatch = platform.match(/^(linux|darwin|windows)-(amd64|arm64|x64|x86|386|armv7)$/i);
+  const osType = platformMatch ? platformMatch[1] : 'Unknown';
+  const osArch = platformMatch ? platformMatch[2] : '';
+  
   return {
     client: parts[0] || 'Unknown',
     version: parts[1] || 'Unknown',
-    platform: parts[2] || 'Unknown',
+    platform,
+    osType,
+    osArch,
     goVersion: parts[3] || 'Unknown',
   };
 }
@@ -752,47 +763,126 @@ export default function NodeDetailPage() {
         {/* Hero Section - NEW from SkyOne */}
         <HeroSection node={node} status={status} metrics={metrics} />
 
-        {/* System Information Card */}
-        <div className="card-xdc">
+        {/* System Information Card with 3D styling */}
+        <div className="card-xdc [perspective:1000px]">
           <div className="flex items-center gap-3 mb-4">
-            <Monitor className="w-5 h-5 text-[#1E90FF]" />
+            <div className="w-10 h-10 rounded-xl bg-[#1E90FF]/10 flex items-center justify-center">
+              <Monitor className="w-5 h-5 text-[#1E90FF]" />
+            </div>
             <h2 className="text-lg font-semibold">System Information</h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {parsedVersion && (
-              <div className="bg-white/5 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:border-[#1E90FF]/20 transition-all duration-300 hover:[transform:translateZ(10px)]">
+                <div className="flex items-center gap-2 mb-3">
                   <ClientLogo clientType={parsedVersion.client} size="sm" />
-                  <div className="text-[12px] uppercase text-[#64748B]">Client Version</div>
+                  <div className="text-[12px] uppercase text-[#64748B] font-medium tracking-wider">Client Version</div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-sm font-medium text-[#F1F5F9]">{parsedVersion.client} {parsedVersion.version}</div>
-                  {parsedVersion.platform !== 'Unknown' && <div className="text-xs text-[#64748B] font-mono">{parsedVersion.platform}</div>}
-                  {parsedVersion.goVersion !== 'Unknown' && <div className="text-xs text-[#64748B] font-mono">{parsedVersion.goVersion}</div>}
+                  <div className="text-sm font-bold text-[#F1F5F9]">{parsedVersion.client} <span className="text-[#1E90FF]">{parsedVersion.version}</span></div>
+                  {parsedVersion.platform !== 'Unknown' && (
+                    <div className="flex items-center gap-2 text-xs text-[#64748B] font-mono">
+                      <span className="px-1.5 py-0.5 bg-white/5 rounded text-[10px]">OS</span>
+                      {parsedVersion.platform}
+                    </div>
+                  )}
+                  {parsedVersion.goVersion !== 'Unknown' && (
+                    <div className="flex items-center gap-2 text-xs text-[#64748B] font-mono">
+                      <span className="px-1.5 py-0.5 bg-white/5 rounded text-[10px]">Runtime</span>
+                      {parsedVersion.goVersion}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
             
-            <div className="bg-white/5 rounded-lg p-4">
-              <div className="text-[12px] uppercase text-[#64748B] mb-2">Coinbase Address</div>
+            <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:border-[#10B981]/20 transition-all duration-300">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-lg bg-[#10B981]/10 flex items-center justify-center">
+                  <span className="text-xs">💰</span>
+                </div>
+                <div className="text-[12px] uppercase text-[#64748B] font-medium tracking-wider">Coinbase Address</div>
+              </div>
               <CoinbaseDisplay coinbase={status.coinbase} />
             </div>
             
             {status.ipv4 && (
-              <div className="bg-white/5 rounded-lg p-4">
-                <div className="text-[12px] uppercase text-[#64748B] mb-1">Public IPv4</div>
-                <div className="text-sm font-mono text-[#1E90FF]">{status.ipv4}</div>
+              <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:border-[#1E90FF]/20 transition-all duration-300">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-lg bg-[#1E90FF]/10 flex items-center justify-center">
+                    <Globe className="w-3 h-3 text-[#1E90FF]" />
+                  </div>
+                  <div className="text-[12px] uppercase text-[#64748B] font-medium tracking-wider">Public IPv4</div>
+                </div>
+                <div className="text-sm font-mono text-[#1E90FF] bg-[#1E90FF]/5 px-3 py-1.5 rounded-lg inline-block">
+                  {status.ipv4}
+                </div>
               </div>
             )}
             
-            {osInfo && (
-              <div className="bg-white/5 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
+            {/* OS Information Card */}
+            {(status?.os || node?.os_info) && (
+              <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:border-[#F59E0B]/20 transition-all duration-300">
+                <div className="flex items-center gap-2 mb-3">
                   <OSIcon osType={status?.os?.type || node?.os_info?.type} />
-                  <div className="text-[12px] uppercase text-[#64748B]">Operating System</div>
+                  <div className="text-[12px] uppercase text-[#64748B] font-medium tracking-wider">Operating System</div>
                 </div>
-                <div className="text-sm text-[#F1F5F9]">{osInfo}</div>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {(status?.os?.type || node?.os_info?.type) && (
+                      <span className="px-2 py-1 bg-[#F59E0B]/10 text-[#F59E0B] rounded text-xs font-medium capitalize">
+                        {status?.os?.type || node?.os_info?.type}
+                      </span>
+                    )}
+                    {(status?.os?.arch || node?.os_info?.arch) && (
+                      <span className="px-2 py-1 bg-white/5 text-[#94A3B8] rounded text-xs font-mono">
+                        {status?.os?.arch || node?.os_info?.arch}
+                      </span>
+                    )}
+                  </div>
+                  {(status?.os?.release || node?.os_info?.release) && (
+                    <div className="text-sm text-[#F1F5F9]">
+                      {status?.os?.release || node?.os_info?.release}
+                    </div>
+                  )}
+                  {(status?.os?.kernel || node?.os_info?.kernel) && (
+                    <div className="flex items-center gap-2 text-xs text-[#64748B] font-mono">
+                      <span className="px-1.5 py-0.5 bg-white/5 rounded text-[10px]">Kernel</span>
+                      {status?.os?.kernel || node?.os_info?.kernel}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Chain ID */}
+            {status.chainId && (
+              <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:border-[#8B5CF6]/20 transition-all duration-300">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-lg bg-[#8B5CF6]/10 flex items-center justify-center">
+                    <Link2 className="w-3 h-3 text-[#8B5CF6]" />
+                  </div>
+                  <div className="text-[12px] uppercase text-[#64748B] font-medium tracking-wider">Chain ID</div>
+                </div>
+                <div className="text-lg font-mono font-bold text-[#8B5CF6]">
+                  {status.chainId}
+                </div>
+              </div>
+            )}
+            
+            {/* Uptime */}
+            {status.uptime !== undefined && (
+              <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:border-[#10B981]/20 transition-all duration-300">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-lg bg-[#10B981]/10 flex items-center justify-center">
+                    <Clock className="w-3 h-3 text-[#10B981]" />
+                  </div>
+                  <div className="text-[12px] uppercase text-[#64748B] font-medium tracking-wider">Uptime</div>
+                </div>
+                <div className="text-lg font-mono font-bold text-[#10B981]">
+                  {Math.floor(status.uptime / 3600)}h {Math.floor((status.uptime % 3600) / 60)}m
+                </div>
               </div>
             )}
           </div>
