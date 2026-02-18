@@ -59,6 +59,9 @@ interface FleetData {
   healthScore: number;
   totalPeers: number;
   mainnetHead: number;
+  apothemHead: number;
+  avgSyncPercent: number;
+  avgBlockHeight: number;
 }
 
 interface Node {
@@ -423,21 +426,27 @@ function NetworkHealthBanner({
         </div>
         
         {/* Stats Row */}
-        <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
           <StatBox label="Total Nodes" value={fleet.totalNodes} />
           <StatBox label="Healthy" value={fleet.healthyNodes} color="#10B981" />
           <StatBox label="Syncing" value={fleet.syncingNodes} color="#F59E0B" />
           <StatBox label="Offline" value={fleet.offlineNodes} color="#EF4444" />
           <StatBox label="Total Peers" value={fleet.totalPeers} />
           <StatBox 
-            label="Mainnet Block" 
+            label="Mainnet Tip" 
             value={fleet.mainnetHead > 0 ? fleet.mainnetHead.toLocaleString() : '—'} 
             isNumber={false}
           />
           <StatBox 
-            label="Masternodes" 
-            value={masternodeCount} 
-            icon=<Pickaxe className="w-3 h-3 text-[var(--warning)]" />
+            label="Apothem Tip" 
+            value={fleet.apothemHead > 0 ? fleet.apothemHead.toLocaleString() : '—'} 
+            isNumber={false}
+          />
+          <StatBox 
+            label="Avg Sync" 
+            value={`${fleet.avgSyncPercent.toFixed(1)}%`}
+            isNumber={false}
+            color={fleet.avgSyncPercent >= 90 ? '#10B981' : fleet.avgSyncPercent >= 50 ? '#F59E0B' : '#EF4444'}
           />
         </div>
       </div>
@@ -1449,7 +1458,10 @@ function HomeContent() {
           syncingNodes: countSyncing,
           healthScore: d.healthScore || 0,
           totalPeers: 0,
-          mainnetHead: d.maxBlockHeight || 0,
+          mainnetHead: d.networkHeights?.mainnet || d.maxBlockHeight || 0,
+          apothemHead: d.networkHeights?.apothem || 0,
+          avgSyncPercent: nodeArr.length > 0 ? nodeArr.reduce((s, n) => s + (n.syncPercent || 0), 0) / nodeArr.length : 0,
+          avgBlockHeight: d.avgBlockHeight || 0,
         });
         
         setNodes(nodeArr);
@@ -1528,6 +1540,39 @@ function HomeContent() {
       type, count, color: clientColors[type] || '#6B7280',
       percentage: globalFilteredNodes.length > 0 ? (count / globalFilteredNodes.length) * 100 : 0,
     }));
+  }, [globalFilteredNodes]);
+
+  // OS distribution
+  const osDistribution = useMemo(() => {
+    const osColors: Record<string, string> = {
+      'linux': '#F59E0B', 'darwin': '#64748B', 'windows': '#3B82F6', 'unknown': '#6B7280',
+    };
+    const osIcons: Record<string, string> = {
+      'linux': '🐧', 'darwin': '🍎', 'windows': '🪟', 'unknown': '❓',
+    };
+    const counts: Record<string, number> = {};
+    globalFilteredNodes.forEach(n => {
+      const os = (n.os_info?.type || 'unknown').toLowerCase();
+      counts[os] = (counts[os] || 0) + 1;
+    });
+    return Object.entries(counts).map(([type, count]) => ({
+      type, count, color: osColors[type] || '#6B7280', icon: osIcons[type] || '❓',
+      percentage: globalFilteredNodes.length > 0 ? (count / globalFilteredNodes.length) * 100 : 0,
+    }));
+  }, [globalFilteredNodes]);
+
+  // Version distribution (per client)
+  const versionDistribution = useMemo(() => {
+    const versions: Record<string, number> = {};
+    globalFilteredNodes.forEach(n => {
+      const ver = n.clientVersion || 'Unknown';
+      // Shorten version string
+      const short = ver.length > 30 ? ver.substring(0, 30) + '…' : ver;
+      versions[short] = (versions[short] || 0) + 1;
+    });
+    return Object.entries(versions)
+      .sort(([,a], [,b]) => b - a)
+      .map(([version, count]) => ({ version, count }));
   }, [globalFilteredNodes]);
 
   // Filter and sort nodes
@@ -1728,22 +1773,66 @@ function HomeContent() {
             />
           )}
 
-          {/* Client Distribution + Fleet by Network */}
+          {/* Client Distribution + OS Distribution + Fleet by Network */}
           {globalFilteredNodes.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-              <div className="card-xdc lg:col-span-1">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+              {/* Client Distribution */}
+              <div className="card-xdc">
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Client Distribution</h3>
                 <ClientDistributionChart data={clientDistribution} total={globalFilteredNodes.length} />
+                <div className="mt-4 space-y-2">
+                  {clientDistribution.map(cd => (
+                    <div key={cd.type} className="flex items-center gap-3">
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: cd.color }} />
+                      <span className="text-sm text-[var(--text-primary)] capitalize flex-1">{getClientDisplayName(cd.type, '')}</span>
+                      <span className="text-sm font-mono-nums text-[var(--text-tertiary)]">{cd.count}</span>
+                      <span className="text-sm font-mono-nums text-[var(--text-primary)]">{cd.percentage.toFixed(0)}%</span>
+                    </div>
+                  ))}
+                </div>
               </div>
+
+              {/* OS Distribution */}
+              <div className="card-xdc">
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">OS Distribution</h3>
+                <div className="space-y-3">
+                  {osDistribution.map(os => (
+                    <div key={os.type}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-[var(--text-primary)] flex items-center gap-2">
+                          <span>{os.icon}</span>
+                          <span className="capitalize">{os.type}</span>
+                        </span>
+                        <span className="text-sm font-mono-nums text-[var(--text-tertiary)]">{os.count} ({os.percentage.toFixed(0)}%)</span>
+                      </div>
+                      <div className="w-full h-2 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all" style={{ width: `${os.percentage}%`, backgroundColor: os.color }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Version breakdown */}
+                {versionDistribution.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-[var(--border-subtle)]">
+                    <span className="text-xs text-[var(--text-tertiary)] mb-2 block">Client Versions</span>
+                    {versionDistribution.slice(0, 5).map(v => (
+                      <div key={v.version} className="flex items-center justify-between py-1">
+                        <span className="text-xs text-[var(--text-secondary)] truncate flex-1 mr-2">{v.version}</span>
+                        <span className="text-xs font-mono-nums text-[var(--text-tertiary)]">{v.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Fleet by Network */}
               <div className="card-xdc lg:col-span-2">
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Fleet by Network</h3>
                 <div className="grid grid-cols-3 gap-3">
                   {['mainnet', 'apothem', 'devnet'].map(net => {
-                    // Count nodes for this network from the FULL nodes list (not filtered)
-                    // This shows actual counts per network regardless of current filter
                     const count = nodes.filter(n => (n as any).network === net || (net === 'mainnet' && !(n as any).network)).length;
-                    // Check if this network is currently selected
                     const isActive = networkFilter === net;
+                    const netHeight = net === 'mainnet' ? (fleet?.mainnetHead || 0) : net === 'apothem' ? (fleet?.apothemHead || 0) : 0;
                     return (
                       <div 
                         key={net} 
@@ -1752,19 +1841,38 @@ function HomeContent() {
                       >
                         <div className={`text-xl font-bold font-mono-nums ${isActive ? 'text-[var(--accent-blue)]' : 'text-[var(--text-primary)]'}`}>{count}</div>
                         <div className="text-xs text-[var(--text-tertiary)] capitalize">{net}</div>
+                        {netHeight > 0 && (
+                          <div className="text-[10px] font-mono-nums text-[var(--text-tertiary)] mt-1">
+                            #{netHeight.toLocaleString()}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
-                <div className="mt-4 space-y-2">
-                  {clientDistribution.map(cd => (
-                    <div key={cd.type} className="flex items-center gap-3">
-                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: cd.color }} />
-                      <span className="text-sm text-[var(--text-primary)] capitalize flex-1">{cd.type}</span>
-                      <span className="text-sm font-mono-nums text-[var(--text-tertiary)]">{cd.count} node{cd.count !== 1 ? 's' : ''}</span>
-                      <span className="text-sm font-mono-nums text-[var(--text-primary)]">{cd.percentage.toFixed(0)}%</span>
-                    </div>
-                  ))}
+                {/* Per-network sync summary */}
+                <div className="mt-4 space-y-3">
+                  {['mainnet', 'apothem'].map(net => {
+                    const netNodes = globalFilteredNodes.filter(n => (n as any).network === net || (net === 'mainnet' && !(n as any).network));
+                    if (netNodes.length === 0) return null;
+                    const avgSync = netNodes.reduce((s, n) => s + (n.syncPercent || 0), 0) / netNodes.length;
+                    const syncColor = avgSync >= 90 ? '#10B981' : avgSync >= 50 ? '#F59E0B' : '#EF4444';
+                    return (
+                      <div key={net} className="p-3 rounded-lg bg-[var(--bg-hover)]">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm text-[var(--text-primary)] capitalize font-medium">{net}</span>
+                          <span className="text-sm font-mono-nums font-medium" style={{ color: syncColor }}>{avgSync.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
+                          <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, avgSync)}%`, backgroundColor: syncColor }} />
+                        </div>
+                        <div className="flex justify-between mt-1 text-[10px] text-[var(--text-tertiary)]">
+                          <span>{netNodes.length} node{netNodes.length !== 1 ? 's' : ''}</span>
+                          <span>{netNodes.filter(n => n.status === 'healthy').length} healthy</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
