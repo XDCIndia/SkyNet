@@ -1792,25 +1792,13 @@ function HomeContent() {
                 </div>
               </div>
 
-              {/* OS Distribution */}
+              {/* OS Distribution - same donut chart style */}
               <div className="card-xdc">
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">OS Distribution</h3>
-                <div className="space-y-3">
-                  {osDistribution.map(os => (
-                    <div key={os.type}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-[var(--text-primary)] flex items-center gap-2">
-                          <span>{os.icon}</span>
-                          <span className="capitalize">{os.type}</span>
-                        </span>
-                        <span className="text-sm font-mono-nums text-[var(--text-tertiary)]">{os.count} ({os.percentage.toFixed(0)}%)</span>
-                      </div>
-                      <div className="w-full h-2 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all" style={{ width: `${os.percentage}%`, backgroundColor: os.color }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <ClientDistributionChart 
+                  data={osDistribution.map(os => ({ type: os.type, count: os.count, color: os.color, icon: os.icon }))} 
+                  total={globalFilteredNodes.length} 
+                />
                 {/* Version breakdown */}
                 {versionDistribution.length > 0 && (
                   <div className="mt-4 pt-3 border-t border-[var(--border-subtle)]">
