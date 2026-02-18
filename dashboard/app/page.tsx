@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import ClientDistributionChart from '@/components/ClientDistributionChart';
 import NetworkFilter from '@/components/NetworkFilter';
@@ -1295,7 +1296,7 @@ function LoadingState() {
   );
 }
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [fleet, setFleet] = useState<FleetData | null>(null);
@@ -1846,5 +1847,13 @@ export default function Home() {
         </div>
       )}
     </DashboardLayout>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',background:'#0A0E1A',color:'#fff'}}>Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
