@@ -200,7 +200,7 @@ function getClientDisplayName(clientType?: string, clientVersion?: string): stri
   
   // Check if geth with XDC Client version (v2.6.x or XDC/v2.x)
   if (ct === 'geth' && (version.includes('v2.6.') || version.includes('xdc/v2.'))) {
-    return 'XDC Client';
+    return 'XDC';
   }
   
   // Otherwise return normal client type
@@ -688,7 +688,11 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
                 {node.syncPercent.toFixed(2)}%
               </span>
               {node.syncPercent < 100 && (
-                <div className="text-xs text-[var(--text-tertiary)] mt-0.5">
+                <div className={`text-xs mt-0.5 ${
+                  node.syncPercent >= 99.9 ? 'text-[var(--success)]' :
+                  node.syncPercent >= 95 ? 'text-[var(--warning)]' :
+                  'text-[var(--critical)]'
+                }`}>
                   Behind: {(100 - node.syncPercent).toFixed(2)}%
                 </div>
               )}

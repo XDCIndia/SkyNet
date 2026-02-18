@@ -190,7 +190,7 @@ export default function NodesPageContent() {
     
     // Check if geth with XDC Client version (v2.6.x or XDC/v2.x)
     if (ct === 'geth' && (version.includes('v2.6.') || version.includes('xdc/v2.'))) {
-      return 'XDC Client';
+      return 'XDC';
     }
     
     // Otherwise return normal client type
@@ -474,7 +474,11 @@ export default function NodesPageContent() {
                     />
                   </div>
                   {node.syncPercent < 100 && (
-                    <div className="text-xs text-[#6B7280] mt-1">
+                    <div className={`text-xs mt-1 ${
+                      node.syncPercent >= 99.9 ? 'text-green-400' :
+                      node.syncPercent >= 95 ? 'text-yellow-400' :
+                      'text-red-400'
+                    }`}>
                       Behind: {(100 - node.syncPercent).toFixed(2)}%
                     </div>
                   )}
