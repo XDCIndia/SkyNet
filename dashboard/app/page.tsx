@@ -667,9 +667,9 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
             <span className="text-sm font-mono-nums font-medium">
               {node.blockHeight > 0 ? node.blockHeight.toLocaleString() : '—'}
             </span>
-            {node.blocksBehind > 0 && (
-              <span className="text-xs text-[var(--warning)] ml-2">
-                -{node.blocksBehind}
+            {node.networkHeight && node.networkHeight > 0 && (
+              <span className="text-xs text-[var(--text-tertiary)] ml-1">
+                / {node.networkHeight.toLocaleString()}
               </span>
             )}
           </div>

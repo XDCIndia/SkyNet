@@ -161,14 +161,55 @@ async function getHandler(request: NextRequest) {
       return val.slice(0, 2) + '*'.repeat(val.length - 4) + val.slice(-2);
     };
 
-    // Get network height for accurate sync percent
+    // Fetch actual chain tip from public RPCs for each network
+    const networkHeights: Record<string, number> = {};
+    const rpcEndpoints: Record<string, string[]> = {
+      mainnet: ['https://rpc.xinfin.network', 'https://erpc.xinfin.network'],
+      apothem: ['https://rpc.apothem.network', 'https://erpc.apothem.network'],
+    };
+
+    for (const [network, rpcs] of Object.entries(rpcEndpoints)) {
+      for (const rpc of rpcs) {
+        try {
+          const resp = await fetch(rpc, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', id: 1 }),
+            signal: AbortSignal.timeout(3000),
+          });
+          const json = await resp.json();
+          if (json.result) {
+            networkHeights[network] = parseInt(json.result, 16);
+            break; // Got it, skip fallback RPC
+          }
+        } catch { /* try next RPC */ }
+      }
+    }
+
+    // Fallback: use fleet max per network if RPC failed
+    const fleetMaxByNetwork: Record<string, number> = {};
+    for (const n of nodeStatusRows) {
+      const net = (n.network || 'mainnet').toLowerCase();
+      const block = Number(n.block_height) || 0;
+      fleetMaxByNetwork[net] = Math.max(fleetMaxByNetwork[net] || 0, block);
+    }
+
+    // Use RPC height if available, otherwise fleet max
+    const getNetworkHeight = (network: string): number => {
+      const net = network.toLowerCase();
+      return networkHeights[net] || fleetMaxByNetwork[net] || 1;
+    };
+
+    // Legacy: fleet-wide max for backward compat
     const maxBlock = Math.max(...nodeStatusRows.map((n: any) => Number(n.block_height) || 0), 1);
 
     // Build node list for frontend
     const nodeList = nodeStatusRows.map((n: any) => {
       const nodeBlock = Number(n.block_height) || 0;
-      const accurateSync = maxBlock > 0
-        ? Math.min(100, Math.round((nodeBlock / maxBlock) * 10000) / 100)
+      const nodeNetwork = (n.network || 'mainnet').toLowerCase();
+      const netHeight = getNetworkHeight(nodeNetwork);
+      const accurateSync = netHeight > 0
+        ? Math.min(100, Math.round((nodeBlock / netHeight) * 10000) / 100)
         : n.sync_percent ?? 0;
       return {
       id: n.id,
@@ -179,7 +220,7 @@ async function getHandler(request: NextRequest) {
       createdAt: n.created_at,
       status: n.status,
       blockHeight: nodeBlock,
-      networkHeight: maxBlock,
+      networkHeight: netHeight,
       syncPercent: accurateSync,
       peerCount: n.peer_count ?? 0,
       cpuPercent: n.cpu_percent ?? 0,
@@ -220,6 +261,10 @@ async function getHandler(request: NextRequest) {
       nakamotoCoefficient: health?.nakamoto_coefficient || 0,
       avgSyncPercent: health?.avg_sync_percent || 0,
       avgRpcLatencyMs: health?.avg_rpc_latency_ms || 0,
+      networkHeights: {
+        mainnet: networkHeights['mainnet'] || fleetMaxByNetwork['mainnet'] || 0,
+        apothem: networkHeights['apothem'] || fleetMaxByNetwork['apothem'] || 0,
+      },
       lastUpdated: health?.collected_at || new Date().toISOString(),
     };
   }, CACHE_TTLS.health);
