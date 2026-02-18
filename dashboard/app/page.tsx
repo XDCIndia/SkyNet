@@ -1822,22 +1822,6 @@ function HomeContent() {
                   total={globalFilteredNodes.length}
                   variant="3d-donut"
                 />
-                <div className="mt-4 space-y-2">
-                  {clientDistribution.map(cd => (
-                    <div key={cd.type} className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors">
-                      <span 
-                        className="w-4 h-4 rounded-full shadow-lg" 
-                        style={{ 
-                          backgroundColor: cd.color,
-                          boxShadow: `0 0 10px ${cd.color}60`
-                        }} 
-                      />
-                      <span className="text-sm text-[var(--text-primary)] capitalize flex-1 font-medium">{getClientDisplayName(cd.type, '')}</span>
-                      <span className="text-sm font-mono-nums text-[var(--text-tertiary)] bg-[var(--bg-hover)] px-2 py-0.5 rounded">{cd.count}</span>
-                      <span className="text-sm font-mono-nums text-[var(--text-primary)] font-semibold min-w-[40px] text-right">{cd.percentage.toFixed(0)}%</span>
-                    </div>
-                  ))}
-                </div>
               </div>
 
               {/* OS Distribution with 3D styling */}
@@ -1851,17 +1835,6 @@ function HomeContent() {
                   total={globalFilteredNodes.length}
                   variant="3d-donut"
                 />
-                {/* OS Details breakdown */}
-                <div className="mt-4 space-y-2">
-                  {osDistribution.map(os => (
-                    <div key={os.type} className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors">
-                      <span className="text-lg">{os.icon}</span>
-                      <span className="text-sm text-[var(--text-primary)] capitalize flex-1 font-medium">{os.type}</span>
-                      <span className="text-sm font-mono-nums text-[var(--text-tertiary)] bg-[var(--bg-hover)] px-2 py-0.5 rounded">{os.count}</span>
-                      <span className="text-sm font-mono-nums text-[var(--text-primary)] font-semibold min-w-[40px] text-right">{os.percentage.toFixed(0)}%</span>
-                    </div>
-                  ))}
-                </div>
               </div>
 
               {/* Fleet by Network with 3D bar chart style */}
