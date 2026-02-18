@@ -972,7 +972,7 @@ function TableRow({
             {node.blockHeight > 0 ? node.blockHeight.toLocaleString() : '—'}
           </span>
           {node.syncPercent < 100 && node.networkHeight && (
-            <span className={`text-[11px] font-mono-nums ${
+            <span className={`text-[12px] font-mono-nums ${
               node.syncPercent >= 99 ? 'text-[var(--success)]' : 
               node.syncPercent >= 95 ? 'text-[var(--warning)]' : 
               'text-[var(--critical)]'
@@ -981,14 +981,14 @@ function TableRow({
             </span>
           )}
           {node.blockDiff !== undefined && node.blockDiff > 0 && (
-            <span className="text-[11px] text-[var(--success)]">
+            <span className="text-[12px] text-[var(--success)]">
               ↑{node.blockDiff.toLocaleString()}
             </span>
           )}
           {node.stallHours && node.stallHours > 0 && (
             <div className="flex items-center gap-1 mt-0.5" title={`Stuck at block ${node.stalledAtBlock?.toLocaleString()}`}>
               <Clock className="h-3 w-3 text-[var(--warning)]" />
-              <span className="text-[11px] text-[var(--warning)]">{node.stallHours.toFixed(1)}h</span>
+              <span className="text-[12px] text-[var(--warning)]">{node.stallHours.toFixed(1)}h</span>
             </div>
           )}
         </div>
@@ -1001,7 +1001,7 @@ function TableRow({
             {node.blocksBehind || 0}
           </span>
           {node.blocksBehind > 0 && node.networkHeight && (
-            <span className="text-[11px] text-[var(--text-tertiary)]">
+            <span className="text-[12px] text-[var(--text-tertiary)]">
               {((node.blockHeight / node.networkHeight) * 100).toFixed(1)}%
             </span>
           )}
@@ -1015,7 +1015,7 @@ function TableRow({
             {node.peakBlock ? node.peakBlock.toLocaleString() : '—'}
           </span>
           {node.peakBlock && node.peakBlock > node.blockHeight && (
-            <span className="text-[11px] text-[var(--warning)]" title="Node regressed from peak - possible roadblock">
+            <span className="text-[12px] text-[var(--warning)]" title="Node regressed from peak - possible roadblock">
               ⚠ was higher
             </span>
           )}
@@ -1915,7 +1915,7 @@ function HomeContent() {
                         <div className={`text-2xl font-bold font-mono-nums ${isActive ? 'text-[var(--accent-blue)]' : 'text-[var(--text-primary)]'}`}>{count}</div>
                         <div className="text-xs text-[var(--text-tertiary)] capitalize font-medium">{net}</div>
                         {netHeight > 0 && (
-                          <div className="text-[10px] font-mono-nums text-[var(--text-tertiary)] mt-1">
+                          <div className="text-[12px] font-mono-nums text-[var(--text-tertiary)] mt-1">
                             #{netHeight.toLocaleString()}
                           </div>
                         )}
@@ -1939,7 +1939,7 @@ function HomeContent() {
                         <div className="w-full h-1.5 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
                           <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, avgSync)}%`, backgroundColor: syncColor }} />
                         </div>
-                        <div className="flex justify-between mt-1 text-[10px] text-[var(--text-tertiary)]">
+                        <div className="flex justify-between mt-1 text-[12px] text-[var(--text-tertiary)]">
                           <span>{netNodes.length} node{netNodes.length !== 1 ? 's' : ''}</span>
                           <span>{netNodes.filter(n => n.status === 'healthy').length} healthy</span>
                         </div>
