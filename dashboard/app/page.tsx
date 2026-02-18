@@ -667,10 +667,10 @@ function NodeCard({ node, onClick }: { node: Node; onClick: () => void }) {
       </div>
       
       {/* IPv4 Display */}
-      {node.ipv4 && (
+      {(node.ipv4 || node.host) && (
         <div className="mb-2 flex items-center gap-1.5">
           <Globe className="w-3 h-3 text-[var(--text-tertiary)]" />
-          <span className="text-xs font-mono text-[var(--accent-blue)]">{node.ipv4}</span>
+          <span className="text-xs font-mono text-[var(--accent-blue)]">{node.ipv4 || node.host}</span>
         </div>
       )}
       
@@ -935,7 +935,7 @@ function TableRow({
       
       {/* IPv4 */}
       <td className="py-2 px-3">
-        <span className="text-xs font-mono text-[var(--accent-blue)]">{node.ipv4 || '—'}</span>
+        <span className="text-xs font-mono text-[var(--accent-blue)]">{node.ipv4 || node.host || '—'}</span>
       </td>
       
       {/* Type */}

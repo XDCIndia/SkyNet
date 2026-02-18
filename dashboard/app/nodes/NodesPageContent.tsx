@@ -75,7 +75,7 @@ export default function NodesPageContent() {
         cpuPercent: node.cpuPercent ?? 0,
         memoryPercent: node.memoryPercent ?? 0,
         diskPercent: node.diskPercent ?? 0,
-        ipv4: node.ipv4 || undefined,
+        ipv4: node.ipv4 || node.host || undefined,
         ipv6: node.ipv6 || undefined,
         networkHeight: node.networkHeight || undefined,
         prevBlock: node.prevBlock || undefined,
