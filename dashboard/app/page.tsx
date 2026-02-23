@@ -1584,7 +1584,10 @@ function HomeContent() {
   // Client distribution for donut chart
   const clientDistribution = useMemo(() => {
     const clientColors: Record<string, string> = {
-      geth: '#1E90FF', nethermind: '#10B981', erigon: '#F59E0B', unknown: '#6B7280',
+      geth: '#1E90FF', 'geth-pr5': '#1E90FF', nethermind: '#10B981', erigon: '#F59E0B', xdc: '#1E90FF', unknown: '#6B7280',
+    };
+    const clientDisplayNames: Record<string, string> = {
+      geth: 'geth', 'geth-pr5': 'geth', nethermind: 'NM', erigon: 'Erigon', xdc: 'XDC', unknown: 'Unknown',
     };
     const counts: Record<string, number> = {};
     globalFilteredNodes.forEach(n => {
@@ -1592,7 +1595,7 @@ function HomeContent() {
       counts[ct] = (counts[ct] || 0) + 1;
     });
     return Object.entries(counts).map(([type, count]) => ({
-      type, count, color: clientColors[type] || '#6B7280',
+      type: clientDisplayNames[type] || type, count, color: clientColors[type] || '#6B7280',
       percentage: globalFilteredNodes.length > 0 ? (count / globalFilteredNodes.length) * 100 : 0,
     }));
   }, [globalFilteredNodes]);

@@ -103,14 +103,18 @@ export default function NodesPageContent() {
       });
       
       const clientColors: Record<string, string> = {
-        geth: '#1E90FF',
+        geth: '#1E90FF', 'geth-pr5': '#1E90FF',
         nethermind: '#10B981',
         erigon: '#F59E0B',
+        xdc: '#1E90FF',
         unknown: '#6B7280',
+      };
+      const clientDisplayNames: Record<string, string> = {
+        geth: 'geth', 'geth-pr5': 'geth', nethermind: 'NM', erigon: 'Erigon', xdc: 'XDC', unknown: 'Unknown',
       };
       
       const clientDistribution = Object.entries(clientCounts).map(([type, count]) => ({
-        type,
+        type: clientDisplayNames[type] || type,
         count,
         color: clientColors[type] || '#6B7280',
         percentage: (count / mappedNodes.length) * 100,

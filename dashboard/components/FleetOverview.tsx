@@ -191,7 +191,7 @@ function ClientBadge({ clientType }: { clientType?: string }) {
       bg: 'bg-blue-500/15', 
       text: 'text-blue-400',
       icon: '🔷',
-      label: 'Geth'
+      label: 'geth'
     },
     erigon: { 
       bg: 'bg-orange-500/15', 
@@ -203,15 +203,15 @@ function ClientBadge({ clientType }: { clientType?: string }) {
       bg: 'bg-green-500/15', 
       text: 'text-green-400',
       icon: '🟢',
-      label: 'Geth PR5'
+      label: 'geth'
     },
     nethermind: { 
       bg: 'bg-purple-500/15', 
       text: 'text-purple-400',
       icon: '🟣',
-      label: 'Nethermind'
+      label: 'NM'
     },
-    XDC: { 
+    xdc: { 
       bg: 'bg-[#1E90FF]/15', 
       text: 'text-[#1E90FF]',
       icon: '⚡',

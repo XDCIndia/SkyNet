@@ -9,9 +9,19 @@ const CLIENT_COLORS: Record<string, string> = {
   geth: '#2563EB',      // Blue
   erigon: '#EA580C',    // Orange
   nethermind: '#7C3AED', // Purple
-  'geth-pr5': '#10B981', // Green
-  XDC: '#1E90FF',       // Light blue
+  'geth-pr5': '#2563EB', // Blue (same as geth)
+  xdc: '#1E90FF',       // Light blue
   unknown: '#6B7280',   // Gray
+};
+
+// Client display names
+const CLIENT_DISPLAY_NAMES: Record<string, string> = {
+  geth: 'geth',
+  erigon: 'Erigon',
+  nethermind: 'NM',
+  'geth-pr5': 'geth',
+  xdc: 'XDC',
+  unknown: 'Unknown',
 };
 
 // Client icons
@@ -19,8 +29,8 @@ const CLIENT_ICONS: Record<string, string> = {
   geth: '🔷',
   erigon: '🔶',
   nethermind: '🟣',
-  'geth-pr5': '🟢',
-  XDC: '⚡',
+  'geth-pr5': '🔷',
+  xdc: '⚡',
   unknown: '⚪',
 };
 
@@ -140,7 +150,7 @@ async function getHandler(request: NextRequest) {
     // Build client distribution with colors
     const clientDistribution = Object.entries(clientCounts)
       .map(([type, count]) => ({
-        type,
+        type: CLIENT_DISPLAY_NAMES[type] || type,
         count,
         color: CLIENT_COLORS[type] || CLIENT_COLORS.unknown,
         icon: CLIENT_ICONS[type] || CLIENT_ICONS.unknown,
