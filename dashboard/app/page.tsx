@@ -6,6 +6,7 @@ import { Suspense } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import ClientDistributionChart from '@/components/ClientDistributionChart';
 import NetworkFilter from '@/components/NetworkFilter';
+import IncidentsPanel from '@/components/IncidentsPanel';
 import { 
   Server, 
   Activity, 
@@ -1957,6 +1958,11 @@ function HomeContent() {
           {incidents.length > 0 && (
             <IncidentsStrip incidents={incidents} />
           )}
+
+          {/* SkyNet AI Incidents Intelligence Panel */}
+          <div className="mb-6">
+            <IncidentsPanel refreshInterval={30000} />
+          </div>
 
           <div className="mb-6">
             {/* Header Row */}
