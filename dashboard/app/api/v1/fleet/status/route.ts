@@ -203,10 +203,19 @@ async function getHandler(request: NextRequest) {
     };
 
     // Fetch actual chain tip from public RPCs for each network
+    // OpenScan RPCs are primary (faster/more reliable), XinFin RPCs are fallback
     const networkHeights: Record<string, number> = {};
     const rpcEndpoints: Record<string, string[]> = {
-      mainnet: ['https://rpc.xinfin.network', 'https://erpc.xinfin.network'],
-      apothem: ['https://rpc.apothem.network', 'https://erpc.apothem.network'],
+      mainnet: [
+        'https://rpc.openscan.ai/50',    // OpenScan - Primary
+        'https://rpc.xinfin.network',     // XinFin - Fallback
+        'https://erpc.xinfin.network'     // XinFin Extended - Fallback
+      ],
+      apothem: [
+        'https://rpc.openscan.ai/51',    // OpenScan - Primary
+        'https://rpc.apothem.network',    // XinFin - Fallback
+        'https://erpc.apothem.network'    // XinFin Extended - Fallback
+      ],
     };
 
     for (const [network, rpcs] of Object.entries(rpcEndpoints)) {

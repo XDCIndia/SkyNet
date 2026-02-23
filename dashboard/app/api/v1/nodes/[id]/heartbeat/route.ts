@@ -21,7 +21,11 @@ export async function POST(
       chainId,
       enode,
       coinbase,
-      fingerprint
+      fingerprint,
+      os,
+      system,
+      security,
+      storageType
     } = body;
 
     // Normalize clientType from version string if needed
@@ -64,6 +68,7 @@ export async function POST(
 
     // Update node's last_seen and network info (Issue #68)
     // Also update coinbase and fingerprint if provided (Issue #71)
+    // Extended data: os, system resources, security, storage (Task 2)
     await query(
       `UPDATE skynet.nodes 
        SET last_seen = NOW(), 
@@ -73,9 +78,43 @@ export async function POST(
            network = COALESCE($4, network),
            chain_id = COALESCE($5, chain_id),
            coinbase = COALESCE($6, coinbase),
-           fingerprint = COALESCE($7, fingerprint)
+           fingerprint = COALESCE($7, fingerprint),
+           os_info = COALESCE($8, os_info),
+           os_type = COALESCE($9, os_type),
+           os_release = COALESCE($10, os_release),
+           os_arch = COALESCE($11, os_arch),
+           kernel_version = COALESCE($12, kernel_version),
+           cpu_percent = COALESCE($13, cpu_percent),
+           memory_percent = COALESCE($14, memory_percent),
+           disk_percent = COALESCE($15, disk_percent),
+           disk_used_gb = COALESCE($16, disk_used_gb),
+           disk_total_gb = COALESCE($17, disk_total_gb),
+           storage_type = COALESCE($18, storage_type),
+           security_score = COALESCE($19, security_score),
+           security_issues = COALESCE($20, security_issues)
        WHERE id = $1`,
-      [nodeId, clientType || null, version || null, network || null, chainId ?? null, coinbase || null, fingerprint || null]
+      [
+        nodeId, 
+        clientType || null, 
+        version || null, 
+        network || null, 
+        chainId ?? null, 
+        coinbase || null, 
+        fingerprint || null,
+        os ? JSON.stringify(os) : null,
+        os?.type || null,
+        os?.release || null,
+        os?.arch || null,
+        os?.kernel || null,
+        system?.cpuPercent ?? null,
+        system?.memoryPercent ?? null,
+        system?.diskPercent ?? null,
+        system?.diskUsedGb ?? null,
+        system?.diskTotalGb ?? null,
+        storageType || null,
+        security?.score ?? null,
+        security?.issues ? JSON.stringify(security.issues) : null
+      ]
     );
 
     // Update enode if provided
