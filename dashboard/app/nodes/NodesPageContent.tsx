@@ -12,6 +12,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   Clock,
+  Cpu,
+  HardDrive,
+  MemoryStick,
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import ClientDistributionChart from '@/components/ClientDistributionChart';
@@ -80,6 +83,8 @@ export default function NodesPageContent() {
         networkHeight: node.networkHeight || undefined,
         prevBlock: node.prevBlock || undefined,
         blockDiff: node.blockDiff || undefined,
+        os: node.os || node.os_type,
+        osType: node.osType || node.os_type,
       }));
       
       setNodes(mappedNodes);
@@ -210,6 +215,22 @@ export default function NodesPageContent() {
       default:
         return 'bg-[rgba(107,114,128,0.15)] text-[#6B7280]';
     }
+  };
+
+  // Get resource usage color (green <50%, yellow 50-80%, red >80%)
+  const getResourceColor = (value: number): string => {
+    if (value < 50) return '#10B981';
+    if (value < 80) return '#F59E0B';
+    return '#EF4444';
+  };
+
+  // Get OS icon based on OS type
+  const getOSIcon = (osType?: string): string => {
+    if (!osType) return '🐧';
+    const os = osType.toLowerCase();
+    if (os.includes('darwin') || os.includes('mac')) return '🍎';
+    if (os.includes('win')) return '🪟';
+    return '🐧'; // Default to Linux
   };
 
   // Format time ago
@@ -431,8 +452,8 @@ export default function NodesPageContent() {
                   </div>
                 )}
 
-                {/* Client Badge */}
-                <div className="mb-3">
+                {/* Client Badge + OS Icon */}
+                <div className="flex items-center justify-between mb-3">
                   <span
                     className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getClientColor(
                       node.clientType
@@ -440,8 +461,8 @@ export default function NodesPageContent() {
                   >
                     {getClientDisplayName(node.clientType, node.clientVersion)}
                   </span>
-                  <span className="ml-2 text-xs text-[#6B7280]">
-                    {node.clientVersion.split('/')[1]?.split('-')[0] || node.clientVersion}
+                  <span className="text-lg" title={node.osType || 'Linux'}>
+                    {getOSIcon(node.osType)}
                   </span>
                 </div>
 
@@ -482,6 +503,68 @@ export default function NodesPageContent() {
                       Behind: {(100 - node.syncPercent).toFixed(2)}%
                     </div>
                   )}
+                </div>
+
+                {/* Compact Resource Display */}
+                <div className="mb-3 p-2 rounded-lg bg-[rgba(255,255,255,0.03)]">
+                  <div className="flex items-center gap-3">
+                    {/* CPU */}
+                    <div className="flex-1" title={`CPU: ${node.cpuPercent.toFixed(1)}%`}>
+                      <div className="flex items-center justify-between text-[10px] mb-0.5">
+                        <Cpu className="w-3 h-3 text-[#6B7280]" />
+                        <span style={{ color: getResourceColor(node.cpuPercent) }}>
+                          {node.cpuPercent.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ 
+                            width: `${Math.min(node.cpuPercent, 100)}%`,
+                            backgroundColor: getResourceColor(node.cpuPercent)
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Memory */}
+                    <div className="flex-1" title={`Memory: ${node.memoryPercent.toFixed(1)}%`}>
+                      <div className="flex items-center justify-between text-[10px] mb-0.5">
+                        <MemoryStick className="w-3 h-3 text-[#6B7280]" />
+                        <span style={{ color: getResourceColor(node.memoryPercent) }}>
+                          {node.memoryPercent.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ 
+                            width: `${Math.min(node.memoryPercent, 100)}%`,
+                            backgroundColor: getResourceColor(node.memoryPercent)
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Disk */}
+                    <div className="flex-1" title={`Disk: ${node.diskPercent.toFixed(1)}%`}>
+                      <div className="flex items-center justify-between text-[10px] mb-0.5">
+                        <HardDrive className="w-3 h-3 text-[#6B7280]" />
+                        <span style={{ color: getResourceColor(node.diskPercent) }}>
+                          {node.diskPercent.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ 
+                            width: `${Math.min(node.diskPercent, 100)}%`,
+                            backgroundColor: getResourceColor(node.diskPercent)
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Block Diff */}

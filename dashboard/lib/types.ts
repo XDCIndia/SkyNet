@@ -128,6 +128,8 @@ export interface SkyNetNode {
   networkHeight?: number;
   prevBlock?: number;
   blockDiff?: number;
+  os?: string;
+  osType?: string;
 }
 
 export interface ClientDistributionItem {

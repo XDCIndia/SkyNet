@@ -5,7 +5,7 @@ import { createErrorResponse, withErrorHandling } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
-// Public registration schema (no auth required)
+// Public registration schema (no auth required) with smart naming support
 const PublicRegistrationSchema = z.object({
   name: z.string().min(3).max(100).regex(/^[a-zA-Z0-9._-]+$/),
   host: z.string().min(1).max(255),
@@ -15,6 +15,10 @@ const PublicRegistrationSchema = z.object({
   telegram: z.string().max(100).optional().or(z.literal('')),
   locationCity: z.string().max(100).optional(),
   locationCountry: z.string().max(5).optional(),
+  // Smart naming fields
+  client: z.enum(['geth', 'erigon', 'gp5', 'nethermind', 'XDC', 'unknown']).optional(),
+  clientVersion: z.string().max(100).optional(),
+  network: z.enum(['mainnet', 'apothem', 'devnet']).optional().default('mainnet'),
 });
 
 // Generate a secure API key
@@ -28,10 +32,38 @@ function generateSecureApiKey(): string {
   return result;
 }
 
+// Parse smart node name to extract components
+// Format: {client}-{version}-{type}-{ip}-{network}
+function parseSmartNodeName(name: string): {
+  clientType: string;
+  version: string;
+  nodeType: string;
+  ip: string;
+  network: string;
+} | null {
+  const parts = name.split('-');
+  if (parts.length < 5) return null;
+  
+  // Last part is network
+  const network = parts[parts.length - 1];
+  // Second to last is IP (with dashes instead of dots)
+  const ip = parts[parts.length - 2].replace(/-/g, '.');
+  // Third from last is node type
+  const nodeType = parts[parts.length - 3];
+  // Version is typically second part (starts with v)
+  const versionPart = parts.find(p => p.startsWith('v') && /v?\d/.test(p));
+  const version = versionPart || 'unknown';
+  // Client is first part
+  const clientType = parts[0];
+  
+  return { clientType, version, nodeType, ip, network };
+}
+
 /**
  * POST /api/v1/nodes/register
  * Public node registration endpoint
  * No authentication required
+ * Supports smart node naming format: {client}-{version}-{type}-{ip}-{network}
  */
 async function postHandler(request: NextRequest) {
   const body = await request.json();
@@ -51,6 +83,9 @@ async function postHandler(request: NextRequest) {
 
   const data = validation.data;
   const apiKey = generateSecureApiKey();
+  
+  // Parse smart node name for metadata
+  const smartNameInfo = parseSmartNodeName(data.name);
   
   try {
     const result = await withTransaction(async (client) => {
@@ -72,8 +107,11 @@ async function postHandler(request: NextRequest) {
           `UPDATE skynet.nodes 
            SET name = $1, host = $2, role = $3, location_city = $4, location_country = $5,
                is_active = true, email = COALESCE(NULLIF($6, ''), email),
-               telegram = COALESCE(NULLIF($7, ''), telegram), updated_at = NOW()
-           WHERE id = $8
+               telegram = COALESCE(NULLIF($7, ''), telegram), updated_at = NOW(),
+               client_type = COALESCE($8, client_type),
+               client_version = COALESCE($9, client_version),
+               network = COALESCE($10, network)
+           WHERE id = $11
            RETURNING id, name, host, role, created_at`,
           [
             data.name,
@@ -83,16 +121,20 @@ async function postHandler(request: NextRequest) {
             data.locationCountry || null,
             data.email || null,
             data.telegram || null,
+            smartNameInfo?.clientType || data.client || null,
+            smartNameInfo?.version || data.clientVersion || null,
+            smartNameInfo?.network || data.network || 'mainnet',
             existingId,
           ]
         );
         node = updateResult.rows[0];
       } else {
-        // Insert new node
+        // Insert new node with smart name metadata
         const nodeResult = await client.query(
           `INSERT INTO skynet.nodes 
-           (name, host, role, location_city, location_country, tags, is_active, email, telegram)
-           VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8)
+           (name, host, role, location_city, location_country, tags, is_active, email, telegram,
+            client_type, client_version, network)
+           VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8, $9, $10, $11)
            RETURNING id, name, host, role, created_at`,
           [
             data.name,
@@ -100,9 +142,12 @@ async function postHandler(request: NextRequest) {
             data.role,
             data.locationCity || null,
             data.locationCountry || null,
-            [`registered_by:${data.email || 'unknown'}`],
+            [`registered_by:${data.email || 'unknown'}`, `smart-name:${data.name}`],
             data.email || null,
             data.telegram || null,
+            smartNameInfo?.clientType || data.client || 'unknown',
+            smartNameInfo?.version || data.clientVersion || null,
+            smartNameInfo?.network || data.network || 'mainnet',
           ]
         );
         node = nodeResult.rows[0];
@@ -121,16 +166,19 @@ async function postHandler(request: NextRequest) {
           apiKey, 
           node.id, 
           `${data.name} auto-generated key`, 
-          ['heartbeat', 'metrics', 'notifications']
+          ['heartbeat', 'metrics', 'notifications', 'errors']
         ]
       );
 
       // Log registration
-      logger.info('Node registered via public form', { 
+      logger.info('Node registered via public form with smart name', { 
         nodeId: node.id, 
         name: data.name, 
         role: data.role,
-        email: data.email 
+        email: data.email,
+        smartNameParsed: smartNameInfo,
+        clientType: smartNameInfo?.clientType || data.client,
+        network: smartNameInfo?.network || data.network,
       });
 
       return {
@@ -198,7 +246,17 @@ export async function GET() {
       email: 'string (valid email for notifications)',
       locationCity: 'string (optional)',
       locationCountry: 'string (optional, ISO code)',
+      client: 'enum: geth, erigon, gp5, nethermind, XDC, unknown (optional)',
+      clientVersion: 'string (optional, client version)',
+      network: 'enum: mainnet, apothem, devnet (optional)',
     },
+    smartNameFormat: '{client}-{version}-{type}-{ip}-{network}',
+    smartNameExamples: [
+      'geth-v2.6.8-fullnode-65.21.27.213-mainnet',
+      'gp5-v1.17.0-fullnode-95.217.56.168-mainnet',
+      'erigon-v3.4.0-fullnode-65.21.27.213-mainnet',
+      'nethermind-v1.30-fullnode-65.21.71.4-apothem',
+    ],
     roles: [
       { value: 'masternode', label: 'Masternode', description: 'Block producer node with validator responsibilities' },
       { value: 'fullnode', label: 'Full Node', description: 'Full blockchain sync, no mining' },

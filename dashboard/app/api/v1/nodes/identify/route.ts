@@ -4,14 +4,17 @@ import { createErrorResponse, withErrorHandling } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
-// Node identity schema
+// Node identity schema with smart naming support
 const NodeIdentitySchema = z.object({
   fingerprint: z.string().min(1).max(100),
   coinbase: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
   ip: z.string().ip().optional(),
-  clientType: z.enum(['geth', 'erigon', 'geth-pr5', 'nethermind', 'XDC', 'unknown']).optional().default('unknown'),
+  clientType: z.enum(['geth', 'erigon', 'gp5', 'nethermind', 'XDC', 'unknown']).optional().default('unknown'),
   clientVersion: z.string().max(200).optional(),
+  // Smart naming fields
   name: z.string().min(3).max(100).regex(/^[a-zA-Z0-9._-]+$/).optional(),
+  network: z.enum(['mainnet', 'apothem', 'devnet']).optional().default('mainnet'),
+  role: z.enum(['masternode', 'fullnode', 'archive', 'rpc']).optional().default('fullnode'),
 });
 
 // Generate a secure API key
@@ -23,6 +26,34 @@ function generateSecureApiKey(): string {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
+}
+
+// Parse smart node name to extract components
+// Format: {client}-{version}-{type}-{ip}-{network}
+// Example: geth-v2.6.8-fullnode-65.21.27.213-mainnet
+function parseSmartNodeName(name: string): {
+  clientType: string;
+  version: string;
+  nodeType: string;
+  ip: string;
+  network: string;
+} | null {
+  const parts = name.split('-');
+  if (parts.length < 5) return null;
+  
+  // Last part is network
+  const network = parts[parts.length - 1];
+  // Second to last is IP (with dashes instead of dots)
+  const ip = parts[parts.length - 2].replace(/-/g, '.');
+  // Third from last is node type
+  const nodeType = parts[parts.length - 3];
+  // Version is typically second part (starts with v)
+  const versionPart = parts.find(p => p.startsWith('v') && /v?\d/.test(p));
+  const version = versionPart || 'unknown';
+  // Client is first part
+  const clientType = parts[0];
+  
+  return { clientType, version, nodeType, ip, network };
 }
 
 /**
@@ -114,24 +145,28 @@ async function postHandler(request: NextRequest) {
         nodeName = `xdc-${data.clientType || 'node'}-${fingerprintHash}`;
       }
 
-      // Extract IP from fingerprint for host field
+      // Parse smart node name for metadata extraction
+      const smartNameInfo = parseSmartNodeName(nodeName);
+      
+      // Extract IP from fingerprint or use provided IP
       const hostIp = data.ip || data.fingerprint.split('@')[1] || 'unknown';
 
-      // Insert new node with fingerprint
+      // Insert new node with fingerprint and smart name metadata
       const nodeResult = await client.query(
         `INSERT INTO skynet.nodes 
-         (name, host, role, is_active, fingerprint, coinbase, client_type, client_version, tags)
-         VALUES ($1, $2, $3, true, $4, $5, $6, $7, $8)
+         (name, host, role, is_active, fingerprint, coinbase, client_type, client_version, tags, network)
+         VALUES ($1, $2, $3, true, $4, $5, $6, $7, $8, $9)
          RETURNING id, name, created_at`,
         [
           nodeName,
           hostIp,
-          'fullnode',
+          data.role || 'fullnode',
           data.fingerprint,
           data.coinbase || null,
-          data.clientType || 'unknown',
-          data.clientVersion || null,
-          ['auto-registered', `fingerprint:${data.fingerprint}`],
+          smartNameInfo?.clientType || data.clientType || 'unknown',
+          smartNameInfo?.version || data.clientVersion || null,
+          ['auto-registered', `fingerprint:${data.fingerprint}`, `smart-name:${nodeName}`],
+          data.network || 'mainnet',
         ]
       );
       const node = nodeResult.rows[0];
@@ -145,7 +180,7 @@ async function postHandler(request: NextRequest) {
           apiKey, 
           node.id, 
           `${nodeName} auto-generated key`, 
-          ['heartbeat', 'metrics', 'notifications']
+          ['heartbeat', 'metrics', 'notifications', 'errors']
         ]
       );
 
@@ -155,11 +190,13 @@ async function postHandler(request: NextRequest) {
         [apiKey, node.id]
       );
 
-      logger.info('Node auto-registered via identity', { 
+      logger.info('Node auto-registered via identity with smart name', { 
         nodeId: node.id, 
         name: nodeName, 
         fingerprint: data.fingerprint,
-        clientType: data.clientType 
+        clientType: data.clientType,
+        network: data.network,
+        smartNameParsed: smartNameInfo
       });
 
       return {
@@ -207,17 +244,26 @@ export async function GET() {
   return NextResponse.json({
     description: 'Node identity and auto-registration endpoint',
     fingerprintFormat: 'coinbase@ip (e.g., 0xabc123@95.217.56.168)',
+    smartNameFormat: '{client}-{version}-{type}-{ip}-{network}',
+    smartNameExamples: [
+      'geth-v2.6.8-fullnode-65.21.27.213-mainnet',
+      'gp5-v1.17.0-fullnode-95.217.56.168-mainnet',
+      'erigon-v3.4.0-fullnode-65.21.27.213-mainnet',
+      'nethermind-v1.30-fullnode-65.21.71.4-apothem',
+    ],
     schema: {
       fingerprint: 'string (required, unique identifier)',
       coinbase: 'string (optional, 0x-prefixed Ethereum address)',
       ip: 'string (optional, IP address)',
-      clientType: 'enum: geth, erigon, geth-pr5, nethermind, XDC, unknown',
+      clientType: 'enum: geth, erigon, gp5, nethermind, XDC, unknown',
       clientVersion: 'string (optional, client version)',
-      name: 'string (optional, node name)',
+      name: 'string (optional, smart node name)',
+      network: 'enum: mainnet, apothem, devnet',
+      role: 'enum: masternode, fullnode, archive, rpc',
     },
     behavior: {
       existing: 'Returns existing nodeId and apiKey (node recovery)',
-      new: 'Auto-registers node and returns new credentials',
+      new: 'Auto-registers node and returns new credentials with smart naming',
     },
   });
 }

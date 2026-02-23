@@ -69,6 +69,13 @@ interface FleetNode {
   // Network fields (Issue #68)
   network?: string;
   chainId?: number;
+  // OS field for compact display
+  os?: {
+    type?: string;
+    release?: string;
+    arch?: string;
+    kernel?: string;
+  };
 }
 
 // Client distribution for diversity chart
@@ -159,6 +166,22 @@ const formatDuration = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
   const mins = Math.round(minutes % 60);
   return `${hours}h ${mins}m`;
+};
+
+// Get resource usage color (green <50%, yellow 50-80%, red >80%)
+const getResourceColor = (value: number): string => {
+  if (value < 50) return '#10B981';
+  if (value < 80) return '#F59E0B';
+  return '#EF4444';
+};
+
+// Get OS icon based on OS type
+const getOSIcon = (osType?: string): string => {
+  if (!osType) return '🐧';
+  const os = osType.toLowerCase();
+  if (os.includes('darwin') || os.includes('mac')) return '🍎';
+  if (os.includes('win')) return '🪟';
+  return '🐧'; // Default to Linux
 };
 
 // Client badge component
@@ -1136,30 +1159,70 @@ export default function FleetOverview() {
                   </div>
                 ) : null}
                 
-                {/* Resource Metrics */}
-                <div className="space-y-2 mb-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#6B7280] flex items-center gap-1"><Cpu className="w-3 h-3" /> CPU</span>
-                    <span style={{ color: getUsageColor(node.cpuUsage) }}>{node.cpuUsage.toFixed(0)}%</span>
-                  </div>
-                  <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${node.cpuUsage}%`, backgroundColor: getUsageColor(node.cpuUsage) }} />
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#6B7280] flex items-center gap-1"><MemoryStick className="w-3 h-3" /> RAM</span>
-                    <span style={{ color: getUsageColor(node.memoryUsage) }}>{node.memoryUsage.toFixed(0)}%</span>
-                  </div>
-                  <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${node.memoryUsage}%`, backgroundColor: getUsageColor(node.memoryUsage) }} />
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#6B7280] flex items-center gap-1"><HardDrive className="w-3 h-3" /> Disk</span>
-                    <span style={{ color: getUsageColor(node.diskUsage) }}>{node.diskUsage.toFixed(0)}%</span>
-                  </div>
-                  <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${node.diskUsage}%`, backgroundColor: getUsageColor(node.diskUsage) }} />
+                {/* Compact Resource Display with OS Icon */}
+                <div className="mb-3 p-2 rounded-lg bg-[rgba(255,255,255,0.03)]">
+                  <div className="flex items-center gap-3">
+                    {/* CPU */}
+                    <div className="flex-1" title={`CPU: ${node.cpuUsage.toFixed(1)}%`}>
+                      <div className="flex items-center justify-between text-[10px] mb-0.5">
+                        <Cpu className="w-3 h-3 text-[#6B7280]" />
+                        <span style={{ color: getResourceColor(node.cpuUsage) }}>
+                          {node.cpuUsage.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ 
+                            width: `${Math.min(node.cpuUsage, 100)}%`,
+                            backgroundColor: getResourceColor(node.cpuUsage)
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Memory */}
+                    <div className="flex-1" title={`Memory: ${node.memoryUsage.toFixed(1)}%`}>
+                      <div className="flex items-center justify-between text-[10px] mb-0.5">
+                        <MemoryStick className="w-3 h-3 text-[#6B7280]" />
+                        <span style={{ color: getResourceColor(node.memoryUsage) }}>
+                          {node.memoryUsage.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ 
+                            width: `${Math.min(node.memoryUsage, 100)}%`,
+                            backgroundColor: getResourceColor(node.memoryUsage)
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Disk */}
+                    <div className="flex-1" title={`Disk: ${node.diskUsage.toFixed(1)}%`}>
+                      <div className="flex items-center justify-between text-[10px] mb-0.5">
+                        <HardDrive className="w-3 h-3 text-[#6B7280]" />
+                        <span style={{ color: getResourceColor(node.diskUsage) }}>
+                          {node.diskUsage.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ 
+                            width: `${Math.min(node.diskUsage, 100)}%`,
+                            backgroundColor: getResourceColor(node.diskUsage)
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* OS Icon */}
+                    <div className="flex-shrink-0" title={node.os?.type || 'Linux'}>
+                      <span className="text-lg">{getOSIcon(node.os?.type)}</span>
+                    </div>
                   </div>
                 </div>
                 
@@ -1318,14 +1381,20 @@ export default function FleetOverview() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5">
-                          <Cpu className="w-3.5 h-3.5" style={{ color: getUsageColor(node.cpuUsage) }} />
-                          <span className="text-xs" style={{ color: getUsageColor(node.cpuUsage) }}>{node.cpuUsage.toFixed(0)}%</span>
+                        <div className="flex items-center gap-1.5" title={`CPU: ${node.cpuUsage.toFixed(1)}%`}>
+                          <Cpu className="w-3.5 h-3.5" style={{ color: getResourceColor(node.cpuUsage) }} />
+                          <span className="text-xs" style={{ color: getResourceColor(node.cpuUsage) }}>{node.cpuUsage.toFixed(0)}%</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <MemoryStick className="w-3.5 h-3.5" style={{ color: getUsageColor(node.memoryUsage) }} />
-                          <span className="text-xs" style={{ color: getUsageColor(node.memoryUsage) }}>{node.memoryUsage.toFixed(0)}%</span>
+                        <div className="flex items-center gap-1.5" title={`Memory: ${node.memoryUsage.toFixed(1)}%`}>
+                          <MemoryStick className="w-3.5 h-3.5" style={{ color: getResourceColor(node.memoryUsage) }} />
+                          <span className="text-xs" style={{ color: getResourceColor(node.memoryUsage) }}>{node.memoryUsage.toFixed(0)}%</span>
                         </div>
+                        <div className="flex items-center gap-1.5" title={`Disk: ${node.diskUsage.toFixed(1)}%`}>
+                          <HardDrive className="w-3.5 h-3.5" style={{ color: getResourceColor(node.diskUsage) }} />
+                          <span className="text-xs" style={{ color: getResourceColor(node.diskUsage) }}>{node.diskUsage.toFixed(0)}%</span>
+                        </div>
+                        
+                        <span className="text-lg ml-1" title={node.os?.type || 'Linux'}>{getOSIcon(node.os?.type)}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-[#9CA3AF]">{formatTimeAgo(node.lastSeen)}</td>
