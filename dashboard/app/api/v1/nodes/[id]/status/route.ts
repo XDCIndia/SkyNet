@@ -38,7 +38,7 @@ export async function GET(
       `SELECT 
         id, name, host, role, is_active, created_at, updated_at,
         location_city, location_country, location_lat, location_lng,
-        tags, ipv4, ipv6, os_info, client_type, node_type, sync_mode
+        tags, ipv4, ipv6, os_info, client_type, node_type, sync_mode, network
        FROM skynet.nodes 
        WHERE id = $1`,
       [id]
@@ -96,13 +96,42 @@ export async function GET(
 
     const latestMetrics = metricsResult.rows[0] || null;
 
-    // Get network height (max block from all healthy nodes in last 5 min)
-    const networkHeightResult = await query(
-      `SELECT COALESCE(MAX(block_height), 0) as network_height
-       FROM skynet.node_metrics
-       WHERE collected_at > NOW() - INTERVAL '5 minutes'`
-    );
-    const networkHeight = parseInt(networkHeightResult.rows[0]?.network_height || '0');
+    // Get network height from public RPCs (OpenScan primary, XinFin fallback)
+    // Then fall back to fleet max if RPCs fail
+    const nodeNetwork = (node.network || 'mainnet').toLowerCase();
+    let networkHeight = 0;
+    
+    const rpcEndpoints: Record<string, string[]> = {
+      mainnet: ['https://rpc.openscan.ai/50', 'https://rpc.xinfin.network'],
+      apothem: ['https://rpc.openscan.ai/51', 'https://rpc.apothem.network'],
+    };
+    
+    const rpcs = rpcEndpoints[nodeNetwork] || rpcEndpoints['mainnet'];
+    for (const rpc of rpcs) {
+      try {
+        const resp = await fetch(rpc, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', id: 1 }),
+          signal: AbortSignal.timeout(3000),
+        });
+        const json = await resp.json();
+        if (json.result) {
+          networkHeight = parseInt(json.result, 16);
+          break;
+        }
+      } catch { /* try next RPC */ }
+    }
+    
+    // Fallback to fleet max if all RPCs failed
+    if (networkHeight === 0) {
+      const networkHeightResult = await query(
+        `SELECT COALESCE(MAX(block_height), 0) as network_height
+         FROM skynet.node_metrics
+         WHERE collected_at > NOW() - INTERVAL '5 minutes'`
+      );
+      networkHeight = parseInt(networkHeightResult.rows[0]?.network_height || '0');
+    }
 
     // Recalculate accurate sync percent
     const nodeBlock = parseInt(latestMetrics?.block_height || '0', 10);
