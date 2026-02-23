@@ -94,6 +94,7 @@ async function getHandler(request: NextRequest) {
         n.sync_mode,
         n.network,
         n.chain_id,
+        n.stalled,
         m.block_height,
         m.sync_percent,
         m.peer_count,
@@ -244,6 +245,8 @@ async function getHandler(request: NextRequest) {
         // Network info
         network: n.network || 'mainnet',
         chainId: n.chain_id,
+        // SkyOne stall detection
+        stalled: n.stalled === true,
       };
     });
 

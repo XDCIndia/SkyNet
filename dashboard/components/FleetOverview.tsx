@@ -76,6 +76,8 @@ interface FleetNode {
     arch?: string;
     kernel?: string;
   };
+  // SkyOne stall detection
+  stalled?: boolean;
 }
 
 // Client distribution for diversity chart
@@ -364,6 +366,7 @@ export default function FleetOverview() {
           storageType: node.storageType || node.storage_type,
           iopsEstimate: node.iopsEstimate || node.iops_estimate || 0,
           clientVersion: node.clientVersion || node.client_version,
+          stalled: node.stalled || false,
         }));
         setNodes(mappedNodes);
         setLoading(false);
@@ -429,6 +432,8 @@ export default function FleetOverview() {
           // Network fields (Issue #68)
           network: node.network || 'mainnet',
           chainId: node.chainId,
+          // SkyOne stall detection
+          stalled: node.stalled || false,
         };
       });
       
@@ -1056,6 +1061,14 @@ export default function FleetOverview() {
                   {node.status.charAt(0).toUpperCase() + node.status.slice(1)}
                 </div>
                 
+                {/* SkyOne: Stalled badge */}
+                {node.stalled && (
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[rgba(245,158,11,0.15)] text-[var(--warning)] text-xs font-medium mb-3 ml-2">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    Stalled
+                  </div>
+                )}
+                
                 {/* Block Height Section - PROMINENT */}
                 <div className="mb-3 p-3 rounded-lg bg-[rgba(30,144,255,0.1)] border border-[rgba(30,144,255,0.2)]">
                   <div className="flex items-center justify-between mb-1">
@@ -1322,10 +1335,19 @@ export default function FleetOverview() {
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${statusStyle.bg} ${statusStyle.text} text-xs font-medium`}>
-                        <StatusIcon className="w-3.5 h-3.5" />
-                        {node.status}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${statusStyle.bg} ${statusStyle.text} text-xs font-medium`}>
+                          <StatusIcon className="w-3.5 h-3.5" />
+                          {node.status}
+                        </span>
+                        {/* SkyOne: Stalled badge in list view */}
+                        {node.stalled && (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-[rgba(245,158,11,0.15)] text-[var(--warning)]">
+                            <AlertTriangle className="w-3 h-3" />
+                            Stalled
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-mono text-[#1E90FF] font-semibold">{node.blockHeight.toLocaleString()}</div>

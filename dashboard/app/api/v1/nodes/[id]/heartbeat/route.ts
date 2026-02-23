@@ -25,7 +25,9 @@ export async function POST(
       os,
       system,
       security,
-      storageType
+      storageType,
+      stalled,
+      lastRestart
     } = body;
 
     // Normalize clientType from version string if needed
@@ -124,6 +126,26 @@ export async function POST(
         [enode, nodeId]
       );
     }
+
+    // SkyOne: Auto-create incident if stalled=true
+    if (stalled === true) {
+      await query(
+        `INSERT INTO skynet.incidents 
+         (node_id, type, severity, message, created_at, status)
+         VALUES ($1, 'sync_stall', 'warning', $2, NOW(), 'open')
+         ON CONFLICT DO NOTHING`,
+        [nodeId, `Block stalled at ${blockHeight} for 5+ minutes with ${peerCount} peers`]
+      );
+    }
+
+    // SkyOne: Update node with stalled status and last restart time
+    await query(
+      `UPDATE skynet.nodes 
+       SET stalled = $2,
+           last_restart = CASE WHEN $3 IS NOT NULL AND $3 != '' THEN $3::timestamp ELSE last_restart END
+       WHERE id = $1`,
+      [nodeId, stalled === true, lastRestart || null]
+    );
 
     return NextResponse.json({
       success: true,
