@@ -139,13 +139,17 @@ export async function POST(
     }
 
     // SkyOne: Update node with stalled status and last restart time
-    await query(
-      `UPDATE skynet.nodes 
-       SET stalled = $2,
-           last_restart = CASE WHEN $3 IS NOT NULL AND $3 != '' THEN $3::timestamp ELSE last_restart END
-       WHERE id = $1`,
-      [nodeId, stalled === true, lastRestart || null]
-    );
+    if (lastRestart) {
+      await query(
+        `UPDATE skynet.nodes SET stalled = $2, last_restart = $3::timestamptz WHERE id = $1`,
+        [nodeId, stalled === true, lastRestart]
+      );
+    } else {
+      await query(
+        `UPDATE skynet.nodes SET stalled = $2 WHERE id = $1`,
+        [nodeId, stalled === true]
+      );
+    }
 
     return NextResponse.json({
       success: true,
