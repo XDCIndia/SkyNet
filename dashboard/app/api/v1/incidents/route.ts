@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 
 const pool = new Pool({
   connectionString: 'postgresql://gateway:gateway_secret_2026@localhost:5433/xdc_gateway',
@@ -75,8 +76,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/v1/incidents — create/update incident (dedup by fingerprint)
+// POST /api/v1/incidents — create/update incident (dedup by fingerprint) (protected)
 export async function POST(request: NextRequest) {
+  // Authenticate request
+  const auth = await authenticateRequest(request);
+  if (!auth.valid) {
+    return unauthorizedResponse(auth.error);
+  }
+
   const client = await pool.connect();
   
   try {
