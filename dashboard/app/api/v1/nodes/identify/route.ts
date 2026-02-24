@@ -8,7 +8,7 @@ import { z } from 'zod';
 const NodeIdentitySchema = z.object({
   fingerprint: z.string().min(1).max(100),
   coinbase: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
-  ip: z.string().ip().optional(),
+  ip: z.string().max(100).optional(),
   clientType: z.enum(['geth', 'erigon', 'gp5', 'nethermind', 'XDC', 'unknown']).optional().default('unknown'),
   clientVersion: z.string().max(200).optional(),
   // Smart naming fields
