@@ -10,7 +10,7 @@ const CLIENT_COLORS: Record<string, string> = {
   erigon: '#EA580C',    // Orange
   nethermind: '#7C3AED', // Purple
   'geth-pr5': '#2563EB', // Blue (same as geth)
-  xdc: '#1E90FF',       // Light blue
+  xdc: '#1E90FF',       // XDC Network official blue
   unknown: '#6B7280',   // Gray
 };
 
@@ -20,7 +20,7 @@ const CLIENT_DISPLAY_NAMES: Record<string, string> = {
   erigon: 'Erigon',
   nethermind: 'NM',
   'geth-pr5': 'geth',
-  xdc: 'XDC',
+  xdc: 'XDC',           // XDC Binary v2.6.8+
   unknown: 'Unknown',
 };
 
@@ -30,7 +30,7 @@ const CLIENT_ICONS: Record<string, string> = {
   erigon: '🔶',
   nethermind: '🟣',
   'geth-pr5': '🔷',
-  xdc: '⚡',
+  xdc: '⚡',             // XDC Network lightning bolt
   unknown: '⚪',
 };
 
