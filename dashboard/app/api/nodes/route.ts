@@ -14,9 +14,14 @@ const CreateNodeSchema = z.object({
   tags: z.array(z.string().max(50)).max(10).optional(),
 });
 
-// GET /api/nodes - List all nodes with latest metrics
-export async function GET() {
+// GET /api/nodes - List all nodes with latest metrics (protected)
+export async function GET(request: NextRequest) {
   try {
+    // Authenticate request - Issue #175 fix
+    const auth = await authenticateRequest(request);
+    if (!auth.valid) {
+      return unauthorizedResponse(auth.error);
+    }
     // Use CTE with DISTINCT ON to batch-fetch latest metrics for all nodes
     // instead of per-node LATERAL join (fixes N+1 query pattern - Issue #26)
     const result = await query(`

@@ -21,7 +21,8 @@ const RETENTION_DAYS = {
   logs: 7,
 };
 
-const SCHEMAS = ['skynet', 'netown'];
+// Issue #67 fix: Using only skynet schema (netown was legacy name)
+const SCHEMAS = ['skynet'];
 
 export async function runRetention(): Promise<{
   success: boolean;

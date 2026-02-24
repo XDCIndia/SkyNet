@@ -53,12 +53,12 @@ async function query(text: string, params?: any[]): Promise<any> {
 async function getLatestMetrics(): Promise<any[]> {
   try {
     const result = await query(`
-      SELECT DISTINCT ON (node_id) 
+      SELECT DISTINCT ON (node_id)
         node_id, block_height, sync_percent, peer_count, cpu_percent,
         memory_percent, disk_percent, tx_pool_pending, tx_pool_queued,
         gas_price, tps, rpc_latency_ms, is_syncing, client_version, coinbase,
         collected_at
-      FROM netown.node_metrics
+      FROM skynet.node_metrics
       ORDER BY node_id, collected_at DESC
     `);
     return result.rows;
@@ -71,8 +71,8 @@ async function getActiveIncidents(): Promise<any[]> {
   try {
     const result = await query(`
       SELECT i.*, n.name as node_name
-      FROM netown.incidents i
-      JOIN netown.nodes n ON i.node_id = n.id
+      FROM skynet.incidents i
+      JOIN skynet.nodes n ON i.node_id = n.id
       WHERE i.status = 'active'
       ORDER BY i.detected_at DESC
       LIMIT 50
@@ -93,7 +93,7 @@ async function getPeersOverview(): Promise<{
       WITH latest_peers AS (
         SELECT DISTINCT ON (peer_enode) 
           peer_enode, remote_ip, country, direction
-        FROM netown.peer_snapshots
+        FROM skynet.peer_snapshots
         WHERE collected_at > NOW() - INTERVAL '10 minutes'
         ORDER BY peer_enode, collected_at DESC
       )
@@ -121,7 +121,7 @@ async function getPeersOverview(): Promise<{
 async function getLatestHealth(): Promise<any | null> {
   try {
     const result = await query(`
-      SELECT * FROM netown.network_health
+      SELECT * FROM skynet.network_health
       ORDER BY collected_at DESC
       LIMIT 1
     `);
