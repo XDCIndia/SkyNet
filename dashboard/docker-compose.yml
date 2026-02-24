@@ -2,17 +2,25 @@ services:
   xdc-dashboard:
     build: .
     ports:
-      - "8888:3000"
+      - "3005:3005"
+      - "3006:3006"
+      - "5443:5443"
     environment:
-      - PROMETHEUS_URL=http://127.0.0.1:19090
-      - RPC_URL=http://127.0.0.1:38545
+      - PROMETHEUS_URL=http://prometheus:9090
+      - RPC_URL=http://xdc-node:8545
       - NEXT_PUBLIC_REFRESH_INTERVAL=30
       - GEO_CACHE_TTL=300000
-    network_mode: host
+      - DATABASE_URL=postgresql://skynet:${DB_PASSWORD:-skynet}@postgres:5432/skynet
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3005/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - skynet-network
+
+networks:
+  skynet-network:
+    driver: bridge
