@@ -53,18 +53,34 @@ export async function POST(
       );
     }
 
-    // Insert metrics
+    // Insert metrics with system resources
     await query(
       `INSERT INTO skynet.node_metrics 
-       (node_id, block_height, peer_count, is_syncing, client_type, client_version, collected_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+       (node_id, block_height, peer_count, is_syncing, client_type, client_version, 
+        cpu_percent, memory_percent, disk_percent, disk_used_gb, disk_total_gb,
+        storage_type, os_type, os_release, os_arch, kernel_version, ipv4,
+        security_score, security_issues, collected_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW())`,
       [
         nodeId,
         blockHeight || 0,
         peerCount || 0,
         isSyncing || false,
         clientType || 'unknown',
-        version || ''
+        version || '',
+        system?.cpuPercent ?? null,
+        system?.memoryPercent ?? null,
+        system?.diskPercent ?? null,
+        system?.diskUsedGb ?? null,
+        system?.diskTotalGb ?? null,
+        storageType || null,
+        os?.type || null,
+        os?.release || null,
+        os?.arch || null,
+        os?.kernel || null,
+        os?.ipv4 || null,
+        security?.score ?? null,
+        security?.issues ? JSON.stringify(security.issues) : null
       ]
     );
 
