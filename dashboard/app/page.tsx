@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -44,6 +44,12 @@ import {
   Hash,
   TrendingUp,
   Flame,
+  Eye,
+  EyeOff,
+  ChevronRight,
+  Trash2,
+  X,
+  Filter,
 } from 'lucide-react';
 
 const REFRESH_INTERVAL = 10; // 10 seconds
@@ -118,7 +124,7 @@ interface HealthyPeersSummary {
   healthyPeers: number;
 }
 
-type FilterType = 'all' | 'healthy' | 'syncing' | 'behind';
+type FilterType = 'all' | 'healthy' | 'syncing' | 'behind' | 'active';
 type ViewMode = 'grid' | 'table';
 type SortField = keyof Node | 'security_score';
 type SortDirection = 'asc' | 'desc';
@@ -1211,7 +1217,7 @@ function VirtualTable({
                 onClick={onDeleteSelected}
                 className="px-3 py-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded transition-colors flex items-center gap-1.5"
               >
-                <AlertCircle className="w-3 h-3" />
+                <Trash2 className="w-3 h-3" />
                 Delete Selected
               </button>
             </>
@@ -1237,47 +1243,62 @@ function VirtualTable({
   );
 }
 
-// Active Incidents Timeline
-function IncidentsStrip({ incidents }: { incidents: Incident[] }) {
+// Collapsible Active Incidents Timeline
+function IncidentsStrip({ incidents, isCollapsed, onToggle }: { incidents: Incident[]; isCollapsed: boolean; onToggle: () => void }) {
   if (incidents.length === 0) return null;
   
   return (
     <div className="card-xdc mb-6">
-      <div className="flex items-center gap-2 mb-4">
-        <ShieldAlert className="w-5 h-5 text-[var(--critical)]" />
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Active Incidents</h2>
-        <span className="px-2 py-0.5 bg-[var(--critical)]/10 text-[var(--critical)] rounded text-xs font-medium">
-          {incidents.length}
-        </span>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="w-5 h-5 text-[var(--critical)]" />
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Active Incidents</h2>
+          <span className="px-2 py-0.5 bg-[var(--critical)]/10 text-[var(--critical)] rounded text-xs font-medium">
+            {incidents.length}
+          </span>
+        </div>
+        <button
+          onClick={onToggle}
+          className="p-2 hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
+          title={isCollapsed ? "Expand" : "Collapse"}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-[var(--text-tertiary)]" />
+          )}
+        </button>
       </div>
       
-      <div className="space-y-0 max-h-[300px] overflow-y-auto">
-        {incidents.map((incident, idx) => (
-          <div key={incident.id} className="flex gap-3 relative">
-            {/* Timeline line */}
-            {idx < incidents.length - 1 && (
-              <div className="absolute left-[11px] top-6 bottom-0 w-px bg-[var(--bg-hover)]" />
-            )}
-            {/* Dot */}
-            <div className="flex-shrink-0 mt-1.5">
-              <div className={`w-[10px] h-[10px] rounded-full border-2 ${
-                incident.severity === 'critical' ? 'border-[#EF4444] bg-[var(--critical)]/30' :
-                incident.severity === 'warning' ? 'border-[#F59E0B] bg-[var(--warning)]/30' :
-                'border-[var(--accent-blue)] bg-[var(--accent-blue)]/30'
-              }`} />
-            </div>
-            {/* Content */}
-            <div className="flex-1 pb-4">
-              <div className="flex items-center gap-2 mb-0.5">
-                <SeverityBadge severity={incident.severity} />
-                <span className="text-xs text-[var(--text-tertiary)]">{formatTimeAgo(incident.detected_at)}</span>
+      {!isCollapsed && (
+        <div className="space-y-0 max-h-[300px] overflow-y-auto">
+          {incidents.map((incident, idx) => (
+            <div key={incident.id} className="flex gap-3 relative">
+              {/* Timeline line */}
+              {idx < incidents.length - 1 && (
+                <div className="absolute left-[11px] top-6 bottom-0 w-px bg-[var(--bg-hover)]" />
+              )}
+              {/* Dot */}
+              <div className="flex-shrink-0 mt-1.5">
+                <div className={`w-[10px] h-[10px] rounded-full border-2 ${
+                  incident.severity === 'critical' ? 'border-[#EF4444] bg-[var(--critical)]/30' :
+                  incident.severity === 'warning' ? 'border-[#F59E0B] bg-[var(--warning)]/30' :
+                  'border-[var(--accent-blue)] bg-[var(--accent-blue)]/30'
+                }`} />
               </div>
-              <p className="text-sm font-medium text-[var(--text-primary)]">{incident.title}</p>
-              <p className="text-xs text-[var(--text-tertiary)]">{incident.node_name}</p>
+              {/* Content */}
+              <div className="flex-1 pb-4">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <SeverityBadge severity={incident.severity} />
+                  <span className="text-xs text-[var(--text-tertiary)]">{formatTimeAgo(incident.detected_at)}</span>
+                </div>
+                <p className="text-sm font-medium text-[var(--text-primary)]">{incident.title}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">{incident.node_name}</p>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1311,6 +1332,8 @@ function FilterBar({
   onOsFilterChange,
   clients,
   osList,
+  showZeroBlockNodes,
+  onToggleZeroBlockNodes,
 }: { 
   activeFilter: FilterType;
   onFilterChange: (filter: FilterType) => void;
@@ -1321,12 +1344,15 @@ function FilterBar({
   onOsFilterChange: (v: string) => void;
   clients: string[];
   osList: string[];
+  showZeroBlockNodes: boolean;
+  onToggleZeroBlockNodes: () => void;
 }) {
   const filters: { key: FilterType; label: string }[] = [
     { key: 'all', label: 'All' },
     { key: 'healthy', label: 'Healthy' },
     { key: 'syncing', label: 'Syncing' },
     { key: 'behind', label: 'Behind' },
+    { key: 'active', label: 'Active Only' },
   ];
   
   return (
@@ -1353,6 +1379,20 @@ function FilterBar({
       <span className="mx-1 text-[var(--border-subtle)]">|</span>
       <DropdownFilter label="Client" value={clientFilter} options={clients} onChange={onClientFilterChange} />
       <DropdownFilter label="OS" value={osFilter} options={osList} onChange={onOsFilterChange} />
+      
+      {/* Zero Block Nodes Toggle */}
+      <button
+        onClick={onToggleZeroBlockNodes}
+        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+          showZeroBlockNodes
+            ? 'bg-[var(--warning)]/20 text-[var(--warning)] border border-[var(--warning)]/30'
+            : 'bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] border border-transparent'
+        }`}
+        title={showZeroBlockNodes ? "Hide 0 block nodes" : "Show 0 block nodes"}
+      >
+        {showZeroBlockNodes ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+        0 Block Nodes
+      </button>
     </div>
   );
 }
@@ -1360,10 +1400,12 @@ function FilterBar({
 // Bulk Actions Bar
 function BulkActionsBar({ 
   selectedCount,
-  onClearSelection
+  onClearSelection,
+  onDeleteSelected,
 }: { 
   selectedCount: number;
   onClearSelection: () => void;
+  onDeleteSelected: () => void;
 }) {
   if (selectedCount === 0) return null;
   
@@ -1399,12 +1441,11 @@ function BulkActionsBar({
           Update
         </button>
         <button
-          disabled
-          title="Coming soon"
-          className="px-3 py-1.5 text-xs bg-[var(--bg-hover)] text-[var(--text-tertiary)] rounded cursor-not-allowed flex items-center gap-1"
+          onClick={onDeleteSelected}
+          className="px-3 py-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded transition-colors flex items-center gap-1"
         >
-          <MoreHorizontal className="w-3 h-3" />
-          More
+          <Trash2 className="w-3 h-3" />
+          Delete
         </button>
       </div>
     </div>
@@ -1444,7 +1485,7 @@ function HomeContent() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [peers, setPeers] = useState<HealthyPeersSummary | null>(null);
   const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null);
-  const [filter, setFilter] = useState<FilterType>('all');
+  const [filter, setFilter] = useState<FilterType>('active'); // Default to 'active' (healthy + syncing)
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -1455,6 +1496,10 @@ function HomeContent() {
   const [networkFilter, setNetworkFilter] = useState(() => searchParams.get('network') || 'all');
   const [clientFilter, setClientFilter] = useState(() => searchParams.get('client') || 'all');
   const [osFilter, setOsFilter] = useState('all');
+  
+  // New state for features
+  const [showZeroBlockNodes, setShowZeroBlockNodes] = useState(false);
+  const [incidentsCollapsed, setIncidentsCollapsed] = useState(false);
   
   // Sorting
   const [sortField, setSortField] = useState<SortField>('blockHeight');
@@ -1640,6 +1685,11 @@ function HomeContent() {
   // Filter and sort nodes
   const filteredNodes = useMemo(() => {
     let result = globalFilteredNodes.filter(node => {
+      // Zero block nodes filter - hide by default
+      if (!showZeroBlockNodes && node.blockHeight === 0) {
+        return false;
+      }
+      
       // Status filter (stale nodes already filtered out at fetch time)
       switch (filter) {
         case 'healthy':
@@ -1650,6 +1700,10 @@ function HomeContent() {
           break;
         case 'behind':
           if (node.blocksBehind <= 0) return false;
+          break;
+        case 'active':
+          // Show only healthy and syncing (exclude offline and degraded)
+          if (node.status !== 'healthy' && node.status !== 'syncing') return false;
           break;
       }
       
@@ -1708,7 +1762,7 @@ function HomeContent() {
     });
     
     return result;
-  }, [globalFilteredNodes, filter, debouncedSearch, sortField, sortDirection, clientFilter, osFilter]);
+  }, [globalFilteredNodes, filter, debouncedSearch, sortField, sortDirection, clientFilter, osFilter, showZeroBlockNodes]);
 
   // Calculate filter counts (stale nodes already filtered out at fetch time)
   // Unique client types and OS types for filter dropdowns
@@ -1726,10 +1780,11 @@ function HomeContent() {
   }, [nodes]);
 
   const filterCounts: Record<FilterType, number> = {
-    all: globalFilteredNodes.length,
-    healthy: globalFilteredNodes.filter(n => n.status === 'healthy').length,
-    syncing: globalFilteredNodes.filter(n => n.status === 'syncing').length,
-    behind: globalFilteredNodes.filter(n => n.blocksBehind > 0).length,
+    all: globalFilteredNodes.filter(n => showZeroBlockNodes || n.blockHeight > 0).length,
+    healthy: globalFilteredNodes.filter(n => (showZeroBlockNodes || n.blockHeight > 0) && n.status === 'healthy').length,
+    syncing: globalFilteredNodes.filter(n => (showZeroBlockNodes || n.blockHeight > 0) && n.status === 'syncing').length,
+    behind: globalFilteredNodes.filter(n => (showZeroBlockNodes || n.blockHeight > 0) && n.blocksBehind > 0).length,
+    active: globalFilteredNodes.filter(n => (showZeroBlockNodes || n.blockHeight > 0) && (n.status === 'healthy' || n.status === 'syncing')).length,
   };
 
   const handleSort = (field: SortField) => {
@@ -1956,7 +2011,11 @@ function HomeContent() {
           )}
 
           {incidents.length > 0 && (
-            <IncidentsStrip incidents={incidents} />
+            <IncidentsStrip 
+              incidents={incidents} 
+              isCollapsed={incidentsCollapsed}
+              onToggle={() => setIncidentsCollapsed(!incidentsCollapsed)}
+            />
           )}
 
           {/* SkyNet AI Incidents Intelligence Panel */}
@@ -1974,6 +2033,11 @@ function HomeContent() {
                   {filteredNodes.length} of {globalFilteredNodes.length}
                   {networkFilter !== 'all' && ` (${networkFilter})`}
                 </span>
+                {!showZeroBlockNodes && globalFilteredNodes.some(n => n.blockHeight === 0) && (
+                  <span className="px-2 py-0.5 bg-[var(--warning)]/10 text-[var(--warning)] rounded text-xs">
+                    {globalFilteredNodes.filter(n => n.blockHeight === 0).length} hidden (0 blocks)
+                  </span>
+                )}
               </div>
               
               <div className="flex items-center gap-3">
@@ -2027,17 +2091,23 @@ function HomeContent() {
               onOsFilterChange={setOsFilter}
               clients={uniqueClients}
               osList={uniqueOS}
+              showZeroBlockNodes={showZeroBlockNodes}
+              onToggleZeroBlockNodes={() => setShowZeroBlockNodes(!showZeroBlockNodes)}
             />
             
             <BulkActionsBar 
               selectedCount={selectedNodes.size}
               onClearSelection={handleClearSelection}
+              onDeleteSelected={() => setShowDeleteConfirm(true)}
             />
 
             {filteredNodes.length === 0 ? (
               <div className="text-center py-12 text-[var(--text-tertiary)]">
                 <Server className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>No nodes match the selected filter</p>
+                {filter === 'active' && (
+                  <p className="text-sm mt-2">Try switching to &quot;All&quot; to see all nodes including offline ones</p>
+                )}
               </div>
             ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -2102,7 +2172,7 @@ function HomeContent() {
                   </>
                 ) : (
                   <>
-                    <AlertCircle className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" />
                     Delete Permanently
                   </>
                 )}
