@@ -1,637 +1,355 @@
-# Architecture Overview
+# XDC SkyNet - Architecture Overview
 
-This document describes the XDCNetOwn monitoring architecture and XDC Network node deployment patterns.
-
----
-
-## Table of Contents
-
-1. [XDCNetOwn Monitoring Architecture](#1-xdcnetown-monitoring-architecture)
-   - [Current Architecture (3 Nodes)](#current-architecture-3-nodes)
-   - [Target Architecture (400+ Nodes)](#target-architecture-400-nodes)
-2. [Single Node Setup](#2-single-node-setup)
-3. [Multi-Node HA Setup](#3-multi-node-ha-setup)
-4. [RPC Infrastructure Setup](#4-rpc-infrastructure-setup)
-5. [Network Diagrams](#5-network-diagrams)
-
----
-
-## 1. XDCNetOwn Monitoring Architecture
-
-### Current Architecture (3 Nodes)
-
-**Status:** Production  
-**Nodes:** 3  
-**Architecture:** Direct push from agents to central API
+## System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         CURRENT: 3-Node Architecture                         │
-│                            (Phase 1 - Production)                            │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│   ┌───────────────┐    ┌───────────────┐    ┌───────────────┐              │
-│   │   Node 1      │    │   Node 2      │    │   Node 3      │              │
-│   │  (Finland)    │    │  (Germany)    │    │  (Singapore)  │              │
-│   │               │    │               │    │               │              │
-│   │ ┌───────────┐ │    │ ┌───────────┐ │    │ ┌───────────┐ │              │
-│   │ │ XDC Node  │ │    │ │ XDC Node  │ │    │ │ XDC Node  │ │              │
-│   │ └─────┬─────┘ │    │ └─────┬─────┘ │    │ └─────┬─────┘ │              │
-│   │       │       │    │       │       │    │       │       │              │
-│   │ ┌─────▼─────┐ │    │ ┌─────▼─────┐ │    │ ┌─────▼─────┐ │              │
-│   │ │netown-    │ │    │ │netown-    │ │    │ │netown-    │ │              │
-│   │ │agent.sh   │ │    │ │agent.sh   │ │    │ │agent.sh   │ │              │
-│   │ │(bash)     │ │    │ │(bash)     │ │    │ │(bash)     │ │              │
-│   │ └─────┬─────┘ │    │ └─────┬─────┘ │    │ └─────┬─────┘ │              │
-│   └───────┼───────┘    └───────┼───────┘    └───────┼───────┘              │
-│           │                    │                    │                        │
-│           │  HTTP POST         │  HTTP POST         │  HTTP POST             │
-│           │  every 60s         │  every 60s         │  every 60s             │
-│           │  (JSON payload)    │  (JSON payload)    │  (JSON payload)        │
-│           └────────────────────┼────────────────────┘                        │
-│                                │                                             │
-│                                ▼                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │                        XDCNetOwn API                                │   │
-│   │                     (Next.js + Node.js)                             │   │
-│   │                                                                     │   │
-│   │  ┌─────────────────────────────────────────────────────────────┐   │   │
-│   │  │  Endpoints:                                                 │   │   │
-│   │  │  • POST /api/heartbeat - Receive agent data                 │   │   │
-│   │  │  • GET  /api/nodes       - Fleet status                     │   │   │
-│   │  │  • GET  /api/nodes/[id]  - Node details                     │   │   │
-│   │  │  • GET  /api/peers       - Healthy peer list                │   │   │
-│   │  └─────────────────────────────────────────────────────────────┘   │   │
-│   └──────────────────────────────────┬──────────────────────────────────┘   │
-│                                      │                                      │
-│                                      ▼                                      │
-│   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │                      PostgreSQL 14+                                 │   │
-│   │                                                                     │   │
-│   │  Tables:                                                            │   │
-│   │  • nodes - Registry of all monitored nodes                          │   │
-│   │  • heartbeats - Historical health data                              │   │
-│   │  • incidents - Automated incident tracking                          │   │
-│   │  • masternodes - XDCValidator contract sync                         │   │
-│   │  • peers - Healthy peer list with port checks                       │   │
-│   └─────────────────────────────────────────────────────────────────────┘   │
-│                                      ▲                                      │
-│                                      │                                      │
-│   ┌──────────────────────────────────┴──────────────────────────────────┐   │
-│   │                      Next.js Dashboard                              │   │
-│   │                                                                     │   │
-│   │  Features:                                                          │   │
-│   │  • Real-time fleet overview (polling every 5s)                      │   │
-│   │  • Node detail pages with metrics                                   │   │
-│   │  • Masternode status and rewards                                    │   │
-│   │  • Healthy peer export                                              │   │
-│   │  • Telegram alert integration                                       │   │
-│   └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          XDC SkyNet Architecture                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐           │
+│  │   Web Dashboard │  │   Mobile App    │  │   Public API    │           │
+│  │   (Next.js 14)  │  │   (React Native)│  │   (REST + WS)   │           │
+│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘           │
+│           │                    │                    │                    │
+│           └────────────────────┼────────────────────┘                    │
+│                                ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────┐        │
+│  │                    API Gateway (Node.js)                     │        │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │        │
+│  │  │    Auth     │  │   Rate      │  │   Request Router    │  │        │
+│  │  │   (JWT)     │  │   Limiting  │  │                     │  │        │
+│  │  └─────────────┘  └─────────────┘  └─────────────────────┘  │        │
+│  └─────────────────────────────────────────────────────────────┘        │
+│                                │                                         │
+│           ┌────────────────────┼────────────────────┐                    │
+│           ▼                    ▼                    ▼                    │
+│  ┌───────────────┐    ┌───────────────┐    ┌───────────────┐            │
+│  │  Node Service │    │ Alert Service │    │  Analytics    │            │
+│  │               │    │               │    │   Service     │            │
+│  └───────┬───────┘    └───────┬───────┘    └───────┬───────┘            │
+│          │                    │                    │                    │
+│          └────────────────────┼────────────────────┘                    │
+│                               ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────┐        │
+│  │                      Data Layer                              │        │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │        │
+│  │  │  PostgreSQL │  │    Redis    │  │   Time-Series DB    │  │        │
+│  │  │  (Metadata) │  │   (Cache)   │  │   (Metrics)         │  │        │
+│  │  └─────────────┘  └─────────────┘  └─────────────────────┘  │        │
+│  └─────────────────────────────────────────────────────────────┘        │
+│                                                                           │
+│  ┌─────────────────────────────────────────────────────────────┐        │
+│  │                    External Integrations                     │        │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │        │
+│  │  │  XDC Nodes  │  │ XDC Network │  │   Notification      │  │        │
+│  │  │  (Heartbeat)│  │  (RPC/API)  │  │   (Email/SMS/Slack) │  │        │
+│  │  └─────────────┘  └─────────────┘  └─────────────────────┘  │        │
+│  └─────────────────────────────────────────────────────────────┘        │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Current Limitations:**
-- Single point of failure (one API instance)
-- No message queue (direct HTTP from agents)
-- PostgreSQL for both fleet state AND time-series data
-- Bash agent (no error recovery, no buffering)
-- Polling-based dashboard (doesn't scale to 400 nodes)
+## Data Flow
 
----
-
-### Target Architecture (400+ Nodes)
-
-**Status:** Architecture Design / Phase 2-3 Implementation  
-**Target:** 400-1000 nodes across multiple continents  
-**Architecture:** Hybrid push+pull with regional collectors
+### Heartbeat Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                    TARGET: 400+ Node Global Architecture                                 │
-│                         (Phase 3 - Regional Scale)                                       │
-├─────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                          │
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
-│  │                         GLOBAL VIEW LAYER                                        │   │
-│  │                                                                                  │   │
-│  │   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │   │
-│  │   │   Grafana    │  │   Dashboard  │  │   Alert      │  │   Report         │   │   │
-│  │   │  (Internal)  │  │  (Next.js)   │  │  Manager     │  │  Generator       │   │   │
-│  │   │              │  │              │  │              │  │                  │   │   │
-│  │   │  • Infra     │  │  • Fleet     │  │  • PagerDuty │  │  • Weekly PDF    │   │   │
-│  │   │    metrics   │  │    view      │  │  • Slack     │  │  • SLA reports   │   │   │
-│  │   │  • Node      │  │  • Node      │  │  • Telegram  │  │  • Analytics     │   │   │
-│  │   │    health    │  │    drilldown │  │  • Webhooks  │  │                  │   │   │
-│  │   └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────────────────┘   │   │
-│  │          │                 │                 │                                   │   │
-│  └──────────┼─────────────────┼─────────────────┼───────────────────────────────────┘   │
-│             │                 │                 │                                        │
-│             └─────────────────┼─────────────────┘                                        │
-│                               ▼                                                          │
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
-│  │                      CENTRAL INFRASTRUCTURE                                      │   │
-│  │                                                                                  │   │
-│  │  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────────────┐ │   │
-│  │  │   Thanos/Mimir  │    │   Central API   │    │   Alert Rules Engine        │ │   │
-│  │  │   (TSDB Query)  │◄──►│   (Next.js v2)  │◄──►│   (Prometheus Alertmanager) │ │   │
-│  │  │                 │    │                 │    │                             │ │   │
-│  │  │  • Long-term    │    │  • Queue        │    │  • Threshold alerts         │ │   │
-│  │  │    storage      │    │    consumer     │    │  • Anomaly detection        │ │   │
-│  │  │  • Global view  │    │  • Fleet API    │    │  • Routing rules            │ │   │
-│  │  │  • Downsampling │    │  • WebSocket    │    │  • Escalation policies      │ │   │
-│  │  │                 │    │    (SSE)        │    │                             │ │   │
-│  │  └────────┬────────┘    └────────┬────────┘    └─────────────────────────────┘ │   │
-│  │           │                      │                                             │   │
-│  │           │ remote_write         │                                             │   │
-│  │           │                      │                                             │   │
-│  │  ┌────────┴──────────────────────┴──────────────────────┬────────┐            │   │
-│  │  │                                                      ▼        │            │   │
-│  │  │  ┌─────────────────┐    ┌─────────────────┐    ┌──────────┐ │            │   │
-│  │  │  │   PostgreSQL    │    │   TimescaleDB   │    │  Redis   │ │            │   │
-│  │  │  │   (Fleet DB)    │    │   (Metrics TSDB)│    │  (Cache) │ │            │   │
-│  │  │  │                 │    │                 │    │          │ │            │   │
-│  │  │  │  • Node reg     │    │  • Time-series  │    │  • Last  │ │            │   │
-│  │  │  │  • Incidents    │    │    metrics      │    │    seen  │ │            │   │
-│  │  │  │  • Masternodes  │    │  • 90d retention│    │  • Rate  │ │            │   │
-│  │  │  │  • Alert rules  │    │  • Compression  │    │    limits│ │            │   │
-│  │  │  └─────────────────┘    └─────────────────┘    └──────────┘ │            │   │
-│  │  └─────────────────────────────────────────────────────────────┘            │   │
-│  │                                                                              │   │
-│  │  ┌─────────────────────────────────────────────────────────────────────┐    │   │
-│  │  │                    MESSAGE QUEUE (NATS Cluster)                      │    │   │
-│  │  │                                                                      │    │   │
-│  │  │  Topics:                                                             │    │   │
-│  │  │    heartbeats.eu    →  metrics.eu    →  dlq (dead letter)           │    │   │
-│  │  │    heartbeats.us    →  metrics.us    →  dlq                         │    │   │
-│  │  │    heartbeats.apac  →  metrics.apac  →  dlq                         │    │   │
-│  │  │                                                                      │    │   │
-│  │  │  Features: Partitioned by region, HA (3-node cluster)              │    │   │
-│  │  └─────────────────────────────────────────────────────────────────────┘    │   │
-│  └─────────────────────────────────────────────────────────────────────────────┘   │
-│                                    ▲          ▲          ▲                         │
-│                                    │          │          │                         │
-│              ┌─────────────────────┘          │          └─────────────────────┐   │
-│              │                                 │                                │   │
-│  ┌───────────┴───────────┐        ┌───────────┴───────────┐        ┌───────────┴──┐│
-│  │   REGIONAL EU-WEST    │        │   REGIONAL US-EAST    │        │ REGIONAL APAC││
-│  │   (Amsterdam)         │        │   (Virginia)          │        │ (Singapore)  ││
-│  │                       │        │                       │        │              ││
-│  │  ┌─────────────────┐  │        │  ┌─────────────────┐  │        │ ┌──────────┐ ││
-│  │  │   Prometheus    │  │        │  │   Prometheus    │  │        │ │Prometheus│ ││
-│  │  │   (Collector)   │  │        │  │   (Collector)   │  │        │ │(Collect) │ ││
-│  │  │                 │  │        │  │                 │  │        │ └────┬─────┘ ││
-│  │  │  • Receives     │  │        │  │  • Receives     │  │        │      │       ││
-│  │  │    agent pushes │  │        │  │    agent pushes │  │        │      │       ││
-│  │  │  • Scrapes local│  │        │  │  • Scrapes local│  │        │      │       ││
-│  │  │  • Thanos       │  │        │  │  • Thanos       │  │        │      │       ││
-│  │  │    sidecar      │  │        │  │    sidecar      │  │        │      │       ││
-│  │  └────────┬────────┘  │        │  └────────┬────────┘  │        └──────┼───────┘│
-│  │           │           │        │           │           │               │        │
-│  │     ┌─────┴─────┐     │        │     ┌─────┴─────┐     │        ┌──────┴──────┐ │
-│  │     │Pushgateway│     │        │     │Pushgateway│     │        │Pushgateway  │ │
-│  │     └─────┬─────┘     │        │     └─────┬─────┘     │        └──────┬──────┘ │
-│  │           │           │        │           │           │               │        │
-│  └───────────┼───────────┘        └───────────┼───────────┘               │        │
-│              │                                │                            │        │
-│    ┌─────────┼─────────┐            ┌─────────┼─────────┐         ┌────────┼─────┐  │
-│    │         │         │            │         │         │         │        │     │  │
-│    ▼         ▼         ▼            ▼         ▼         ▼         ▼        ▼     ▼  │
-│ ┌──────┐ ┌──────┐ ┌──────┐      ┌──────┐ ┌──────┐ ┌──────┐   ┌──────┐ ┌──────┐...│  │
-│ │Node 1│ │Node 2│ │Node 3│      │Node 4│ │Node 5│ │Node 6│   │Node 7│ │Node 8│   │  │
-│ │(Go)  │ │(Go)  │ │(Go)  │      │(Go)  │ │(Go)  │ │(Go)  │   │(Go)  │ │(Go)  │   │  │
-│ └──┬───┘ └──┬───┘ └──┬───┘      └──┬───┘ └──┬───┘ └──┬───┘   └──┬───┘ └──┬───┘   │  │
-│    │        │        │             │        │        │          │        │       │  │
-│    └────────┴────────┘             └────────┴────────┘          └────────┘       │  │
-│    ~150 nodes in EU                ~120 nodes in US             ~130 nodes APAC  │  │
-│                                                                                   │  │
-└───────────────────────────────────────────────────────────────────────────────────┘
-
-                                    AGENT DETAIL
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                                                                                      │
-│  ┌───────────────────────────────────────────────────────────────────────────────┐  │
-│  │                         netown-agent v2 (Go Binary)                            │  │
-│  │                                                                                │  │
-│  │  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   │  │
-│  │  │ XDC Metrics  │   │ System       │   │ Network      │   │ Buffer       │   │  │
-│  │  │ Collector    │   │ Metrics      │   │ Checker      │   │ Queue        │   │  │
-│  │  │              │   │              │   │              │   │              │   │  │
-│  │  │ • Block      │   │ • CPU        │   │ • Peer       │   │ • Local      │   │  │
-│  │  │   height     │   │ • Memory     │   │   latency    │   │   storage    │   │  │
-│  │  │ • Sync       │   │ • Disk       │   │ • Port 30303 │   │ • Retry      │   │  │
-│  │  │   status     │   │ • Network    │   │ • Geo loc    │   │   logic      │   │  │
-│  │  │ • Peers      │   │              │   │              │   │ • Backoff    │   │  │
-│  │  │ • TX pool    │   │              │   │              │   │              │   │  │
-│  │  └──────┬───────┘   └──────┬───────┘   └──────┬───────┘   └──────┬───────┘   │  │
-│  │         └──────────────────┼──────────────────┘                  │           │  │
-│  │                            ▼                                     │           │  │
-│  │                   ┌─────────────────┐                            │           │  │
-│  │                   │   Aggregator    │◄───────────────────────────┘           │  │
-│  │                   │                 │                                        │  │
-│  │                   │  • Batch every  │                                        │  │
-│  │                   │    30s          │                                        │  │
-│  │                   │  • Compress     │                                        │  │
-│  │                   │    (zstd)       │                                        │  │
-│  │                   │  • Sign payload │                                        │  │
-│  │                   └────────┬────────┘                                        │  │
-│  │                            │                                                 │  │
-│  │                            ▼ gRPC/HTTP2                                       │  │
-│  │                   ┌─────────────────┐                                         │  │
-│  │                   │  Regional       │                                         │  │
-│  │                   │  Collector      │                                         │  │
-│  │                   └─────────────────┘                                         │  │
-│  │                                                                                │  │
-│  │  Resource Budget: <50MB RAM, <1% CPU                                           │  │
-│  │  Binary Size: ~15MB single binary                                              │  │
-│  │  Auto-Update: Yes                                                              │  │
-│  └───────────────────────────────────────────────────────────────────────────────┘  │
-│                                                                                      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
+XDC Node (SkyOne Agent)
+    ↓ POST /api/v1/nodes/heartbeat
+API Gateway (Auth + Rate Limit)
+    ↓
+Node Service (Validation)
+    ↓
+PostgreSQL (Store metrics)
+    ↓
+Alert Service (Check thresholds)
+    ↓
+Notification Service (Send alerts)
 ```
 
-**Key Improvements:**
-1. **Regional Collectors:** 3-5 Prometheus instances worldwide reduce latency
-2. **Message Queue:** NATS decouples agents from API, handles burst traffic
-3. **Hybrid Push+Pull:** Agents push app data, Prometheus pulls system metrics
-4. **Time-Series DB:** TimescaleDB for 90-day metrics, compressed
-5. **Go Agent:** Cross-platform, self-updating, buffered
-6. **SSE Dashboard:** Real-time updates without polling
-7. **Horizontal Scaling:** Stateless API instances behind load balancer
-
----
-
-## 2. Single Node Setup
-
-The simplest deployment pattern, suitable for individual validators or small operations.
-
-### Architecture
+### Dashboard Flow
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Single XDC Node                          │
-│                     (Production Server)                      │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │                  Docker Network                      │   │
-│  │  ┌──────────────┐    ┌──────────────┐              │   │
-│  │  │   XDC Node   │◄───│  Prometheus  │              │   │
-│  │  │   (30303)    │    │   (9090)     │              │   │
-│  │  │   (8545)     │    └──────────────┘              │   │
-│  │  └──────┬───────┘         ▲                        │   │
-│  │         │                 │                        │   │
-│  │         ▼                 │                        │   │
-│  │  ┌──────────────┐         │                        │   │
-│  │  │ Chain Data   │         │                        │   │
-│  │  │  (/xdcchain) │         │                        │   │
-│  │  └──────────────┘         │                        │   │
-│  │                            │                        │   │
-│  │  ┌──────────────┐         │                        │   │
-│  │  │  Grafana     │─────────┘                        │   │
-│  │  │   (3000)     │                                  │   │
-│  │  └──────────────┘                                  │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                                                              │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │              System Services                         │   │
-│  │  • systemd (xdc-node.service)                       │   │
-│  │  • cron (health checks, backups)                    │   │
-│  │  • UFW firewall                                     │   │
-│  │  • fail2ban                                         │   │
-│  │  • auditd                                           │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+User Browser
+    ↓ GET /api/v1/fleet/status
+API Gateway (Auth)
+    ↓
+Node Service (Query)
+    ↓
+PostgreSQL (Fetch data)
+    ↓
+Dashboard (Render)
 ```
 
-### Components
+## Database Schema
 
-| Component | Purpose | Port |
-|-----------|---------|------|
-| XDC Node | Blockchain client | 30303 (P2P), 8545 (RPC) |
-| Prometheus | Metrics collection | 9090 (local) |
-| Grafana | Visualization | 3000 (local) |
-| Node Exporter | System metrics | 9100 (internal) |
+### Core Tables
 
-### Hardware Requirements
+```sql
+-- Node registry
+CREATE TABLE skynet.nodes (
+  id UUID PRIMARY KEY,
+  name VARCHAR(255),
+  role VARCHAR(50),
+  client_type VARCHAR(50),
+  created_at TIMESTAMP,
+  last_seen TIMESTAMP
+);
 
-| Resource | Minimum | Recommended |
-|----------|---------|-------------|
-| CPU | 8 cores | 16 cores |
-| RAM | 32 GB | 64 GB |
-| Disk | 1 TB SSD | 2 TB NVMe |
-| Network | 1 Gbps | 10 Gbps |
+-- Time-series metrics
+CREATE TABLE skynet.node_metrics (
+  id BIGSERIAL PRIMARY KEY,
+  node_id UUID REFERENCES nodes(id),
+  block_height BIGINT,
+  peer_count INT,
+  cpu_percent FLOAT,
+  memory_percent FLOAT,
+  disk_percent FLOAT,
+  collected_at TIMESTAMP
+);
 
----
-
-## 3. Multi-Node HA Setup
-
-High-availability deployment with multiple nodes for redundancy.
-
-### Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         Multi-Node HA Setup                              │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│   ┌──────────────────┐         ┌──────────────────┐                     │
-│   │   Node 1 (EU)    │◄───────►│   Node 2 (US)    │                     │
-│   │  65.21.27.213    │  P2P    │  95.217.56.168   │                     │
-│   │                  │         │                  │                     │
-│   │ ┌──────────────┐ │         │ ┌──────────────┐ │                     │
-│   │ │  XDC Node    │ │         │ │  XDC Node    │ │                     │
-│   │ │  (Primary)   │ │         │ │  (Secondary) │ │                     │
-│   │ └──────────────┘ │         │ └──────────────┘ │                     │
-│   └────────┬─────────┘         └────────┬─────────┘                     │
-│            │                            │                                │
-│            │     ┌──────────────┐       │                                │
-│            └────►│  HAProxy/    │◄──────┘                                │
-│                  │  eRPC Load   │                                       │
-│                  │  Balancer    │                                       │
-│                  └──────┬───────┘                                       │
-│                         │                                               │
-│            ┌────────────┼────────────┐                                  │
-│            ▼            ▼            ▼                                  │
-│      ┌─────────┐  ┌─────────┐  ┌─────────┐                             │
-│      │ Client 1│  │ Client 2│  │ Client 3│                             │
-│      └─────────┘  └─────────┘  └─────────┘                             │
-│                                                                          │
-│   ┌────────────────────────────────────────────────────────────────┐   │
-│   │                     Monitoring Stack                            │   │
-│   │  • Centralized Prometheus (Node 1)                              │   │
-│   │  • Grafana with multi-node dashboards                           │   │
-│   │  • Shared alerts configuration                                  │   │
-│   └────────────────────────────────────────────────────────────────┘   │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
+-- Incidents
+CREATE TABLE skynet.incidents (
+  id SERIAL PRIMARY KEY,
+  node_id UUID REFERENCES nodes(id),
+  type VARCHAR(50),
+  severity VARCHAR(20),
+  title VARCHAR(255),
+  status VARCHAR(20),
+  created_at TIMESTAMP
+);
 ```
 
-### HA Configuration
+### Indexing Strategy
 
-**Node 1 (Primary)**
+```sql
+-- Time-series queries
+CREATE INDEX idx_metrics_node_time ON node_metrics(node_id, collected_at DESC);
+
+-- Incident queries
+CREATE INDEX idx_incidents_node_status ON incidents(node_id, status);
+
+-- Fleet queries
+CREATE INDEX idx_nodes_active ON nodes(is_active) WHERE is_active = true;
+```
+
+## Authentication Architecture
+
+### API Key Types
+
+1. **Master API Keys**: Full access, configured via environment
+2. **Node API Keys**: Per-node access, stored in database
+3. **Dashboard Keys**: Read-only access for dashboard
+
+### Authentication Flow
+
+```
+Request → Authorization Header
+    ↓
+Extract Bearer Token
+    ↓
+Validate against:
+  - Master keys (env)
+  - Node keys (database)
+    ↓
+Return permissions
+```
+
+## Alert System Architecture
+
+### Alert Pipeline
+
+```
+Heartbeat Received
+    ↓
+Check Thresholds
+    ↓
+Create Incident (if triggered)
+    ↓
+Evaluate Alert Rules
+    ↓
+Send Notifications
+    ↓
+Update Alert History
+```
+
+### Notification Channels
+
+- **Email**: SMTP integration
+- **Telegram**: Bot API
+- **Slack**: Webhook
+- **PagerDuty**: Integration API
+- **Webhook**: Custom endpoints
+
+## Masternode Monitoring
+
+### Data Collection
+
+```
+XDC Network (RPC)
+    ↓
+XDPoS_getMasternodesByNumber
+    ↓
+Fetch Candidate Details
+    ↓
+Store in masternode_snapshots
+```
+
+### Metrics Tracked
+
+- Epoch transitions
+- Vote participation
+- Blocks produced/missed
+- Stake amounts
+- Nakamoto coefficient
+
+## Multi-Client Support
+
+### Client Detection
+
+```typescript
+// From heartbeat
+interface ClientInfo {
+  clientType: 'geth' | 'erigon' | 'nethermind' | 'reth';
+  clientVersion: string;
+  nodeType: 'full' | 'archive' | 'fast' | 'snap';
+  syncMode: 'full' | 'fast' | 'snap';
+}
+```
+
+### Client Comparison
+
+- Side-by-side metrics
+- Performance benchmarking
+- Resource usage comparison
+- Sync speed analysis
+
+## Scalability Architecture
+
+### Current Limitations
+
+1. **Single PostgreSQL instance**: Read replicas needed for scale
+2. **Unbounded metrics growth**: Retention policy required
+3. **Single WebSocket server**: Redis pub/sub for horizontal scaling
+
+### Scaling Path
+
+```
+Phase 1: Read Replicas
+  - PostgreSQL read replicas for dashboard queries
+  - Connection pooling optimization
+
+Phase 2: Time-Series Optimization
+  - TimescaleDB for metrics
+  - Automated partitioning
+
+Phase 3: Horizontal Scaling
+  - Redis for session/cache
+  - WebSocket clustering
+  - Load balancer
+```
+
+## Security Architecture
+
+### Network Security
+
+- TLS termination at reverse proxy
+- Internal Docker network
+- No direct database exposure
+
+### API Security
+
+- Bearer token authentication
+- Rate limiting per tier
+- Input validation (Zod schemas)
+- SQL injection prevention (parameterized queries)
+
+### Data Security
+
+- API keys hashed in database
+- Connection pooling with limits
+- Audit logging for mutations
+
+## Integration Points
+
+### SkyOne Agent Integration
+
+```
+SkyOne Agent (per node)
+    ↓ HTTPS
+SkyNet API
+    - Registration
+    - Heartbeat
+    - Issue reporting
+```
+
+### External Notifications
+
+```
+Alert Triggered
+    ↓
+Notification Service
+    ↓
+Email/SMS/Slack/PagerDuty
+```
+
+## Technology Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | Next.js 14, TypeScript, Tailwind CSS |
+| Backend | Node.js, Express |
+| Database | PostgreSQL 14+ |
+| Cache | Redis |
+| WebSocket | ws library |
+| Validation | Zod |
+| Testing | Jest, Playwright |
+
+## Deployment Architecture
+
+### Docker Compose
+
 ```yaml
-# docker-compose.yml
 services:
-  xdc-node:
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "3000:3000"
     environment:
-      - SYNC_MODE=full
-      - BOOTNODES=enode://...node2...
+      - DATABASE_URL
+      - API_KEYS
+  
+  postgres:
+    image: postgres:14
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  
+  redis:
+    image: redis:7-alpine
 ```
 
-**Node 2 (Secondary)**
-```yaml
-# docker-compose.yml
-services:
-  xdc-node:
-    environment:
-      - SYNC_MODE=full
-      - BOOTNODES=enode://...node1...
-```
+### Production Considerations
 
-**Load Balancer (HAProxy)**
-```haproxy
-# /etc/haproxy/haproxy.cfg
-global
-    maxconn 4096
+- PostgreSQL connection pooling
+- Redis for distributed rate limiting
+- nginx reverse proxy with TLS
+- Log aggregation
+- Monitoring (Prometheus/Grafana)
 
-defaults
-    mode http
-    timeout connect 5s
-    timeout client 30s
-    timeout server 30s
+## Future Enhancements
 
-backend xdc_rpc
-    balance roundrobin
-    option httpchk POST / HTTP/1.1\r\nContent-Type:\ application/json\r\n\r\n{"jsonrpc":"2.0","method":"net_version","id":1}
-    server node1 65.21.27.213:8545 check
-    server node2 95.217.56.168:8545 check backup
+### Planned Features
 
-frontend xdc_frontend
-    bind *:8989
-    default_backend xdc_rpc
-```
+1. **AI Diagnostics**: Machine learning for anomaly detection
+2. **Mobile App**: iOS/Android companion
+3. **Validator Leaderboard**: Real-time rankings
+4. **Cross-Client Testing**: Automated divergence detection
+5. **Consensus Health Scoring**: XDPoS 2.0 analysis
 
----
+## References
 
-## 4. RPC Infrastructure Setup
-
-Enterprise-grade RPC infrastructure for serving multiple clients.
-
-### Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      RPC Infrastructure Setup                            │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│   ┌─────────────────────────────────────────────────────────────────┐  │
-│   │                     Global Load Balancer                         │  │
-│   │                   (CloudFlare / AWS ALB)                         │  │
-│   └─────────────────────────────┬───────────────────────────────────┘  │
-│                                 │                                       │
-│           ┌─────────────────────┼─────────────────────┐                │
-│           │                     │                     │                │
-│           ▼                     ▼                     ▼                │
-│   ┌───────────────┐     ┌───────────────┐     ┌───────────────┐       │
-│   │  Region 1     │     │  Region 2     │     │  Region 3     │       │
-│   │  (EU-West)    │     │  (US-East)    │     │  (Asia-Pacific)│      │
-│   │               │     │               │     │               │       │
-│   │ ┌───────────┐ │     │ ┌───────────┐ │     │ ┌───────────┐ │       │
-│   │ │  Node 1A  │ │     │ │  Node 2A  │ │     │ │  Node 3A  │ │       │
-│   │ │  (Full)   │ │     │ │  (Full)   │ │     │ │  (Full)   │ │       │
-│   │ └─────┬─────┘ │     │ └─────┬─────┘ │     │ └─────┬─────┘ │       │
-│   │       │       │     │       │       │     │       │       │       │
-│   │ ┌─────▼─────┐ │     │ ┌─────▼─────┐ │     │ ┌─────▼─────┐ │       │
-│   │ │  Node 1B  │ │     │ │  Node 2B  │ │     │ │  Node 3B  │ │       │
-│   │ │ (Archive) │ │     │ │ (Archive) │ │     │ │ (Archive) │ │       │
-│   │ └───────────┘ │     │ └───────────┘ │     │ └───────────┘ │       │
-│   │               │     │               │     │               │       │
-│   │ ┌───────────┐ │     │ ┌───────────┐ │     │ ┌───────────┐ │       │
-│   │ │  eRPC     │ │     │ │  eRPC     │ │     │ │  eRPC     │ │       │
-│   │ │ Gateway   │ │     │ │ Gateway   │ │     │ │ Gateway   │ │       │
-│   │ └───────────┘ │     │ └───────────┘ │     │ └───────────┘ │       │
-│   └───────────────┘     └───────────────┘     └───────────────┘       │
-│                                                                          │
-│   ┌─────────────────────────────────────────────────────────────────┐  │
-│   │                     Central Monitoring                           │  │
-│   │  • Prometheus Federation                                          │  │
-│   │  • Grafana with global dashboards                                 │  │
-│   │  • PagerDuty/OpsGenie integration                                 │  │
-│   └─────────────────────────────────────────────────────────────────┘  │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### eRPC Configuration
-
-```yaml
-# erpc.yaml
-server:
-  listenV4: true
-  httpHostV4: 0.0.0.0
-  httpPort: 4000
-  maxTimeout: 30s
-
-projects:
-  - id: xdc-mainnet
-    networks:
-      - architecture: evm
-        evm:
-          chainId: 50
-        failsafe:
-          timeout:
-            duration: 30s
-          retry:
-            maxCount: 3
-            delay: 1000ms
-            backoffMaxDelay: 10s
-            backoffFactor: 0.5
-            jitter: 500ms
-          hedge:
-            delay: 500ms
-            maxCount: 2
-        upstreams:
-          - endpoint: http://node1a:8545
-          - endpoint: http://node1b:8545
-          - endpoint: http://node2a:8545
-          - endpoint: http://node2b:8545
-          - endpoint: http://node3a:8545
-          - endpoint: http://node3b:8545
-```
-
----
-
-## 5. Network Diagrams
-
-### Network Flow - Transaction Processing
-
-```
-Client Request
-     │
-     ▼
-┌─────────────┐
-│   Load      │
-│  Balancer   │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐     ┌─────────────┐
-│   eRPC      │────►│   XDC       │
-│   Gateway   │◄────│   Node      │
-└─────────────┘     └──────┬──────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │  XDPoS      │
-                    │ Consensus   │
-                    └─────────────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │   P2P       │
-                    │  Network    │
-                    └─────────────┘
-```
-
-### Network Flow - Block Propagation
-
-```
-┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-│  Block      │─────►│   P2P       │─────►│   Peers     │
-│  Producer   │      │  Broadcast  │      │  (Network)  │
-└─────────────┘      └─────────────┘      └──────┬──────┘
-                                                  │
-        ┌─────────────────────────────────────────┼─────────┐
-        │                                         │         │
-        ▼                                         ▼         ▼
-   ┌─────────┐                              ┌─────────┐ ┌─────────┐
-   │ Node 1  │                              │ Node 2  │ │ Node 3  │
-   │ (EU)    │                              │ (US)    │ │ (Asia)  │
-   └─────────┘                              └─────────┘ └─────────┘
-```
-
-### Security Zones
-
-```
-┌───────────────────────────────────────────────────────────────────────┐
-│                         PUBLIC ZONE                                   │
-│  (Internet - Untrusted)                                               │
-│                                                                       │
-│  • Load Balancer (443/80)                                            │
-│  • P2P Connections (30303)                                           │
-└───────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌───────────────────────────────────────────────────────────────────────┐
-│                        DMZ ZONE                                       │
-│  (Limited Trust)                                                      │
-│                                                                       │
-│  • eRPC Gateway                                                       │
-│  • DDoS Protection                                                    │
-│  • Rate Limiting                                                      │
-└───────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌───────────────────────────────────────────────────────────────────────┐
-│                      INTERNAL ZONE                                    │
-│  (Trusted - Never Exposed)                                            │
-│                                                                       │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                │
-│  │  XDC Node    │  │ Prometheus   │  │  Grafana     │                │
-│  │  (8545/8546) │  │  (9090)      │  │  (3000)      │                │
-│  └──────────────┘  └──────────────┘  └──────────────┘                │
-│                                                                       │
-└───────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Deployment Checklist
-
-### Single Node
-- [ ] Provision server (8+ cores, 32GB RAM, 1TB SSD)
-- [ ] Run `setup.sh`
-- [ ] Configure firewall
-- [ ] Set up monitoring
-- [ ] Configure backups
-- [ ] Run security hardening
-
-### Multi-Node HA
-- [ ] Provision 2+ servers in different regions
-- [ ] Deploy nodes on each server
-- [ ] Configure P2P peering between nodes
-- [ ] Set up load balancer
-- [ ] Configure health checks
-- [ ] Test failover
-
-### RPC Infrastructure
-- [ ] Provision 3+ regions
-- [ ] Deploy full + archive nodes per region
-- [ ] Configure eRPC gateway
-- [ ] Set up global load balancer
-- [ ] Configure rate limiting
-- [ ] Set up monitoring aggregation
-- [ ] Configure alerting (PagerDuty/OpsGenie)
-
----
-
-## Scaling Considerations
-
-| Metric | Single Node | Multi-Node | Enterprise | XDCNetOwn (400 nodes) |
-|--------|-------------|------------|------------|----------------------|
-| RPS | 100-500 | 1,000-5,000 | 10,000+ | N/A (monitoring) |
-| Regions | 1 | 2-3 | 3+ | 3-5 collectors |
-| Nodes | 1 | 2-6 | 10+ | 400+ monitored |
-| Storage | 1 TB | 2-4 TB | 10+ TB | 200GB metrics |
-| Network | 1 Gbps | 10 Gbps | 100 Gbps | 1 Gbps |
-
----
-
-## Related Documents
-
-- [SCALABILITY-ARCHITECTURE.md](./SCALABILITY-ARCHITECTURE.md) - Detailed 400+ node scalability plan
-- [ROADMAP.md](./ROADMAP.md) - Implementation phases and timeline
-- [INTEGRATION.md](./INTEGRATION.md) - Agent integration guide
-- [REQUIREMENTS-V2.md](./REQUIREMENTS-V2.md) - System requirements
+- [API Documentation](API.md)
+- [Database Schema](docs/ARCHITECTURE.md)
+- [Integration Guide](docs/INTEGRATION.md)
+- [XDPoS Monitoring](docs/XDPOS-MONITORING.md)
