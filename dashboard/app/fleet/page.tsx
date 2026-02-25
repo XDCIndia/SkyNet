@@ -11,9 +11,6 @@ import {
   ChevronDown, 
   ChevronRight,
   RefreshCw,
-  FileText,
-  Play,
-  Plus,
   Clock,
   MapPin,
   Cpu,
@@ -24,7 +21,13 @@ import {
   Wifi,
   Layers,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  EyeOff,
+  ChevronUp,
+  Filter,
+  Square,
+  CheckSquare
 } from 'lucide-react';
 
 type NodeStatus = 'online' | 'degraded' | 'offline';
@@ -49,7 +52,6 @@ interface FleetNode {
   client_version: string;
   last_seen: string;
   status: NodeStatus;
-  // Erigon dual sentry monitoring (Issue #14)
   client_type?: string;
   sentries?: { port: number; protocol: string; peers: number }[];
 }
@@ -193,57 +195,6 @@ function ConfirmDialog({
   );
 }
 
-function DiagnosticsRow({ nodeId, onAction }: { nodeId: string; onAction: (action: string, node: string) => void }) {
-  const [running, setRunning] = useState<string | null>(null);
-  const [result, setResult] = useState<any>(null);
-
-  const runDiagnostic = async (command: string) => {
-    setRunning(command);
-    try {
-      const res = await fetch('/api/diagnostics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nodeId, command }),
-      });
-      const data = await res.json();
-      setResult(data);
-      onAction(`Diagnostic: ${command}`, nodeId);
-    } catch (err) {
-      console.error('Diagnostic failed:', err);
-    } finally {
-      setRunning(null);
-    }
-  };
-
-  return (
-    <div className="col-span-full bg-[#0A0E1A]/50 p-4 rounded-lg mt-2">
-      <div className="flex flex-wrap gap-3 mb-4">
-        {['health_check', 'sync_status', 'peer_discovery', 'disk_usage', 'memory_profile', 'rpc_test'].map((cmd) => (
-          <button
-            key={cmd}
-            onClick={() => runDiagnostic(cmd)}
-            disabled={running === cmd}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors disabled:opacity-50"
-          >
-            {running === cmd ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Activity className="w-4 h-4 text-[#1E90FF]" />
-            )}
-            {cmd.replace('_', ' ')}
-          </button>
-        ))}
-      </div>
-      
-      {result && (
-        <div className="bg-white/5 rounded-lg p-3 text-sm font-mono overflow-x-auto">
-          <pre className="text-xs">{JSON.stringify(result.result, null, 2)}</pre>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function FleetPage() {
   const router = useRouter();
   const [nodes, setNodes] = useState<FleetNode[]>([]);
@@ -259,15 +210,17 @@ export default function FleetPage() {
   const [loading, setLoading] = useState(true);
   const [sortField, setSortField] = useState<string>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [expandedNode, setExpandedNode] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<NodeRole | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<NodeStatus | 'all'>('all');
   const [toast, setToast] = useState<string | null>(null);
   
-  // Node removal state
-  const [nodeToRemove, setNodeToRemove] = useState<FleetNode | null>(null);
-  const [isRemovingNode, setIsRemovingNode] = useState(false);
-
+  // New state for requested features
+  const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
+  const [showZeroBlockNodes, setShowZeroBlockNodes] = useState(false);
+  const [incidentsCollapsed, setIncidentsCollapsed] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  
   // WebSocket for live updates
   const { incidents: wsIncidents, connected: wsConnected } = useWebSocket();
 
@@ -281,7 +234,6 @@ export default function FleetPage() {
       if (fleetRes.ok) {
         const fleetData = await fleetRes.json();
         
-        // Map nodes with calculated status
         const mappedNodes: FleetNode[] = fleetData.nodes.map((n: any) => ({
           id: n.id,
           name: n.name,
@@ -329,58 +281,101 @@ export default function FleetPage() {
 
   useEffect(() => {
     fetchFleet();
-    // Auto-refresh every 10 seconds
     const interval = setInterval(fetchFleet, 10000);
     return () => clearInterval(interval);
   }, [fetchFleet]);
 
-  // Update incidents from WebSocket
   useEffect(() => {
     if (wsIncidents) {
       setIncidents((wsIncidents as any).data || []);
     }
   }, [wsIncidents]);
 
-  const handleAction = (action: string, node: string) => {
-    setToast(`Command "${action}" executed on ${node}`);
-  };
-
-  const handleRowClick = (nodeId: string) => {
-    router.push(`/nodes/${nodeId}`);
-  };
-
-  // Handle node removal
-  const handleRemoveNode = async (node: FleetNode) => {
-    setIsRemovingNode(true);
-    try {
-      const res = await fetch(`/api/v1/nodes/${node.id}`, {
-        method: 'DELETE',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY || 'xdc-netown-key-2026-prod'}`,
-        },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setToast(`Node "${node.name}" has been removed successfully`);
-        // Refresh the fleet data
-        await fetchFleet();
-      } else {
-        const error = await res.json();
-        setToast(`Failed to remove node: ${error.error || 'Unknown error'}`);
-      }
-    } catch (err) {
-      console.error('Error removing node:', err);
-      setToast('Failed to remove node. Please try again.');
-    } finally {
-      setIsRemovingNode(false);
-      setNodeToRemove(null);
+  // Toggle node selection
+  const toggleNodeSelection = (nodeId: string) => {
+    const newSelected = new Set(selectedNodes);
+    if (newSelected.has(nodeId)) {
+      newSelected.delete(nodeId);
+    } else {
+      newSelected.add(nodeId);
     }
+    setSelectedNodes(newSelected);
+  };
+
+  // Select/deselect all visible nodes
+  const toggleSelectAll = () => {
+    if (selectedNodes.size === filteredAndSortedNodes.length) {
+      setSelectedNodes(new Set());
+    } else {
+      setSelectedNodes(new Set(filteredAndSortedNodes.map(n => n.id)));
+    }
+  };
+
+  // Bulk delete nodes
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    const nodesToDelete = Array.from(selectedNodes);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const nodeId of nodesToDelete) {
+      try {
+        const res = await fetch(`/api/v1/nodes/${nodeId}`, {
+          method: 'DELETE',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY || 'xdc-netown-key-2026-prod'}`,
+          },
+        });
+
+        if (res.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (err) {
+        failCount++;
+      }
+    }
+
+    setToast(`Deleted ${successCount} nodes${failCount > 0 ? `, ${failCount} failed` : ''}`);
+    setSelectedNodes(new Set());
+    setIsBulkDeleting(false);
+    setShowBulkDeleteConfirm(false);
+    await fetchFleet();
+  };
+
+  // Delete non-active nodes (not healthy or syncing)
+  const deleteNonActiveNodes = async () => {
+    const nonActiveNodes = nodes.filter(n => n.status === 'offline' && n.block_height === 0);
+    let successCount = 0;
+
+    for (const node of nonActiveNodes) {
+      try {
+        const res = await fetch(`/api/v1/nodes/${node.id}`, {
+          method: 'DELETE',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY || 'xdc-netown-key-2026-prod'}`,
+          },
+        });
+        if (res.ok) successCount++;
+      } catch (err) {
+        console.error('Failed to delete node:', err);
+      }
+    }
+
+    setToast(`Removed ${successCount} non-active nodes`);
+    await fetchFleet();
   };
 
   const filteredAndSortedNodes = useMemo(() => {
     let filtered = [...nodes];
+    
+    // Hide 0 block nodes by default
+    if (!showZeroBlockNodes) {
+      filtered = filtered.filter(n => n.block_height > 0);
+    }
     
     if (roleFilter !== 'all') {
       filtered = filtered.filter(n => n.role === roleFilter);
@@ -415,9 +410,10 @@ export default function FleetPage() {
     });
     
     return filtered;
-  }, [nodes, roleFilter, statusFilter, sortField, sortDirection]);
+  }, [nodes, roleFilter, statusFilter, sortField, sortDirection, showZeroBlockNodes]);
 
   const activeIncidents = incidents.filter(i => i.status === 'active');
+  const zeroBlockCount = nodes.filter(n => n.block_height === 0).length;
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -436,12 +432,23 @@ export default function FleetPage() {
             <h1 className="text-2xl font-semibold text-[#F1F5F9]">Fleet Management</h1>
             <p className="text-[#64748B] mt-1">Monitor and manage all nodes in your fleet</p>
           </div>
-          {wsConnected && (
-            <div className="flex items-center gap-2">
-              <Wifi className="w-4 h-4 text-[#10B981]" />
-              <span className="text-sm text-[#10B981]">Live</span>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {selectedNodes.size > 0 && (
+              <button
+                onClick={() => setShowBulkDeleteConfirm(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#EF4444] text-white hover:bg-[#EF4444]/90 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete {selectedNodes.size} nodes
+              </button>
+            )}
+            {wsConnected && (
+              <div className="flex items-center gap-2">
+                <Wifi className="w-4 h-4 text-[#10B981]" />
+                <span className="text-sm text-[#10B981]">Live</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -472,11 +479,35 @@ export default function FleetPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-[#F1F5F9]">Fleet Status Matrix</h2>
-                  <p className="text-xs text-[#64748B]">All registered nodes</p>
+                  <p className="text-xs text-[#64748B]">{filteredAndSortedNodes.length} nodes visible</p>
                 </div>
               </div>
               
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                {/* 0 Block Toggle */}
+                <button
+                  onClick={() => setShowZeroBlockNodes(!showZeroBlockNodes)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    showZeroBlockNodes 
+                      ? 'bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/30' 
+                      : 'bg-white/5 text-[#64748B] border border-white/10 hover:bg-white/10'
+                  }`}
+                  title={showZeroBlockNodes ? 'Hide 0-block nodes' : `Show ${zeroBlockCount} 0-block nodes`}
+                >
+                  {showZeroBlockNodes ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  {zeroBlockCount} 0-block
+                </button>
+
+                {/* Remove Non-Active Button */}
+                <button
+                  onClick={deleteNonActiveNodes}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20 text-sm hover:bg-[#EF4444]/20 transition-colors"
+                  title="Remove offline nodes with 0 blocks"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Clean Non-Active
+                </button>
+
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value as NodeRole | 'all')}
@@ -506,7 +537,19 @@ export default function FleetPage() {
               <table className="w-full min-w-[800px]">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]"></th>
+                    <th className="text-left py-3 px-2 text-xs font-medium text-[#64748B]">
+                      <button 
+                        onClick={toggleSelectAll}
+                        className="hover:text-[#F1F5F9] transition-colors"
+                        title={selectedNodes.size === filteredAndSortedNodes.length ? 'Deselect all' : 'Select all'}
+                      >
+                        {selectedNodes.size === filteredAndSortedNodes.length && filteredAndSortedNodes.length > 0 ? (
+                          <CheckSquare className="w-4 h-4" />
+                        ) : (
+                          <Square className="w-4 h-4" />
+                        )}
+                      </button>
+                    </th>
                     <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B] cursor-pointer hover:text-[#F1F5F9]" onClick={() => handleSort('status')}>Status</th>
                     <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B] cursor-pointer hover:text-[#F1F5F9]" onClick={() => handleSort('name')}>Name</th>
                     <th className="text-left py-3 px-3 text-xs font-medium text-[#64748B]">Role</th>
@@ -524,88 +567,75 @@ export default function FleetPage() {
                 <tbody className="divide-y divide-white/5">
                   {loading ? (
                     <tr>
-                      <td colSpan={12} className="py-8 text-center text-[#64748B]">Loading...</td>
+                      <td colSpan={14} className="py-8 text-center text-[#64748B]">Loading...</td>
                     </tr>
                   ) : filteredAndSortedNodes.length === 0 ? (
                     <tr>
-                      <td colSpan={12} className="py-8 text-center text-[#64748B]">No nodes match filters</td>
+                      <td colSpan={14} className="py-8 text-center text-[#64748B]">
+                        {showZeroBlockNodes ? 'No nodes match filters' : `No nodes with >0 blocks. Click "${zeroBlockCount} 0-block" to show all.`}
+                      </td>
                     </tr>
                   ) : (
                     filteredAndSortedNodes.map((node) => (
-                      <>
-                        <tr
-                          key={node.id}
-                          className="hover:bg-white/[0.02] cursor-pointer"
-                          onClick={() => handleRowClick(node.id)}
-                        >
-                          <td className="py-3 px-3">
-                            <ChevronRight className="w-4 h-4 text-[#64748B]" />
-                          </td>
-                          <td className="py-3 px-3">
-                            <StatusDot status={node.status} />
-                          </td>
-                          <td className="py-3 px-3 font-medium">{node.name}</td>
-                          <td className="py-3 px-3">
-                            <span className="px-2 py-0.5 bg-white/5 rounded text-xs">{node.role}</span>
-                          </td>
-                          <td className="py-3 px-3">
-                            <div className="flex items-center gap-1 text-xs text-[#64748B]">
-                              <MapPin className="w-3 h-3" />
-                              {node.location_city}
-                            </div>
-                          </td>
-                          <td className="py-3 px-3 font-mono-nums">{(node.block_height || 0).toLocaleString()}</td>
-                          <td className="py-3 px-3">
-                            <span className={node.sync_percent >= 99 ? 'text-[#10B981]' : 'text-[#F59E0B]'} >
-                              {(node.sync_percent || 0).toFixed(1)}%
-                            </span>
-                          </td>
-                          <td className="py-3 px-3 font-mono-nums">{node.peer_count || 0}</td>
-                          <td className="py-3 px-3">
-                            <div className="flex items-center gap-2">
-                              <Cpu className="w-3 h-3 text-[#64748B]" />
-                              <span className={(node.cpu_percent || 0) > 80 ? 'text-[#EF4444]' : ''}>{Math.round(node.cpu_percent || 0)}%</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-3">
-                            <div className="flex items-center gap-2">
-                              <MemoryStick className="w-3 h-3 text-[#64748B]" />
-                              <span className={(node.memory_percent || 0) > 90 ? 'text-[#EF4444]' : ''}>{Math.round(node.memory_percent || 0)}%</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-3">
-                            <div className="flex items-center gap-2">
-                              <HardDrive className="w-3 h-3 text-[#64748B]" />
-                              <span className={(node.disk_percent || 0) > 85 ? 'text-[#F59E0B]' : ''}>{Math.round(node.disk_percent || 0)}%</span>
-                            </div>
-                          </td>
-                          {/* Client Type */}
-                          <td className="py-3 px-3">
-                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#1E90FF]/10 text-[#1E90FF] border border-[#1E90FF]/20">
-                              {(node.client_type || 'unknown').toUpperCase()}
-                            </span>
-                          </td>
-                          {/* Client Version */}
-                          <td className="py-3 px-3 text-xs text-[#64748B]" title={node.client_version}>
-                            {node.client_version?.split('/')[0] || 'Unknown'}
-                          </td>
-                          {/* Erigon Sentry Indicator (Issue #14) */}
-                          {node.client_type?.toLowerCase() === 'erigon' && node.sentries && (
-                            <td className="py-3 px-3">
-                              <div className="flex items-center gap-1" title={`Sentries: ${node.sentries.map(s => `${s.protocol}:${s.peers}`).join(', ')}`}>
-                                <Layers className="w-3 h-3 text-orange-400" />
-                                {node.sentries.every(s => s.peers > 0) ? (
-                                  <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-                                ) : node.sentries.some(s => s.peers > 0) ? (
-                                  <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
-                                ) : (
-                                  <span className="w-2 h-2 rounded-full bg-[#EF4444] animate-pulse" />
-                                )}
-                              </div>
-                            </td>
+                      <tr
+                        key={node.id}
+                        className="hover:bg-white/[0.02] cursor-pointer"
+                        onClick={() => router.push(`/nodes/${node.id}`)}
+                      >
+                        <td className="py-3 px-2" onClick={(e) => { e.stopPropagation(); toggleNodeSelection(node.id); }}>
+                          {selectedNodes.has(node.id) ? (
+                            <CheckSquare className="w-4 h-4 text-[#1E90FF]" />
+                          ) : (
+                            <Square className="w-4 h-4 text-[#64748B]" />
                           )}
-                        </tr>
-                      </>
+                        </td>
+                        <td className="py-3 px-3">
+                          <StatusDot status={node.status} />
+                        </td>
+                        <td className="py-3 px-3 font-medium">{node.name}</td>
+                        <td className="py-3 px-3">
+                          <span className="px-2 py-0.5 bg-white/5 rounded text-xs">{node.role}</span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-1 text-xs text-[#64748B]">
+                            <MapPin className="w-3 h-3" />
+                            {node.location_city}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 font-mono-nums">{(node.block_height || 0).toLocaleString()}</td>
+                        <td className="py-3 px-3">
+                          <span className={node.sync_percent >= 99 ? 'text-[#10B981]' : 'text-[#F59E0B]'} >
+                            {(node.sync_percent || 0).toFixed(1)}%
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 font-mono-nums">{node.peer_count || 0}</td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2">
+                            <Cpu className="w-3 h-3 text-[#64748B]" />
+                            <span className={(node.cpu_percent || 0) > 80 ? 'text-[#EF4444]' : ''}>{Math.round(node.cpu_percent || 0)}%</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2">
+                            <MemoryStick className="w-3 h-3 text-[#64748B]" />
+                            <span className={(node.memory_percent || 0) > 90 ? 'text-[#EF4444]' : ''}>{Math.round(node.memory_percent || 0)}%</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2">
+                            <HardDrive className="w-3 h-3 text-[#64748B]" />
+                            <span className={(node.disk_percent || 0) > 85 ? 'text-[#F59E0B]' : ''}>{Math.round(node.disk_percent || 0)}%</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#1E90FF]/10 text-[#1E90FF] border border-[#1E90FF]/20">
+                            {(node.client_type || 'unknown').toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-xs text-[#64748B]" title={node.client_version}>
+                          {node.client_version?.split('/')[0] || 'Unknown'}
+                        </td>
+                      </tr>
                     ))
                   )}
                 </tbody>
@@ -614,42 +644,57 @@ export default function FleetPage() {
           </div>
 
           <div className="space-y-4">
+            {/* Active Incidents - Collapsible */}
             <div className="card-xdc">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[rgba(239,68,68,0.1)] flex items-center justify-center text-[#EF4444]">
-                  <AlertTriangle className="w-5 h-5" />
+              <div 
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => setIncidentsCollapsed(!incidentsCollapsed)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[rgba(239,68,68,0.1)] flex items-center justify-center text-[#EF4444]">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-[#F1F5F9]">Active Incidents</h2>
+                    <p className="text-xs text-[#64748B]">{activeIncidents.length} requiring attention</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-[#F1F5F9]">Active Incidents</h2>
-                  <p className="text-xs text-[#64748B]">{activeIncidents.length} requiring attention</p>
-                </div>
+                <button className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                  {incidentsCollapsed ? (
+                    <ChevronDown className="w-5 h-5 text-[#64748B]" />
+                  ) : (
+                    <ChevronUp className="w-5 h-5 text-[#64748B]" />
+                  )}
+                </button>
               </div>
               
-              <div className="space-y-3">
-                {activeIncidents.length === 0 ? (
-                  <div className="text-center py-6 text-[#64748B]">
-                    <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-[#10B981]" />
-                    <p>All systems operational</p>
-                  </div>
-                ) : (
-                  activeIncidents.map(incident => (
-                    <div key={incident.id} className="bg-white/5 rounded-lg p-3 border border-white/5">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <SeverityBadge severity={incident.severity} />
-                          <span className="text-sm font-medium">{incident.type}</span>
-                        </div>
-                        <span className="text-xs text-[#64748B]">{formatTimeAgo(incident.detected_at)}</span>
-                      </div>
-                      <p className="text-xs text-[#64748B] mb-2">{incident.description}</p>
-                      <div className="flex items-center gap-2 text-xs">
-                        <Server className="w-3 h-3 text-[#64748B]" />
-                        <span>{incident.node_name}</span>
-                      </div>
+              {!incidentsCollapsed && (
+                <div className="space-y-3 mt-4">
+                  {activeIncidents.length === 0 ? (
+                    <div className="text-center py-6 text-[#64748B]">
+                      <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-[#10B981]" />
+                      <p>All systems operational</p>
                     </div>
-                  ))
-                )}
-              </div>
+                  ) : (
+                    activeIncidents.map(incident => (
+                      <div key={incident.id} className="bg-white/5 rounded-lg p-3 border border-white/5">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <SeverityBadge severity={incident.severity} />
+                            <span className="text-sm font-medium">{incident.type}</span>
+                          </div>
+                          <span className="text-xs text-[#64748B]">{formatTimeAgo(incident.detected_at)}</span>
+                        </div>
+                        <p className="text-xs text-[#64748B] mb-2">{incident.description}</p>
+                        <div className="flex items-center gap-2 text-xs">
+                          <Server className="w-3 h-3 text-[#64748B]" />
+                          <span>{incident.node_name}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="card-xdc">
@@ -684,6 +729,18 @@ export default function FleetPage() {
           </div>
         </div>
       </div>
+      
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showBulkDeleteConfirm}
+        title="Delete Multiple Nodes"
+        message={`Are you sure you want to delete ${selectedNodes.size} selected nodes? This action cannot be undone.`}
+        confirmText="Delete All"
+        confirmVariant="danger"
+        onConfirm={handleBulkDelete}
+        onCancel={() => setShowBulkDeleteConfirm(false)}
+        isLoading={isBulkDeleting}
+      />
       
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </DashboardLayout>
