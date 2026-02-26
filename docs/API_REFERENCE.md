@@ -3,29 +3,23 @@
 ## Base URL
 
 ```
-Production: https://net.xdc.network
-Local:      http://localhost:3000
+Production: https://net.xdc.network/api/v1
+Local:      http://localhost:3000/api/v1
 ```
 
 ## Authentication
 
-All API requests require Bearer token authentication:
+All API endpoints require Bearer token authentication:
 
 ```http
 Authorization: Bearer YOUR_API_KEY
 ```
 
-API keys are configured via the `API_KEYS` environment variable (comma-separated).
+### Obtaining an API Key
 
-## Rate Limits
-
-| Tier | Limit | Window |
-|------|-------|--------|
-| Public | 60 | 1 minute |
-| Authenticated | 120 | 1 minute |
-| Heartbeat | 120 | 1 minute |
-| Write | 30 | 1 minute |
-| Admin | 300 | 1 minute |
+1. Register your node with SkyNet
+2. API key is returned in the registration response
+3. Store securely in `skynet.conf`
 
 ## Endpoints
 
@@ -33,52 +27,45 @@ API keys are configured via the `API_KEYS` environment variable (comma-separated
 
 Register a new node with SkyNet.
 
-```http
-POST /api/v1/nodes/register
-Authorization: Bearer YOUR_API_KEY
-Content-Type: application/json
-```
+**Endpoint:** `POST /nodes/register`
 
-**Request Body:**
-
+**Request:**
 ```json
 {
   "name": "xdc-node-01",
   "host": "192.168.1.100",
   "role": "masternode",
   "rpcUrl": "http://192.168.1.100:8545",
+  "location": {
+    "city": "Singapore",
+    "country": "SG",
+    "lat": 1.3521,
+    "lng": 103.8198
+  },
+  "tags": ["production", "asia"],
+  "version": "v2.6.8-stable",
   "clientType": "geth",
-  "nodeType": "full",
-  "syncMode": "full"
+  "nodeType": "masternode"
 }
 ```
 
 **Response:**
-
 ```json
 {
   "success": true,
-  "data": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "apiKey": "xdc_abc123...",
-    "name": "xdc-node-01",
-    "registeredAt": "2026-02-14T12:00:00Z"
-  }
+  "nodeId": "550e8400-e29b-41d4-a716-446655440000",
+  "apiKey": "xdc_a1b2c3d4e5f6...",
+  "message": "Node registered successfully"
 }
 ```
 
 ### Heartbeat
 
-Send node metrics and receive commands.
+Send node metrics to SkyNet.
 
-```http
-POST /api/v1/nodes/heartbeat
-Authorization: Bearer YOUR_API_KEY
-Content-Type: application/json
-```
+**Endpoint:** `POST /nodes/heartbeat`
 
-**Request Body:**
-
+**Request:**
 ```json
 {
   "nodeId": "550e8400-e29b-41d4-a716-446655440000",
@@ -110,13 +97,12 @@ Content-Type: application/json
 ```
 
 **Response:**
-
 ```json
 {
   "success": true,
   "data": {
     "ok": true,
-    "commands": []
+    "commands": ["restart", "update"]
   },
   "incidentsDetected": 0
 }
@@ -126,13 +112,9 @@ Content-Type: application/json
 
 Get overview of all registered nodes.
 
-```http
-GET /api/v1/fleet/status
-Authorization: Bearer YOUR_API_KEY
-```
+**Endpoint:** `GET /fleet/status`
 
 **Response:**
-
 ```json
 {
   "success": true,
@@ -184,13 +166,9 @@ Authorization: Bearer YOUR_API_KEY
 
 Get detailed status for a specific node.
 
-```http
-GET /api/v1/nodes/{nodeId}/status
-Authorization: Bearer YOUR_API_KEY
-```
+**Endpoint:** `GET /nodes/{nodeId}/status`
 
 **Response:**
-
 ```json
 {
   "node": {
@@ -212,52 +190,13 @@ Authorization: Bearer YOUR_API_KEY
 }
 ```
 
-### Node Metrics History
-
-Get historical metrics for a node.
-
-```http
-GET /api/v1/nodes/{nodeId}/metrics/history?hours=24
-Authorization: Bearer YOUR_API_KEY
-```
-
-**Query Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| hours | number | 24 | Hours of history to retrieve |
-| limit | number | 1000 | Maximum data points |
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "blockHeight": 89234567,
-      "peerCount": 25,
-      "cpuPercent": 45.2,
-      "memoryPercent": 62.1,
-      "diskPercent": 78.0,
-      "collectedAt": "2026-02-14T12:00:00Z"
-    }
-  ]
-}
-```
-
 ### Report Issue
 
 Report an issue from a node.
 
-```http
-POST /api/v1/issues/report
-Authorization: Bearer YOUR_API_KEY
-Content-Type: application/json
-```
+**Endpoint:** `POST /issues/report`
 
-**Request Body:**
-
+**Request:**
 ```json
 {
   "nodeId": "550e8400-e29b-41d4-a716-446655440000",
@@ -280,65 +219,44 @@ Content-Type: application/json
 }
 ```
 
-**Issue Types:**
-
-| Type | Description |
-|------|-------------|
-| sync_stall | Block sync has stopped progressing |
-| peer_drop | Peer count dropped critically |
-| disk_critical | Disk usage exceeded threshold |
-| rpc_error | RPC endpoint not responding |
-| bad_block | BAD BLOCK detected |
-| container_crash | Node container crashed |
-
 **Response:**
-
 ```json
 {
   "success": true,
-  "data": {
-    "id": 123,
-    "isDuplicate": false,
-    "githubIssueUrl": "https://github.com/AnilChinchawale/xdc-node-setup/issues/123"
-  }
+  "issueId": "issue-123",
+  "isDuplicate": false,
+  "githubIssueUrl": "https://github.com/AnilChinchawale/xdc-node-setup/issues/123"
 }
 ```
 
 ### List Issues
 
-Get all reported issues.
+Get list of issues with filters.
 
-```http
-GET /api/v1/issues?status=open&severity=critical
-Authorization: Bearer YOUR_API_KEY
-```
+**Endpoint:** `GET /issues?status=open&severity=critical`
 
 **Query Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| status | string | Filter by status: open, resolved |
-| severity | string | Filter by severity: critical, high, medium, low |
-| nodeId | string | Filter by node ID |
-| limit | number | Maximum results (default: 50) |
+- `status`: `open`, `resolved`, `all`
+- `severity`: `critical`, `high`, `medium`, `low`
+- `nodeId`: Filter by node
+- `limit`: Maximum results (default: 50)
 
 **Response:**
-
 ```json
 {
   "success": true,
   "data": [
     {
-      "id": 123,
-      "node_id": "550e8400-e29b-41d4-a716-446655440000",
+      "id": "issue-123",
+      "node_id": "550e8400-...",
       "node_name": "xdc-node-01",
       "type": "sync_stall",
       "severity": "high",
       "title": "Block sync stalled at height 89234567",
       "status": "open",
-      "github_issue_url": "https://github.com/AnilChinchawale/xdc-node-setup/issues/123",
+      "github_issue_url": "https://github.com/.../issues/123",
       "solution_description": "Sync stall detected. Common causes: insufficient peers...",
-      "solution_code": "#!/bin/bash\n# Fix sync stall...",
+      "solution_code": "#!/bin/bash\n# Fix sync stall\n...",
       "occurrence_count": 3,
       "first_seen": "2026-02-14T10:00:00Z",
       "last_seen": "2026-02-14T12:30:00Z"
@@ -358,95 +276,63 @@ Authorization: Bearer YOUR_API_KEY
 
 Mark an issue as resolved.
 
-```http
-POST /api/v1/issues/{id}/resolve
-Authorization: Bearer YOUR_API_KEY
-Content-Type: application/json
-```
+**Endpoint:** `POST /issues/{id}/resolve`
 
-**Request Body:**
-
+**Request:**
 ```json
 {
-  "resolution": "Restarted node, sync resumed",
-  "resolvedBy": "operator@example.com"
+  "resolution": "Restarted node and sync resumed",
+  "resolvedBy": "admin"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Issue marked as resolved"
 }
 ```
 
 ### Network Health
 
-Get network-wide health status.
+Get overall network health metrics.
 
-```http
-GET /api/v1/network/health
-Authorization: Bearer YOUR_API_KEY
-```
+**Endpoint:** `GET /network/health`
 
 **Response:**
-
 ```json
 {
   "success": true,
   "data": {
-    "status": "healthy",
     "healthScore": 92,
     "totalNodes": 12,
     "healthyNodes": 10,
-    "syncingNodes": 1,
     "degradedNodes": 1,
     "offlineNodes": 0,
     "avgBlockHeight": 89234560,
     "maxBlockHeight": 89234567,
-    "blockHeightDelta": 7,
-    "avgPeerCount": 23,
+    "totalPeers": 287,
+    "avgSyncPercent": 98.5,
     "lastUpdated": "2026-02-14T12:00:00Z"
   }
 }
 ```
 
-### Epoch Information
+### Masternode Data
 
-Get current XDPoS epoch information.
+Get current masternode information.
 
-```http
-GET /api/v1/network/epoch
-Authorization: Bearer YOUR_API_KEY
-```
+**Endpoint:** `GET /masternodes`
 
 **Response:**
-
 ```json
 {
   "success": true,
   "data": {
     "epoch": 99150,
-    "round": 3,
+    "round": 5,
     "blockNumber": 89234567,
-    "epochStartBlock": 89235001,
-    "epochEndBlock": 89235900,
-    "blocksUntilEpochEnd": 933,
-    "masternodeCount": 108,
-    "standbyCount": 12
-  }
-}
-```
-
-### Masternodes
-
-Get current masternode list.
-
-```http
-GET /api/v1/masternodes
-Authorization: Bearer YOUR_API_KEY
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "epoch": 99150,
     "masternodes": [
       {
         "address": "0x...",
@@ -458,22 +344,100 @@ Authorization: Bearer YOUR_API_KEY
     ],
     "standbynodes": [],
     "penalized": [],
-    "totalStaked": "1,080,000,000.00",
+    "totalStaked": "100000000000000000000000000",
     "nakamotoCoefficient": 7
   }
 }
 ```
 
+### Candidate Detail
+
+Get detailed information about a specific candidate.
+
+**Endpoint:** `GET /masternodes/{address}`
+
+**Response:**
+```json
+{
+  "address": "0x...",
+  "xdcAddress": "xdc...",
+  "status": "active",
+  "stake": "10,000,000.00",
+  "owner": "0x...",
+  "voters": [
+    {
+      "address": "0x...",
+      "xdcAddress": "xdc...",
+      "stake": "1,000,000.00"
+    }
+  ],
+  "blocksProduced": 1234,
+  "blocksMissed": 12
+}
+```
+
+## Rate Limits
+
+| Tier | Limit | Window |
+|------|-------|--------|
+| Public | 60 req | 1 min |
+| Authenticated | 120 req | 1 min |
+| Heartbeat | 120 req | 1 min |
+| Write | 30 req | 1 min |
+| Admin | 300 req | 1 min |
+
+## Error Responses
+
+### 400 Bad Request
+
+```json
+{
+  "success": false,
+  "error": "Invalid request body",
+  "details": "Missing required field: nodeId"
+}
+```
+
+### 401 Unauthorized
+
+```json
+{
+  "success": false,
+  "error": "Unauthorized",
+  "message": "Invalid or missing API key"
+}
+```
+
+### 429 Too Many Requests
+
+```json
+{
+  "success": false,
+  "error": "Rate limit exceeded",
+  "retryAfter": 60
+}
+```
+
+### 500 Internal Server Error
+
+```json
+{
+  "success": false,
+  "error": "Internal server error",
+  "requestId": "req-123-abc"
+}
+```
+
 ## WebSocket API
 
-Connect for real-time updates:
+Connect to real-time updates:
 
 ```javascript
 const ws = new WebSocket('wss://net.xdc.network/ws');
 
 ws.onopen = () => {
   ws.send(JSON.stringify({
-    type: 'subscribe',
+    action: 'subscribe',
     channel: 'fleet-updates'
   }));
 };
@@ -484,111 +448,94 @@ ws.onmessage = (event) => {
 };
 ```
 
-## Error Responses
+## SDK Examples
 
-### Standard Error Format
+### JavaScript/TypeScript
 
-```json
-{
-  "success": false,
-  "error": "Error message",
-  "code": "ERROR_CODE",
-  "details": {}
+```typescript
+class SkyNetClient {
+  private apiKey: string;
+  private baseUrl: string;
+
+  constructor(apiKey: string, baseUrl = 'https://net.xdc.network/api/v1') {
+    this.apiKey = apiKey;
+    this.baseUrl = baseUrl;
+  }
+
+  async registerNode(nodeData: any) {
+    const response = await fetch(`${this.baseUrl}/nodes/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`
+      },
+      body: JSON.stringify(nodeData)
+    });
+    return response.json();
+  }
+
+  async sendHeartbeat(heartbeatData: any) {
+    const response = await fetch(`${this.baseUrl}/nodes/heartbeat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`
+      },
+      body: JSON.stringify(heartbeatData)
+    });
+    return response.json();
+  }
+
+  async getFleetStatus() {
+    const response = await fetch(`${this.baseUrl}/fleet/status`, {
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`
+      }
+    });
+    return response.json();
+  }
 }
 ```
-
-### HTTP Status Codes
-
-| Status | Description |
-|--------|-------------|
-| 200 | Success |
-| 400 | Bad Request |
-| 401 | Unauthorized |
-| 403 | Forbidden |
-| 404 | Not Found |
-| 429 | Too Many Requests |
-| 500 | Internal Server Error |
-
-### Error Codes
-
-| Code | Description |
-|------|-------------|
-| UNAUTHORIZED | Missing or invalid API key |
-| FORBIDDEN | Insufficient permissions |
-| BAD_REQUEST | Invalid request parameters |
-| NOT_FOUND | Resource not found |
-| RATE_LIMITED | Too many requests |
-| INTERNAL_ERROR | Server error |
-
-## SDK Examples
 
 ### Python
 
 ```python
 import requests
 
-API_KEY = 'your-api-key'
-BASE_URL = 'https://net.xdc.network'
+class SkyNetClient:
+    def __init__(self, api_key, base_url='https://net.xdc.network/api/v1'):
+        self.api_key = api_key
+        self.base_url = base_url
+        self.headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        }
 
-headers = {
-    'Authorization': f'Bearer {API_KEY}',
-    'Content-Type': 'application/json'
-}
+    def register_node(self, node_data):
+        response = requests.post(
+            f'{self.base_url}/nodes/register',
+            headers=self.headers,
+            json=node_data
+        )
+        return response.json()
 
-# Register node
-response = requests.post(
-    f'{BASE_URL}/api/v1/nodes/register',
-    headers=headers,
-    json={
-        'name': 'xdc-node-01',
-        'role': 'masternode'
-    }
-)
-node = response.json()['data']
+    def send_heartbeat(self, heartbeat_data):
+        response = requests.post(
+            f'{self.base_url}/nodes/heartbeat',
+            headers=self.headers,
+            json=heartbeat_data
+        )
+        return response.json()
 
-# Send heartbeat
-requests.post(
-    f'{BASE_URL}/api/v1/nodes/heartbeat',
-    headers=headers,
-    json={
-        'nodeId': node['id'],
-        'blockHeight': 89234567,
-        'syncing': False,
-        'peerCount': 25
-    }
-)
+    def get_fleet_status(self):
+        response = requests.get(
+            f'{self.base_url}/fleet/status',
+            headers=self.headers
+        )
+        return response.json()
 ```
 
-### JavaScript
+---
 
-```javascript
-const axios = require('axios');
-
-const client = axios.create({
-  baseURL: 'https://net.xdc.network',
-  headers: {
-    'Authorization': 'Bearer your-api-key',
-    'Content-Type': 'application/json'
-  }
-});
-
-// Register node
-const { data } = await client.post('/api/v1/nodes/register', {
-  name: 'xdc-node-01',
-  role: 'masternode'
-});
-
-// Send heartbeat
-await client.post('/api/v1/nodes/heartbeat', {
-  nodeId: data.data.id,
-  blockHeight: 89234567,
-  syncing: false,
-  peerCount: 25
-});
-```
-
-## References
-
-- [Integration Guide](docs/INTEGRATION.md)
-- [Architecture Overview](docs/ARCHITECTURE.md)
-- [XDPoS Monitoring](docs/XDPOS-MONITORING.md)
+**Document Version:** 1.0.0  
+**Last Updated:** February 27, 2026
