@@ -1,364 +1,349 @@
-# SkyNet XDPoS 2.0 Integration Guide
+# SkyNet - XDPoS 2.0 Integration Guide
 
 ## Overview
 
-This guide covers integrating XDPoS 2.0 consensus monitoring into SkyNet for comprehensive masternode fleet management.
+This guide covers integrating XDPoS 2.0 consensus monitoring into SkyNet for comprehensive validator and network health tracking.
 
 ## XDPoS 2.0 Concepts
 
-### Consensus Participants
+### Epochs and Rounds
 
-| Role | Description | Count |
-|------|-------------|-------|
-| Masternodes | Active validators producing blocks | 108 |
-| Standby Nodes | Waiting to become masternodes | Variable |
-| Penalized Nodes | Temporarily removed from set | Variable |
+XDPoS 2.0 organizes consensus into:
+- **Epochs**: 900 blocks (approximately 30 minutes)
+- **Rounds**: Within each epoch for QC formation
+- **Gap Blocks**: Special blocks at epoch boundaries
 
-### Epoch Lifecycle
-
-```
-Epoch N (blocks 1-900)
-├── Blocks 1-449: Normal operation
-├── Blocks 450-899: Vote collection for Epoch N+1
-│   └── Masternodes vote on next epoch's validator set
-└── Block 900: Epoch transition
-    └── New masternode set takes effect
-
-Epoch N+1 (blocks 901-1800)
-└── ... repeats
-```
-
-## SkyNet Integration Architecture
-
-### Data Flow
+### Masternode Lifecycle
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│ XDC Nodes   │────▶│ SkyNet API  │────▶│ PostgreSQL  │
-│ (Masternodes)│     │             │     │             │
-└─────────────┘     └─────────────┘     └─────────────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │ Dashboard   │
-                    │ (Next.js)   │
-                    └─────────────┘
+Candidate → Standby → Active Masternode → Penalized
+                ↑___________________________|
 ```
 
-### Consensus Data Collection
+States:
+- **Candidate**: Registered but not in standby
+- **Standby**: Eligible to join active set
+- **Active**: Participating in consensus
+- **Penalized**: Removed due to misbehavior
 
-#### Heartbeat Extension
+## Data Collection
 
-```typescript
-interface XDPoSHeartbeat {
-  nodeId: string;
-  blockHeight: number;
-  epoch: number;
-  round: number;
-  
-  // XDPoS-specific metrics
-  consensus: {
-    isMasternode: boolean;
-    masternodeAddress?: string;
-    voteParticipation: number;
-    blocksProducedThisEpoch: number;
-    blocksMissedThisEpoch: number;
-    lastVoteTimestamp?: string;
-    qcFormationTime: number;
-  };
-  
-  // Penalty status
-  penalties: {
-    currentStatus: 'active' | 'penalized' | 'standby';
-    totalPenalties: number;
-    lastPenaltyReason?: string;
-  };
+### Extended Heartbeat API
+
+Nodes should report XDPoS 2.0 metrics:
+
+```json
+{
+  "nodeId": "550e8400-e29b-41d4-a716-446655440000",
+  "blockHeight": 89234567,
+  "consensus": {
+    "epoch": 99150,
+    "round": 5,
+    "epochProgress": 45.2,
+    "isMasternode": true,
+    "inActiveSet": true,
+    "voteParticipation": 0.98,
+    "qcFormationTime": 1200,
+    "timeoutCount": 0,
+    "masternodesInEpoch": 108,
+    "standbynodes": 25
+  },
+  "timestamp": "2026-02-26T12:00:00Z"
 }
 ```
 
-#### API Endpoints
+### Database Schema
+
+```sql
+-- Consensus metrics table
+CREATE TABLE consensus_metrics (
+  id SERIAL PRIMARY KEY,
+  node_id UUID REFERENCES nodes(id),
+  epoch INTEGER NOT NULL,
+  round INTEGER NOT NULL,
+  epoch_progress DECIMAL(5,2),
+  is_masternode BOOLEAN,
+  in_active_set BOOLEAN,
+  vote_participation DECIMAL(5,4),
+  qc_formation_time_ms INTEGER,
+  timeout_count INTEGER,
+  masternode_count INTEGER,
+  standby_count INTEGER,
+  collected_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Create hypertable for time-series data
+SELECT create_hypertable('consensus_metrics', 'collected_at');
+
+-- Validator performance table
+CREATE TABLE validator_performance (
+  id SERIAL PRIMARY KEY,
+  address VARCHAR(42) NOT NULL,
+  epoch INTEGER NOT NULL,
+  blocks_produced INTEGER DEFAULT 0,
+  blocks_missed INTEGER DEFAULT 0,
+  votes_participated INTEGER DEFAULT 0,
+  votes_missed INTEGER DEFAULT 0,
+  avg_vote_latency_ms INTEGER,
+  penalties INTEGER DEFAULT 0,
+  stake_amount DECIMAL(30,0),
+  UNIQUE(address, epoch)
+);
+```
+
+## API Implementation
+
+### Consensus Data Endpoint
 
 ```typescript
-// Register masternode
-POST /api/v1/masternodes/register
-{
-  "nodeId": "uuid",
-  "masternodeAddress": "xdc...",
-  "stakeAmount": "10000000000"
-}
+// app/api/v1/consensus/route.ts
+import { NextRequest } from 'next/server';
+import { query } from '@/lib/db';
 
-// Submit consensus metrics
-POST /api/v1/masternodes/consensus-metrics
-{
-  "nodeId": "uuid",
-  "epoch": 6171,
-  "metrics": {
-    "votesCast": 850,
-    "votesMissed": 5,
-    "blocksProduced": 8,
-    "avgQcFormationTime": 450
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const epoch = searchParams.get('epoch');
+  
+  try {
+    const result = await query(`
+      SELECT 
+        epoch,
+        AVG(vote_participation) as avg_participation,
+        AVG(qc_formation_time_ms) as avg_qc_time,
+        SUM(timeout_count) as total_timeouts,
+        COUNT(DISTINCT node_id) as reporting_nodes
+      FROM consensus_metrics
+      WHERE epoch = $1
+      GROUP BY epoch
+    `, [epoch]);
+    
+    return Response.json({
+      success: true,
+      data: result.rows[0]
+    });
+  } catch (err) {
+    return Response.json(
+      { success: false, error: 'Failed to fetch consensus data' },
+      { status: 500 }
+    );
   }
 }
+```
 
-// Get epoch status
-GET /api/v1/network/epoch
-{
-  "epoch": 6171,
-  "blockNumber": 5553900,
-  "blocksUntilNextEpoch": 300,
-  "voteCollectionActive": true,
-  "masternodeCount": 108,
-  "totalStake": "1080000000000"
+### Masternode API
+
+```typescript
+// app/api/v1/masternodes/route.ts
+export async function GET() {
+  const result = await query(`
+    SELECT 
+      n.id,
+      n.name,
+      n.address,
+      cm.epoch,
+      cm.in_active_set,
+      cm.vote_participation,
+      vp.blocks_produced,
+      vp.blocks_missed,
+      vp.stake_amount
+    FROM nodes n
+    JOIN consensus_metrics cm ON n.id = cm.node_id
+    LEFT JOIN validator_performance vp ON n.address = vp.address
+    WHERE cm.is_masternode = true
+    AND cm.collected_at > NOW() - INTERVAL '1 hour'
+    ORDER BY vp.stake_amount DESC
+  `);
+  
+  return Response.json({
+    success: true,
+    data: result.rows
+  });
 }
 ```
 
-## Dashboard Features
+## Dashboard Components
 
-### 1. Epoch Monitor
+### Epoch Monitor
 
-```typescript
+```tsx
 // components/EpochMonitor.tsx
-interface EpochMonitorProps {
-  currentEpoch: number;
-  blocksUntilNext: number;
-  voteCollectionActive: boolean;
-  qcStatus: 'forming' | 'formed' | 'timeout';
+'use client';
+
+import { useEffect, useState } from 'react';
+
+interface EpochData {
+  epoch: number;
+  round: number;
+  progress: number;
+  masternodes: number;
+  standby: number;
 }
 
-export function EpochMonitor(props: EpochMonitorProps) {
+export function EpochMonitor() {
+  const [data, setData] = useState<EpochData | null>(null);
+  
+  useEffect(() => {
+    const fetchEpoch = async () => {
+      const res = await fetch('/api/v1/consensus/latest');
+      const json = await res.json();
+      setData(json.data);
+    };
+    
+    fetchEpoch();
+    const interval = setInterval(fetchEpoch, 30000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  if (!data) return <div>Loading...</div>;
+  
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Epoch {props.currentEpoch}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Progress value={(900 - props.blocksUntilNext) / 9} />
-        <div className="flex justify-between">
-          <span>Blocks until epoch: {props.blocksUntilNext}</span>
-          <Badge variant={props.voteCollectionActive ? "default" : "secondary"}>
-            Vote Collection {props.voteCollectionActive ? "Active" : "Inactive"}
-          </Badge>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="epoch-monitor">
+      <div className="epoch-number">Epoch {data.epoch}</div>
+      <div className="progress-bar">
+        <div 
+          className="progress-fill" 
+          style={{ width: `${data.progress}%` }}
+        />
+      </div>
+      <div className="epoch-stats">
+        <span>Round: {data.round}</span>
+        <span>Masternodes: {data.masternodes}</span>
+        <span>Standby: {data.standby}</span>
+      </div>
+    </div>
   );
 }
 ```
 
-### 2. Masternode Leaderboard
+### Validator Leaderboard
+
+```tsx
+// components/ValidatorLeaderboard.tsx
+interface Validator {
+  address: string;
+  name: string;
+  stake: string;
+  signingRate: number;
+  blocksProduced: number;
+  blocksMissed: number;
+  rank: number;
+}
+
+export function ValidatorLeaderboard({ validators }: { validators: Validator[] }) {
+  return (
+    <table className="validator-table">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Validator</th>
+          <th>Stake</th>
+          <th>Signing Rate</th>
+          <th>Blocks</th>
+        </tr>
+      </thead>
+      <tbody>
+        {validators.map((v) => (
+          <tr key={v.address}>
+            <td>{v.rank}</td>
+            <td>{v.name || v.address.slice(0, 20)}...</td>
+            <td>{v.stake} XDC</td>
+            <td>{(v.signingRate * 100).toFixed(2)}%</td>
+            <td>{v.blocksProduced} / {v.blocksMissed}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+```
+
+## Alerting
+
+### Consensus Alert Rules
 
 ```typescript
-// components/MasternodeLeaderboard.tsx
-interface MasternodeStats {
-  address: string;
-  rank: number;
-  stake: string;
-  performance: {
-    voteParticipation: number;
-    blocksProduced: number;
-    avgQcTime: number;
-  };
-  penalties: number;
-  healthScore: number;
-}
-
-export function MasternodeLeaderboard({ masternodes }: { masternodes: MasternodeStats[] }) {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Rank</TableHead>
-          <TableHead>Address</TableHead>
-          <TableHead>Stake</TableHead>
-          <TableHead>Vote %</TableHead>
-          <TableHead>Health</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {masternodes.map((m) => (
-          <TableRow key={m.address}>
-            <TableCell>{m.rank}</TableCell>
-            <TableCell>{m.address}</TableCell>
-            <TableCell>{formatXdc(m.stake)}</TableCell>
-            <TableCell>{m.performance.voteParticipation}%</TableCell>
-            <TableCell>
-              <HealthScoreBadge score={m.healthScore} />
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
+// lib/alert-rules/consensus.ts
+export const consensusAlertRules = [
+  {
+    name: 'low_vote_participation',
+    condition: (metrics: ConsensusMetrics) => 
+      metrics.voteParticipation < 0.67,
+    severity: 'critical',
+    message: 'Vote participation below 67%'
+  },
+  {
+    name: 'high_qc_formation_time',
+    condition: (metrics: ConsensusMetrics) =>
+      metrics.qcFormationTime > 5000,
+    severity: 'warning',
+    message: 'QC formation time exceeds 5 seconds'
+  },
+  {
+    name: 'epoch_transition_delayed',
+    condition: (metrics: ConsensusMetrics, blockHeight: number) =>
+      blockHeight % 900 === 0 && metrics.round > 10,
+    severity: 'critical',
+    message: 'Epoch transition delayed'
+  }
+];
 ```
 
-### 3. Consensus Health Score
+## Consensus Health Score
+
+Calculate network-wide consensus health:
 
 ```typescript
 // lib/consensus-health.ts
-interface ConsensusHealthComponents {
-  voteParticipation: number;  // 0-100
-  qcFormation: number;        // 0-100
-  roundStability: number;     // 0-100
-  blockProduction: number;    // 0-100
-}
-
-function calculateHealthScore(components: ConsensusHealthComponents): number {
-  const weights = {
-    voteParticipation: 0.3,
-    qcFormation: 0.3,
-    roundStability: 0.2,
-    blockProduction: 0.2
+export function calculateConsensusHealth(
+  metrics: ConsensusMetrics[]
+): ConsensusHealth {
+  const scores = {
+    voteParticipation: calculateVoteScore(metrics),
+    qcFormation: calculateQCScore(metrics),
+    timeoutRate: calculateTimeoutScore(metrics),
+    masternodeUptime: calculateUptimeScore(metrics)
   };
   
-  return Math.round(
-    components.voteParticipation * weights.voteParticipation +
-    components.qcFormation * weights.qcFormation +
-    components.roundStability * weights.roundStability +
-    components.blockProduction * weights.blockProduction
+  const overall = Math.round(
+    (scores.voteParticipation * 0.4) +
+    (scores.qcFormation * 0.3) +
+    (scores.timeoutRate * 0.2) +
+    (scores.masternodeUptime * 0.1)
   );
-}
-
-function getHealthGrade(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
-  if (score >= 90) return 'A';
-  if (score >= 80) return 'B';
-  if (score >= 70) return 'C';
-  if (score >= 60) return 'D';
-  return 'F';
+  
+  return {
+    overallScore: overall,
+    components: scores,
+    status: overall >= 90 ? 'healthy' : overall >= 70 ? 'degraded' : 'critical'
+  };
 }
 ```
 
-## Database Schema
+## Testing
 
-### Masternode Table
+### Local Testing
 
+1. Start local XDC devnet:
+```bash
+docker-compose -f docker-compose.devnet.yml up -d
+```
+
+2. Run consensus data collector:
+```bash
+npm run test:consensus
+```
+
+3. Verify database entries:
 ```sql
-CREATE TABLE netown.masternodes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    address VARCHAR(42) UNIQUE NOT NULL,
-    node_id UUID REFERENCES netown.nodes(id),
-    stake_amount NUMERIC(30, 0),
-    status VARCHAR(20) DEFAULT 'active',
-    first_epoch INTEGER,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX idx_masternodes_status ON netown.masternodes(status);
-CREATE INDEX idx_masternodes_node ON netown.masternodes(node_id);
+SELECT * FROM consensus_metrics ORDER BY collected_at DESC LIMIT 10;
 ```
-
-### Consensus Metrics Table
-
-```sql
-CREATE TABLE netown.consensus_metrics (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    node_id UUID REFERENCES netown.nodes(id),
-    epoch INTEGER NOT NULL,
-    round INTEGER,
-    block_height INTEGER NOT NULL,
-    
-    -- Vote metrics
-    votes_cast INTEGER DEFAULT 0,
-    votes_missed INTEGER DEFAULT 0,
-    vote_participation_rate DECIMAL(5, 2),
-    avg_vote_latency_ms INTEGER,
-    
-    -- Block metrics
-    blocks_produced INTEGER DEFAULT 0,
-    blocks_missed INTEGER DEFAULT 0,
-    
-    -- QC metrics
-    qc_formation_time_ms INTEGER,
-    round_changes INTEGER DEFAULT 0,
-    timeout_certificates INTEGER DEFAULT 0,
-    
-    collected_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX idx_consensus_metrics_node_epoch ON netown.consensus_metrics(node_id, epoch);
-CREATE INDEX idx_consensus_metrics_collected ON netown.consensus_metrics(collected_at);
-```
-
-### Epoch History Table
-
-```sql
-CREATE TABLE netown.epoch_history (
-    epoch INTEGER PRIMARY KEY,
-    start_block INTEGER NOT NULL,
-    end_block INTEGER NOT NULL,
-    masternode_count INTEGER,
-    total_stake NUMERIC(30, 0),
-    avg_vote_participation DECIMAL(5, 2),
-    avg_qc_formation_time_ms INTEGER,
-    completed_at TIMESTAMP
-);
-```
-
-## Alerting Rules
-
-### Critical Alerts
-
-```yaml
-# alerts/consensus.yml
-groups:
-  - name: xdpos-critical
-    rules:
-      - alert: LowVoteParticipation
-        expr: |
-          (
-            SELECT AVG(vote_participation_rate) 
-            FROM netown.consensus_metrics 
-            WHERE collected_at > NOW() - INTERVAL '5 minutes'
-          ) < 0.90
-        for: 5m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Vote participation below 90%"
-          
-      - alert: MasternodePenaltyRisk
-        expr: |
-          SELECT COUNT(*) FROM netown.consensus_metrics cm
-          JOIN netown.masternodes m ON cm.node_id = m.node_id
-          WHERE cm.votes_missed > 50 
-          AND cm.collected_at > NOW() - INTERVAL '1 hour'
-        for: 10m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Masternode at risk of penalty"
-```
-
-## Implementation Checklist
-
-### Phase 1: Data Collection
-- [ ] Extend heartbeat payload with XDPoS metrics
-- [ ] Create consensus metrics API endpoints
-- [ ] Implement epoch tracking
-- [ ] Add masternode registration
-
-### Phase 2: Dashboard
-- [ ] Build epoch monitor component
-- [ ] Create masternode leaderboard
-- [ ] Implement health scoring display
-- [ ] Add consensus metrics charts
-
-### Phase 3: Alerting
-- [ ] Configure vote participation alerts
-- [ ] Add penalty risk alerts
-- [ ] Set up epoch transition notifications
-- [ ] Create consensus health alerts
-
-### Phase 4: Analytics
-- [ ] Build performance trend analysis
-- [ ] Implement penalty prediction
-- [ ] Create epoch comparison reports
-- [ ] Add masternode profitability tracking
 
 ## References
 
-- [XDPoS 2.0 Whitepaper](https://docs.xdc.network)
-- [XDC Network Consensus](https://docs.xdc.network/consensus)
-- [SkyNet API Documentation](API.md)
-- [XDC EVM Expert Validation Report](../XDC_VALIDATION_REPORT.md)
+- [XDPoS 2.0 Whitepaper](https://www.xdc.dev/xdc-foundation/xdpos-2-0-a-new-era-in-blockchain-consensus-4k9b)
+- [XDPoSChain RPC Documentation](https://github.com/XinFinOrg/XDPoSChain/wiki/RPC-API)
+- [TimescaleDB Documentation](https://docs.timescale.com/)
+
+---
+*Document Version: 1.0*
+*Last Updated: February 26, 2026*
