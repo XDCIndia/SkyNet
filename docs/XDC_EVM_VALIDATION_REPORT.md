@@ -1,8 +1,23 @@
 # XDC EVM Expert Agent - Validation Report
 
+**Date:** February 27, 2026  
+**Agent:** XDC EVM Expert Agent  
+**Repositories Validated:**
+1. [xdc-node-setup](https://github.com/AnilChinchawale/xdc-node-setup) (SkyOne)
+2. [XDCNetOwn](https://github.com/AnilChinchawale/XDCNetOwn) (SkyNet)
+
+---
+
 ## Executive Summary
 
-This document contains the comprehensive validation findings from the XDC EVM Expert Agent review of the XDC Node Setup (SkyOne) and XDC SkyNet (XDCNetOwn) repositories. The validation focused on XDPoS 2.0 consensus compatibility, multi-client support, security, and operational excellence.
+This report presents the comprehensive validation findings from the XDC EVM Expert Agent review of the XDC node infrastructure repositories. The validation focused on XDPoS 2.0 consensus compatibility, multi-client support, security, and operational excellence.
+
+### Overall Assessment
+
+| Repository | Status | Notes |
+|------------|--------|-------|
+| xdc-node-setup | Production-ready | Security hardening recommended |
+| XDCNetOwn | Production-ready | Data management improvements needed |
 
 ---
 
@@ -12,12 +27,12 @@ This document contains the comprehensive validation findings from the XDC EVM Ex
 SkyOne is a production-ready XDC Network node deployment toolkit supporting multiple clients (Geth-XDC, Erigon-XDC, Nethermind-XDC, Reth-XDC) across multiple networks (Mainnet, Apothem/Testnet, Devnet).
 
 ### Strengths
-- ✅ Multi-client support with proper port configuration documentation
-- ✅ Docker-first architecture with security hardening options
-- ✅ Comprehensive CLI (`xdc`) for node management
-- ✅ Built-in SkyNet agent for fleet monitoring
-- ✅ Self-healing capabilities (auto-restart, health checks)
-- ✅ Security hardening scripts (fail2ban, SSH hardening, UFW)
+- Multi-client support with proper port configuration documentation
+- Docker-first architecture with security hardening options
+- Comprehensive CLI (`xdc`) for node management
+- Built-in SkyNet agent for fleet monitoring
+- Self-healing capabilities (auto-restart, health checks)
+- Security hardening scripts (fail2ban, SSH hardening, UFW)
 
 ### Critical Issues (P0)
 
@@ -29,6 +44,8 @@ SkyOne is a production-ready XDC Network node deployment toolkit supporting mult
 
 **Impact:** Remote fund theft possible if wallet unlocked
 
+**GitHub Issue:** [#296](https://github.com/AnilChinchawale/xdc-node-setup/issues/296)
+
 **Recommendation:**
 - Default RPC to `127.0.0.1` only
 - Add nginx reverse proxy template for external access
@@ -39,63 +56,34 @@ SkyOne is a production-ready XDC Network node deployment toolkit supporting mult
 
 **Impact:** Container escape to host with root privileges
 
+**GitHub Issue:** [#249](https://github.com/AnilChinchawale/xdc-node-setup/issues/249)
+
 **Recommendation:**
 - Remove docker socket mount from default configuration
 - Use Docker API over TCP with TLS if required
 - Document security profile usage
 
-#### P0-3: Privileged Container Usage
-**Issue:** cAdvisor runs with `privileged: true`
-
-**Impact:** Full host access, container escape risk
-
-**Recommendation:**
-- Remove privileged mode
-- Use specific capability grants
-- Document minimum required capabilities
-
 ### High Priority Issues (P1)
 
-#### P1-1: Missing Input Validation
-**Issue:** User-provided values not validated in setup.sh
-
-**Recommendation:**
-- Add validation functions for all inputs
-- Sanitize shell-special characters
-- Validate port ranges
-
-#### P1-2: No Rate Limiting on RPC
-**Issue:** No rate limiting on RPC endpoints
-
-**Recommendation:**
-- Add nginx reverse proxy with rate limiting
-- Implement per-IP connection limits
-
-#### P1-3: Multi-Client Edge Cases
+#### P1-1: Multi-Client Edge Cases
 **Issue:** Limited testing of mixed-client networks
+
+**GitHub Issue:** [#267](https://github.com/AnilChinchawale/xdc-node-setup/issues/267)
 
 **Recommendation:**
 - Integration tests for Geth ↔ Erigon peer connections
 - Test epoch boundary handling across clients
 - Verify vote/timeout propagation
 
-### Medium Priority Issues (P2)
+#### P1-2: Missing Input Validation
+**Issue:** User-provided values not validated in setup.sh
 
-#### P2-1: Container-Native Deployment
-**Issue:** Kubernetes/Helm support is basic
-
-**Recommendation:**
-- Production-ready Helm charts
-- StatefulSet for persistent storage
-- ConfigMap for configuration management
-
-#### P2-2: Automated Snapshot Management
-**Issue:** Snapshot download lacks resume and verification
+**GitHub Issue:** [#160](https://github.com/AnilChinchawale/xdc-node-setup/issues/160)
 
 **Recommendation:**
-- Checksum verification for snapshots
-- Resume partial downloads
-- Automated snapshot rotation
+- Add validation functions for all inputs
+- Sanitize shell-special characters
+- Validate port ranges
 
 ---
 
@@ -105,11 +93,11 @@ SkyOne is a production-ready XDC Network node deployment toolkit supporting mult
 SkyNet is a centralized monitoring dashboard for XDC nodes providing fleet management, real-time metrics, and automated incident detection.
 
 ### Strengths
-- ✅ Comprehensive heartbeat API with rich metrics
-- ✅ Auto-incident detection (sync stall, peer drop, disk pressure)
-- ✅ Multi-client view support (Geth, Erigon, Nethermind, Reth)
-- ✅ Automated issue pipeline with GitHub integration
-- ✅ Real-time fleet health scoring
+- Comprehensive heartbeat API with rich metrics
+- Auto-incident detection (sync stall, peer drop, disk pressure)
+- Multi-client view support (Geth, Erigon, Nethermind, Reth)
+- Automated issue pipeline with GitHub integration
+- Real-time fleet health scoring
 
 ### Critical Issues (P0)
 
@@ -117,6 +105,8 @@ SkyNet is a centralized monitoring dashboard for XDC nodes providing fleet manag
 **Issue:** `node_metrics` and `peer_snapshots` tables grow without retention
 
 **Impact:** At 1 metric/30s/node × 100 nodes = 288K rows/day
+
+**GitHub Issue:** [#387](https://github.com/AnilChinchawale/XDCNetOwn/issues/387)
 
 **Recommendation:**
 - Implement automated retention policy (90 days default)
@@ -127,6 +117,8 @@ SkyNet is a centralized monitoring dashboard for XDC nodes providing fleet manag
 **Issue:** No rate limiting on API endpoints
 
 **Impact:** DDoS vulnerability
+
+**GitHub Issue:** [#364](https://github.com/AnilChinchawale/XDCNetOwn/issues/364)
 
 **Recommendation:**
 ```typescript
@@ -140,18 +132,12 @@ const rateLimits = {
 };
 ```
 
-#### P0-3: Legacy API Authentication Gap
-**Issue:** Some legacy endpoints lack authentication
-
-**Recommendation:**
-- Audit all endpoints for authentication
-- Add middleware for consistent auth
-- Implement API key scoping
-
 ### High Priority Issues (P1)
 
 #### P1-1: Masternode Monitoring Enhancements
 **Issue:** Limited XDPoS 2.0 consensus monitoring
+
+**GitHub Issue:** [#397](https://github.com/AnilChinchawale/XDCNetOwn/issues/397)
 
 **Recommendation:**
 - Epoch transition tracking
@@ -162,32 +148,19 @@ const rateLimits = {
 #### P1-2: Cross-Client Block Comparison
 **Issue:** No divergence detection between clients
 
+**GitHub Issue:** [#383](https://github.com/AnilChinchawale/XDCNetOwn/issues/383)
+
 **Recommendation:**
 - Compare block hashes across clients
 - Alert on consensus forks
 - Track vote propagation
 
-#### P1-3: Consensus Health Scoring
-**Issue:** No comprehensive consensus health metrics
-
-**Recommendation:**
-- Vote latency tracking
-- QC formation time
-- Timeout rate monitoring
-- Block production rate
-
 ### Medium Priority Issues (P2)
 
-#### P2-1: Network Topology Visualization
-**Issue:** Limited peer network visualization
-
-**Recommendation:**
-- Interactive network graph
-- Geographic distribution map
-- Peer connection quality metrics
-
-#### P2-2: Automated Anomaly Detection
+#### P2-1: Automated Anomaly Detection
 **Issue:** Static thresholds for alerts
+
+**GitHub Issue:** [#372](https://github.com/AnilChinchawale/XDCNetOwn/issues/372)
 
 **Recommendation:**
 - ML-based anomaly detection
@@ -199,25 +172,25 @@ const rateLimits = {
 ## XDPoS 2.0 Consensus Validation
 
 ### Epoch Boundary Handling
-✅ **Status:** Correctly implemented
+**Status:** Correctly implemented
 - Epoch length: 900 blocks
 - Gap blocks: 450 blocks before epoch end
 - Vote/timeout mechanisms properly configured
 
 ### Gap Block Processing
-✅ **Status:** Verified
+**Status:** Verified
 - Gap blocks properly identified
 - No block production during gap
 - Vote collection continues
 
 ### Vote/Timeout Race Conditions
-⚠️ **Status:** Needs monitoring
+**Status:** Needs monitoring
 - Vote propagation latency not tracked
 - Timeout certificate formation time unknown
 - Recommendation: Add metrics for vote latency and TC formation
 
 ### Multi-Client Compatibility
-✅ **Status:** Good
+**Status:** Good
 - All clients support XDPoS 2.0
 - Protocol versions documented
 - Port configurations specified
@@ -259,23 +232,6 @@ const rateLimits = {
 
 ---
 
-## Documentation Status
-
-### Existing Documentation
-- ✅ Comprehensive README
-- ✅ Architecture guides
-- ✅ API reference
-- ✅ Security audit reports
-- ✅ Client-specific guides (Erigon, Nethermind)
-
-### Gaps Identified
-- ⚠️ Multi-client setup guide
-- ⚠️ Kubernetes deployment guide
-- ⚠️ Troubleshooting runbooks
-- ⚠️ Performance tuning guide
-
----
-
 ## Recommendations Summary
 
 ### Immediate Actions (P0)
@@ -308,5 +264,5 @@ Both repositories demonstrate solid engineering with good security practices. Th
 
 ---
 
-*Report generated by XDC EVM Expert Agent*
-*Date: 2026-02-26*
+*Report generated by XDC EVM Expert Agent*  
+*Date: 2026-02-27*
