@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getCollectorStatus, startCollector, stopCollector } from '@/lib/collector';
 import { query } from '@/lib/db';
 import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
+
+// Zod schema for collector action validation
+const CollectorActionSchema = z.object({
+  action: z.enum(['start', 'stop'], {
+    errorMap: () => ({ message: 'Action must be "start" or "stop"' }),
+  }),
+});
 
 // GET /api/collector - Get collector status
 export async function GET() {
@@ -42,14 +50,21 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { action } = body;
-
-    if (!action || !['start', 'stop'].includes(action)) {
+    
+    // Validate input with Zod
+    const validationResult = CollectorActionSchema.safeParse(body);
+    
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Invalid action. Must be "start" or "stop"' },
+        { 
+          error: 'Validation failed', 
+          details: validationResult.error.format() 
+        },
         { status: 400 }
       );
     }
+
+    const { action } = validationResult.data;
 
     if (action === 'start') {
       startCollector();
