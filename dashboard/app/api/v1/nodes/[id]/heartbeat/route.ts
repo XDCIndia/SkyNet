@@ -9,8 +9,19 @@ export async function POST(
   try {
     const nodeId = params.id;
     
-    // Parse heartbeat data
-    const body = await request.json();
+    // Parse heartbeat data with sanitization for malformed JSON (e.g., .03 -> 0.03)
+    const rawBody = await request.text();
+    const sanitizedBody = rawBody.replace(/":\s*\.(\d+)/g, '": 0.$1');
+    let body;
+    try {
+      body = JSON.parse(sanitizedBody);
+    } catch (e) {
+      console.error('Failed to parse heartbeat JSON:', rawBody.substring(0, 500));
+      return NextResponse.json(
+        { error: 'Invalid JSON in heartbeat' },
+        { status: 400 }
+      );
+    }
     let { 
       blockHeight, 
       peerCount, 
