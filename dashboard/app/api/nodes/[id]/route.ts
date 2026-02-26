@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
+import { z } from 'zod';
+
+// Validation schema for PATCH updates
+const UpdateNodeSchema = z.object({
+  name: z.string().min(1).max(100).transform(v => v.replace(/<[^>]*>/g, '').trim()).optional(),
+  host: z.string().min(1).max(255).optional(),
+  role: z.enum(['masternode', 'fullnode', 'archive', 'rpc']).optional(),
+  location_city: z.string().max(100).optional(),
+  location_country: z.string().max(5).optional(),
+  location_lat: z.coerce.number().min(-90).max(90).optional(),
+  location_lng: z.coerce.number().min(-180).max(180).optional(),
+  tags: z.array(z.string().max(50)).max(10).optional(),
+  is_active: z.boolean().optional(),
+}).strict(); // Reject unknown fields
 
 // GET /api/nodes/[id] - Get single node with details
 export async function GET(
@@ -73,34 +87,49 @@ export async function PATCH(
 
     const { id } = params;
     const body = await request.json();
-    const updates: Record<string, unknown> = {};
-
-    // Allowed fields to update
-    const allowedFields = [
-      'name', 'host', 'role', 'location_city', 'location_country',
-      'location_lat', 'location_lng', 'tags', 'is_active'
-    ];
-
-    for (const field of allowedFields) {
-      if (body[field] !== undefined) {
-        updates[field] = body[field];
-      }
+    
+    // Validate input with Zod schema
+    const validation = UpdateNodeSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: validation.error.errors },
+        { status: 400 }
+      );
     }
+    
+    const updates = validation.data;
+    
+    // Filter out undefined values
+    const validUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([_, v]) => v !== undefined)
+    );
 
-    if (Object.keys(updates).length === 0) {
+    if (Object.keys(validUpdates).length === 0) {
       return NextResponse.json(
         { error: 'No valid fields to update' },
         { status: 400 }
       );
     }
 
-    const setClause = Object.keys(updates)
+    // Build parameterized query with validated field names
+    const allowedFields = ['name', 'host', 'role', 'location_city', 'location_country',
+      'location_lat', 'location_lng', 'tags', 'is_active'] as const;
+    
+    const setClause = Object.keys(validUpdates)
+      .filter(key => allowedFields.includes(key as typeof allowedFields[number]))
       .map((key, i) => `${key} = $${i + 2}`)
       .join(', ');
+    
+    if (!setClause) {
+      return NextResponse.json(
+        { error: 'No valid fields to update' },
+        { status: 400 }
+      );
+    }
 
     const result = await query(
       `UPDATE skynet.nodes SET ${setClause}, updated_at = NOW() WHERE id = $1 RETURNING *`,
-      [id, ...Object.values(updates)]
+      [id, ...Object.values(validUpdates)]
     );
 
     if (result.rowCount === 0) {
