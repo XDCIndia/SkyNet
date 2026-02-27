@@ -3,6 +3,7 @@ import { withTransaction, query } from '@/lib/db';
 import { createErrorResponse, withErrorHandling } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import crypto from 'crypto';
 
 // Node identity schema with smart naming support
 const NodeIdentitySchema = z.object({
@@ -17,15 +18,11 @@ const NodeIdentitySchema = z.object({
   role: z.enum(['masternode', 'fullnode', 'archive', 'rpc']).optional().default('fullnode'),
 });
 
-// Generate a secure API key
+// Generate a secure API key using crypto.randomBytes
 function generateSecureApiKey(): string {
-  const prefix = 'xdc_';
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = prefix;
-  for (let i = 0; i < 48; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  // Generate 32 bytes (256 bits) of random data and convert to hex
+  const randomBytes = crypto.randomBytes(32).toString('hex');
+  return 'xdc_' + randomBytes;
 }
 
 // Parse smart node name to extract components

@@ -4,6 +4,7 @@ import { generateApiKey } from '@/lib/auth';
 import { createErrorResponse, withErrorHandling } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import crypto from 'crypto';
 
 // Public registration schema (no auth required) with smart naming support
 const PublicRegistrationSchema = z.object({
@@ -21,15 +22,11 @@ const PublicRegistrationSchema = z.object({
   network: z.enum(['mainnet', 'apothem', 'devnet']).optional().default('mainnet'),
 });
 
-// Generate a secure API key
+// Generate a secure API key using crypto.randomBytes
 function generateSecureApiKey(): string {
-  const prefix = 'xdc_';
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = prefix;
-  for (let i = 0; i < 48; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  // Generate 32 bytes (256 bits) of random data and convert to hex
+  const randomBytes = crypto.randomBytes(32).toString('hex');
+  return 'xdc_' + randomBytes;
 }
 
 // Parse smart node name to extract components
