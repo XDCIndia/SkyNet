@@ -6,21 +6,23 @@ import { z } from 'zod';
 
 // Client type colors for diversity chart
 const CLIENT_COLORS: Record<string, string> = {
-  geth: '#2563EB',      // Blue
-  erigon: '#EA580C',    // Orange
+  geth: '#2563EB',       // Blue
+  erigon: '#EA580C',     // Orange
   nethermind: '#7C3AED', // Purple
-  'geth-pr5': '#2563EB', // Blue (same as geth)
-  xdc: '#1E90FF',       // XDC Network official blue
-  unknown: '#6B7280',   // Gray
+  'geth-pr5': '#0EA5E9', // Light blue (GP5 distinct from geth)
+  reth: '#16A34A',       // Green
+  xdc: '#1E90FF',        // XDC Network official blue
+  unknown: '#6B7280',    // Gray
 };
 
 // Client display names
 const CLIENT_DISPLAY_NAMES: Record<string, string> = {
-  geth: 'geth',
+  geth: 'Geth',
   erigon: 'Erigon',
-  nethermind: 'NM',
-  'geth-pr5': 'geth',
-  xdc: 'XDC',           // XDC Binary v2.6.8+
+  nethermind: 'Nethermind',
+  'geth-pr5': 'GP5',
+  reth: 'Reth',
+  xdc: 'XDC',
   unknown: 'Unknown',
 };
 
@@ -29,8 +31,9 @@ const CLIENT_ICONS: Record<string, string> = {
   geth: '🔷',
   erigon: '🔶',
   nethermind: '🟣',
-  'geth-pr5': '🔷',
-  xdc: '⚡',             // XDC Network lightning bolt
+  'geth-pr5': '🔹',
+  reth: '🟢',
+  xdc: '⚡',
   unknown: '⚪',
 };
 

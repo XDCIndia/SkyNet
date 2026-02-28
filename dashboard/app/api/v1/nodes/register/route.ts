@@ -17,7 +17,7 @@ const PublicRegistrationSchema = z.object({
   locationCity: z.string().max(100).optional(),
   locationCountry: z.string().max(5).optional(),
   // Smart naming fields
-  client: z.enum(['geth', 'erigon', 'gp5', 'nethermind', 'XDC', 'unknown']).optional(),
+  client: z.enum(['geth', 'erigon', 'gp5', 'nethermind', 'reth', 'XDC', 'unknown']).optional(),
   clientVersion: z.string().max(100).optional(),
   network: z.enum(['mainnet', 'apothem', 'devnet']).optional().default('mainnet'),
 });
@@ -243,7 +243,7 @@ export async function GET() {
       email: 'string (valid email for notifications)',
       locationCity: 'string (optional)',
       locationCountry: 'string (optional, ISO code)',
-      client: 'enum: geth, erigon, gp5, nethermind, XDC, unknown (optional)',
+      client: 'enum: geth, erigon, gp5, nethermind, reth, XDC, unknown (optional)',
       clientVersion: 'string (optional, client version)',
       network: 'enum: mainnet, apothem, devnet (optional)',
     },
