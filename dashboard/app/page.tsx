@@ -1630,42 +1630,122 @@ function HomeContent() {
   // Client distribution for donut chart
   const clientDistribution = useMemo(() => {
     const clientColors: Record<string, string> = {
-      geth: '#1E90FF', 'geth-pr5': '#1E90FF', nethermind: '#10B981', erigon: '#F59E0B', xdc: '#1E90FF', unknown: '#6B7280',
+      geth:       '#2563EB', // Blue
+      erigon:     '#EA580C', // Orange
+      nethermind: '#7C3AED', // Purple
+      reth:       '#16A34A', // Green
+      xdc:        '#1E90FF', // XDC blue
+      unknown:    '#6B7280', // Gray
     };
     const clientDisplayNames: Record<string, string> = {
-      geth: 'geth', 'geth-pr5': 'geth', nethermind: 'NM', erigon: 'Erigon', xdc: 'XDC', unknown: 'Unknown',
+      geth:       'Geth',
+      erigon:     'Erigon',
+      nethermind: 'Nethermind',
+      reth:       'Reth',
+      xdc:        'XDC',
+      unknown:    'Unknown',
+    };
+    const clientIcons: Record<string, string> = {
+      geth:       '🔷',
+      erigon:     '🔶',
+      nethermind: '🟣',
+      reth:       '🟢',
+      xdc:        '⚡',
+      unknown:    '⚪',
+    };
+    // Normalize: geth-pr5 and other geth variants → 'geth'
+    const normalizeClient = (ct: string): string => {
+      if (ct === 'geth-pr5' || ct === 'geth-xdc') return 'geth';
+      return ct;
     };
     const counts: Record<string, number> = {};
     globalFilteredNodes.forEach(n => {
-      const ct = (n.client_type || 'unknown').toLowerCase();
+      const ct = normalizeClient((n.client_type || 'unknown').toLowerCase());
       counts[ct] = (counts[ct] || 0) + 1;
     });
-    return Object.entries(counts).map(([type, count]) => ({
-      type: clientDisplayNames[type] || type, count, color: clientColors[type] || '#6B7280',
-      percentage: globalFilteredNodes.length > 0 ? (count / globalFilteredNodes.length) * 100 : 0,
-    }));
+    return Object.entries(counts)
+      .sort(([,a], [,b]) => b - a)
+      .map(([type, count]) => ({
+        type: clientDisplayNames[type] || type,
+        count,
+        color: clientColors[type] || '#6B7280',
+        icon: clientIcons[type] || '⚪',
+        percentage: globalFilteredNodes.length > 0 ? (count / globalFilteredNodes.length) * 100 : 0,
+      }));
   }, [globalFilteredNodes]);
 
-  // OS distribution
+  // OS distribution — uses os_release for precise distro label (Ubuntu 22.04, Alpine 3.20, etc.)
   const osDistribution = useMemo(() => {
+    // Parse a meaningful short label from os_release string
+    const parseOsLabel = (osRelease?: string, osType?: string): string => {
+      const r = (osRelease || '').trim();
+      if (!r) {
+        // Fall back to osType or parse from clientVersion
+        const t = (osType || '').toLowerCase();
+        if (t === 'linux') return 'Linux';
+        if (t === 'darwin') return 'macOS';
+        if (t === 'windows') return 'Windows';
+        return 'Unknown';
+      }
+      // Alpine Linux v3.20.x → Alpine 3.20
+      const alpine = r.match(/Alpine Linux v?(\d+\.\d+)/i);
+      if (alpine) return `Alpine ${alpine[1]}`;
+      // Ubuntu 22.04.x LTS → Ubuntu 22.04
+      const ubuntu = r.match(/Ubuntu (\d+\.\d+)/i);
+      if (ubuntu) return `Ubuntu ${ubuntu[1]}`;
+      // Debian GNU/Linux 12 → Debian 12
+      const debian = r.match(/Debian[^0-9]*(\d+)/i);
+      if (debian) return `Debian ${debian[1]}`;
+      // CentOS/RHEL
+      const centos = r.match(/(CentOS|Rocky|AlmaLinux)[^0-9]*(\d+)/i);
+      if (centos) return `${centos[1]} ${centos[2]}`;
+      // Trim overly long strings
+      return r.length > 20 ? r.substring(0, 20) : r;
+    };
     const osColors: Record<string, string> = {
-      'linux': '#F59E0B', 'darwin': '#64748B', 'windows': '#3B82F6', 'unknown': '#6B7280',
+      'Ubuntu 22.04': '#E95420',
+      'Ubuntu 24.04': '#DD4814',
+      'Ubuntu 20.04': '#F77F00',
+      'Alpine 3.20':  '#0D597F',
+      'Alpine 3.19':  '#0D597F',
+      'Alpine 3.18':  '#0A4F70',
+      'Debian 12':    '#A80030',
+      'Debian 11':    '#A80030',
+      'Linux':        '#F59E0B',
+      'macOS':        '#64748B',
+      'Windows':      '#3B82F6',
+      'Unknown':      '#6B7280',
     };
     const osIcons: Record<string, string> = {
-      'linux': '🐧', 'darwin': '🍎', 'windows': '🪟', 'unknown': '❓',
+      'Ubuntu 22.04': '🐧',
+      'Ubuntu 24.04': '🐧',
+      'Ubuntu 20.04': '🐧',
+      'Alpine 3.20':  '🐳',
+      'Alpine 3.19':  '🐳',
+      'Alpine 3.18':  '🐳',
+      'Debian 12':    '🐧',
+      'Debian 11':    '🐧',
+      'Linux':        '🐧',
+      'macOS':        '🍎',
+      'Windows':      '🪟',
+      'Unknown':      '❓',
     };
     const counts: Record<string, number> = {};
     globalFilteredNodes.forEach(n => {
-      let os = (n.os_info?.type || '').toLowerCase();
-      if (!os || os === 'unknown') {
-        os = parseOsFromClientVersion(n.clientVersion).type || 'unknown';
-      }
-      counts[os] = (counts[os] || 0) + 1;
+      const label = parseOsLabel(n.os_info?.release, n.os_info?.type)
+        || parseOsFromClientVersion(n.clientVersion).type
+        || 'Unknown';
+      counts[label] = (counts[label] || 0) + 1;
     });
-    return Object.entries(counts).map(([type, count]) => ({
-      type, count, color: osColors[type] || '#6B7280', icon: osIcons[type] || '❓',
-      percentage: globalFilteredNodes.length > 0 ? (count / globalFilteredNodes.length) * 100 : 0,
-    }));
+    return Object.entries(counts)
+      .sort(([,a], [,b]) => b - a)
+      .map(([type, count]) => ({
+        type,
+        count,
+        color: osColors[type] || '#6B7280',
+        icon: osIcons[type] || '🐧',
+        percentage: globalFilteredNodes.length > 0 ? (count / globalFilteredNodes.length) * 100 : 0,
+      }));
   }, [globalFilteredNodes]);
 
   // Version distribution (per client)

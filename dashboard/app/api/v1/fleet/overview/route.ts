@@ -4,37 +4,41 @@ import { withErrorHandling } from '@/lib/errors';
 import { withCache, CACHE_TTLS, generateCacheKey } from '@/lib/cache';
 import { z } from 'zod';
 
+// Normalize raw client_type from DB to canonical key
+function normalizeClientType(raw: string): string {
+  const t = raw.toLowerCase();
+  if (t === 'geth-pr5' || t === 'geth-xdc' || t === 'gp5') return 'geth';
+  return t;
+}
+
 // Client type colors for diversity chart
 const CLIENT_COLORS: Record<string, string> = {
-  geth: '#2563EB',       // Blue
-  erigon: '#EA580C',     // Orange
+  geth:       '#2563EB', // Blue
+  erigon:     '#EA580C', // Orange
   nethermind: '#7C3AED', // Purple
-  'geth-pr5': '#0EA5E9', // Light blue (GP5 distinct from geth)
-  reth: '#16A34A',       // Green
-  xdc: '#1E90FF',        // XDC Network official blue
-  unknown: '#6B7280',    // Gray
+  reth:       '#16A34A', // Green
+  xdc:        '#1E90FF', // XDC Network official blue
+  unknown:    '#6B7280', // Gray
 };
 
 // Client display names
 const CLIENT_DISPLAY_NAMES: Record<string, string> = {
-  geth: 'Geth',
-  erigon: 'Erigon',
+  geth:       'Geth',
+  erigon:     'Erigon',
   nethermind: 'Nethermind',
-  'geth-pr5': 'GP5',
-  reth: 'Reth',
-  xdc: 'XDC',
-  unknown: 'Unknown',
+  reth:       'Reth',
+  xdc:        'XDC',
+  unknown:    'Unknown',
 };
 
 // Client icons
 const CLIENT_ICONS: Record<string, string> = {
-  geth: '🔷',
-  erigon: '🔶',
+  geth:       '🔷',
+  erigon:     '🔶',
   nethermind: '🟣',
-  'geth-pr5': '🔹',
-  reth: '🟢',
-  xdc: '⚡',
-  unknown: '⚪',
+  reth:       '🟢',
+  xdc:        '⚡',
+  unknown:    '⚪',
 };
 
 // Query params schema
@@ -140,7 +144,7 @@ async function getHandler(request: NextRequest) {
 
     for (const node of nodeStatusRows) {
       // Client type count
-      const clientType = (node.client_type || 'unknown').toLowerCase();
+      const clientType = normalizeClientType(node.client_type || 'unknown');
       clientCounts[clientType] = (clientCounts[clientType] || 0) + 1;
       
       // Network count
@@ -238,10 +242,10 @@ async function getHandler(request: NextRequest) {
         lastSeen: n.collected_at || n.created_at,
         email: mask(n.email),
         telegram: mask(n.telegram),
-        // Client info
-        clientType: n.client_type || 'unknown',
-        clientIcon: CLIENT_ICONS[(n.client_type || 'unknown').toLowerCase()] || CLIENT_ICONS.unknown,
-        clientColor: CLIENT_COLORS[(n.client_type || 'unknown').toLowerCase()] || CLIENT_COLORS.unknown,
+        // Client info (normalized: geth-pr5/gp5 → geth)
+        clientType: normalizeClientType(n.client_type || 'unknown'),
+        clientIcon: CLIENT_ICONS[normalizeClientType(n.client_type || 'unknown')] || CLIENT_ICONS.unknown,
+        clientColor: CLIENT_COLORS[normalizeClientType(n.client_type || 'unknown')] || CLIENT_COLORS.unknown,
         nodeType: n.node_type || 'fullnode',
         syncMode: n.sync_mode || 'full',
         clientVersion: n.last_client_version || n.client_version || 'Unknown',

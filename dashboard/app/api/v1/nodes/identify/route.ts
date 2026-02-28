@@ -104,7 +104,7 @@ async function postHandler(request: NextRequest) {
         if (data.clientType || data.clientVersion) {
           await client.query(
             `UPDATE skynet.nodes 
-             SET client_type = COALESCE($1, client_type),
+             SET client_type = COALESCE(NULLIF($1, 'unknown'), client_type),
                  client_version = COALESCE($2, client_version),
                  updated_at = NOW()
              WHERE id = $3`,

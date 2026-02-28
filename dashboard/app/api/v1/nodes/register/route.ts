@@ -105,7 +105,7 @@ async function postHandler(request: NextRequest) {
            SET name = $1, host = $2, role = $3, location_city = $4, location_country = $5,
                is_active = true, email = COALESCE(NULLIF($6, ''), email),
                telegram = COALESCE(NULLIF($7, ''), telegram), updated_at = NOW(),
-               client_type = COALESCE($8, client_type),
+               client_type = COALESCE(NULLIF($8, 'unknown'), client_type),
                client_version = COALESCE($9, client_version),
                network = COALESCE($10, network)
            WHERE id = $11
