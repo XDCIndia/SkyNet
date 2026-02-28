@@ -80,7 +80,8 @@ function getClientIcon(clientType?: string): string {
   const type = clientType?.toLowerCase() || '';
   if (type.includes('nethermind')) return '🟣';
   if (type.includes('erigon')) return '🔶';
-  if (type.includes('geth')) return '🟢';
+  if (type.includes('reth')) return '🟢';
+  if (type.includes('geth') || type.includes('gp5') || type.includes('xdc')) return '🔷';
   return '🔷';
 }
 
@@ -89,8 +90,9 @@ function getClientName(clientType?: string, clientVersion?: string): string {
   const ver = clientVersion?.toLowerCase() || '';
   if (type.includes('nethermind')) return 'Nethermind';
   if (type.includes('erigon')) return 'Erigon';
+  if (type.includes('reth')) return 'Reth';
+  if (type === 'gp5' || type === 'geth-pr5') return 'GP5';
   if (type.includes('geth')) {
-    // v2.6.x or XDC/v2.x is the official XDC client
     if (ver.includes('v2.6.') || ver.includes('xdc/v2.')) return 'XDC';
     return 'Geth';
   }

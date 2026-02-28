@@ -159,29 +159,46 @@ function NodeTypeBadge({ nodeType, confirmed = false }: { nodeType?: string; con
 
 // Client Type Badge
 function ClientTypeBadge({ clientType }: { clientType?: string }) {
-  if (!clientType || clientType === 'Unknown') return null;
+  if (!clientType || clientType.toLowerCase() === 'unknown') return null;
+
+  // Normalize to display name
+  const ct = clientType.toLowerCase();
+  let displayName = clientType;
+  if (ct === 'nethermind') displayName = 'Nethermind';
+  else if (ct === 'erigon') displayName = 'Erigon';
+  else if (ct === 'reth') displayName = 'Reth';
+  else if (ct === 'gp5' || ct === 'geth-pr5') displayName = 'GP5';
+  else if (ct === 'geth' || ct === 'xdc') displayName = 'Geth';
 
   const styles: Record<string, { bg: string; icon: React.ReactNode }> = {
-    XDC: {
-      bg: 'bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border-[var(--accent-blue)]/20',
-      icon: <Terminal className="w-3 h-3" />
-    },
-    Erigon: {
+    Nethermind: {
       bg: 'bg-[#8B5CF6]/10 text-[#8B5CF6] border-[#8B5CF6]/20',
       icon: <Layers className="w-3 h-3" />
     },
+    Erigon: {
+      bg: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20',
+      icon: <Layers className="w-3 h-3" />
+    },
+    Reth: {
+      bg: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20',
+      icon: <Terminal className="w-3 h-3" />
+    },
+    GP5: {
+      bg: 'bg-[#0EA5E9]/10 text-[#0EA5E9] border-[#0EA5E9]/20',
+      icon: <Globe className="w-3 h-3" />
+    },
     Geth: {
-      bg: 'bg-[var(--success)]/10 text-[var(--success)] border-[#10B981]/20',
+      bg: 'bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border-[var(--accent-blue)]/20',
       icon: <Globe className="w-3 h-3" />
     },
   };
 
-  const style = styles[clientType] || { bg: 'bg-white/5 text-[#6B7280] border-white/10', icon: <Terminal className="w-3 h-3" /> };
+  const style = styles[displayName] || { bg: 'bg-white/5 text-[#6B7280] border-white/10', icon: <Terminal className="w-3 h-3" /> };
 
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border ${style.bg}`}>
       {style.icon}
-      {clientType}
+      {displayName}
     </span>
   );
 }

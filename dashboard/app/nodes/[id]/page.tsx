@@ -89,17 +89,23 @@ function ClientLogo({ clientType, clientVersion, size = 'md' }: { clientType?: s
   };
   
   const styles: Record<string, { bg: string; color: string; letter: string }> = {
-    XDC: { bg: 'bg-[#1E90FF]/20', color: 'text-[#1E90FF]', letter: 'X' },
-    Nethermind: { bg: 'bg-purple-500/20', color: 'text-purple-400', letter: 'N' },
-    Erigon: { bg: 'bg-orange-500/20', color: 'text-orange-400', letter: 'E' },
-    Geth: { bg: 'bg-gray-500/20', color: 'text-gray-400', letter: 'G' },
+    XDC:        { bg: 'bg-[#1E90FF]/20', color: 'text-[#1E90FF]',   letter: 'X' },
+    Nethermind: { bg: 'bg-purple-500/20', color: 'text-purple-400',  letter: 'N' },
+    Erigon:     { bg: 'bg-orange-500/20', color: 'text-orange-400',  letter: 'E' },
+    Geth:       { bg: 'bg-gray-500/20',   color: 'text-gray-400',    letter: 'G' },
+    GP5:        { bg: 'bg-sky-500/20',    color: 'text-sky-400',     letter: 'G' },
+    Reth:       { bg: 'bg-green-500/20',  color: 'text-green-400',   letter: 'R' },
   };
   
   // Determine display name: v2.6.x geth = XDC
   let displayType = clientType || 'Unknown';
   const ct = (clientType || '').toLowerCase();
   const cv = (clientVersion || '').toLowerCase();
-  if (ct.includes('geth') && (cv.includes('v2.6.') || cv.includes('xdc/v2.'))) {
+  if (ct.includes('reth')) {
+    displayType = 'Reth';
+  } else if (ct === 'gp5' || ct === 'geth-pr5') {
+    displayType = 'GP5';
+  } else if (ct.includes('geth') && (cv.includes('v2.6.') || cv.includes('xdc/v2.'))) {
     displayType = 'XDC';
   } else if (ct.includes('nethermind')) {
     displayType = 'Nethermind';

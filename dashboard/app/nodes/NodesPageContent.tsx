@@ -110,7 +110,7 @@ export default function NodesPageContent() {
         unknown: '#6B7280',
       };
       const clientDisplayNames: Record<string, string> = {
-        geth: 'geth', 'geth-pr5': 'geth', nethermind: 'NM', erigon: 'Erigon', xdc: 'XDC', unknown: 'Unknown',
+        geth: 'Geth', 'geth-pr5': 'GP5', nethermind: 'Nethermind', erigon: 'Erigon', reth: 'Reth', xdc: 'XDC', unknown: 'Unknown',
       };
       
       const clientDistribution = Object.entries(clientCounts).map(([type, count]) => ({
@@ -210,12 +210,16 @@ export default function NodesPageContent() {
   const getClientColor = (clientType: string) => {
     const client = clientType.toLowerCase();
     switch (client) {
-      case 'geth':
+      case 'geth': case 'xdc':
         return 'bg-[rgba(30,144,255,0.15)] text-[#1E90FF]';
+      case 'geth-pr5': case 'gp5':
+        return 'bg-[rgba(14,165,233,0.15)] text-[#0EA5E9]';
       case 'nethermind':
-        return 'bg-[rgba(16,185,129,0.15)] text-[#10B981]';
+        return 'bg-[rgba(139,92,246,0.15)] text-[#8B5CF6]';
       case 'erigon':
         return 'bg-[rgba(245,158,11,0.15)] text-[#F59E0B]';
+      case 'reth':
+        return 'bg-[rgba(16,185,129,0.15)] text-[#10B981]';
       default:
         return 'bg-[rgba(107,114,128,0.15)] text-[#6B7280]';
     }
