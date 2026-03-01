@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { toXdcAddress } from '@/lib/ui-utils';
+import { weiToXDC } from '@/lib/masternode';
+
 export const dynamic = 'force-dynamic';
 
 // XDC Mainnet RPC and Validator Contract
@@ -41,22 +44,6 @@ interface MasternodeData {
   penalized: MasternodeInfo[];
   totalStaked: string;
   nakamotoCoefficient: number;
-}
-
-// Helper: convert 0x address to xdc address
-function toXdcAddress(address: string): string {
-  if (!address) return '';
-  if (address.startsWith('0x')) {
-    return 'xdc' + address.slice(2);
-  }
-  return address;
-}
-
-// Helper: format wei to XDC
-function weiToXDC(wei: bigint | string): string {
-  const weiValue = typeof wei === 'string' ? BigInt(wei) : wei;
-  const xdcValue = Number(weiValue) / 1e18;
-  return xdcValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // Make RPC call to mainnet

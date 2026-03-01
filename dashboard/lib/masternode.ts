@@ -51,14 +51,8 @@ export interface CandidateDetail extends MasternodeInfo {
   blocksMissed?: number;
 }
 
-// Helper: convert 0x address to xdc address
-export function toXdcAddress(address: string): string {
-  if (!address) return '';
-  if (address.startsWith('0x')) {
-    return 'xdc' + address.slice(2);
-  }
-  return address;
-}
+// Import shared utilities
+import { toXdcAddress } from './ui-utils';
 
 // Helper: format wei to XDC
 export function weiToXDC(wei: bigint | string): string {
