@@ -82,8 +82,11 @@ export async function DELETE(
     return unauthorizedResponse(auth.error);
   }
 
-  // TODO: Check if user is admin
-  // For now, just check if authenticated
+  // Check if user has admin or wildcard permissions
+  const { hasPermission, forbiddenResponse } = await import('@/lib/auth');
+  if (!hasPermission(auth, 'admin') && !hasPermission(auth, '*')) {
+    return forbiddenResponse('Admin permissions required to delete incidents');
+  }
 
   try {
     const incidentId = parseInt(params.id);

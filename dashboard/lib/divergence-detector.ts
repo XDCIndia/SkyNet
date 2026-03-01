@@ -308,16 +308,23 @@ export class DivergenceDetector {
   private async sendAlert(report: DivergenceReport): Promise<void> {
     console.error(`🚨 DIVERGENCE ALERT [${report.severity.toUpperCase()}]:`, report.details);
 
-    // TODO: Integrate with notification system
-    // await sendNotification({
-    //   type: 'divergence',
-    //   severity: report.severity,
-    //   message: report.details,
-    //   metadata: {
-    //     blockNumber: report.blockNumber,
-    //     affectedClients: report.affectedClients,
-    //   },
-    // });
+    // Integrate with notification system
+    try {
+      const { sendAlert: sendAlertNotification } = await import('./alerting');
+      await sendAlertNotification({
+        severity: report.severity,
+        title: `Block Divergence Detected at #${report.blockNumber}`,
+        message: report.details,
+        metadata: {
+          blockNumber: report.blockNumber,
+          affectedClients: report.affectedClients,
+          expectedHash: report.expectedHash,
+          timestamp: new Date(report.timestamp).toISOString(),
+        },
+      });
+    } catch (error) {
+      console.error('Failed to send divergence alert notification:', error);
+    }
   }
 
   // Get divergence history
