@@ -9,6 +9,7 @@ const nextConfig = {
     RPC_URL: process.env.RPC_URL || 'http://127.0.0.1:38545',
   },
   // CORS Configuration - Issue #337 fix
+  // Security Headers - Issue #552 fix
   async headers() {
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
       'https://net.xdc.network',
@@ -16,10 +17,47 @@ const nextConfig = {
       'http://localhost:3000',
     ];
     
+    // Security headers for all routes
+    const securityHeaders = [
+      {
+        key: 'X-DNS-Prefetch-Control',
+        value: 'on',
+      },
+      {
+        key: 'Strict-Transport-Security',
+        value: 'max-age=63072000; includeSubDomains; preload',
+      },
+      {
+        key: 'X-Frame-Options',
+        value: 'SAMEORIGIN',
+      },
+      {
+        key: 'X-Content-Type-Options',
+        value: 'nosniff',
+      },
+      {
+        key: 'X-XSS-Protection',
+        value: '1; mode=block',
+      },
+      {
+        key: 'Referrer-Policy',
+        value: 'strict-origin-when-cross-origin',
+      },
+      {
+        key: 'Permissions-Policy',
+        value: 'camera=(), microphone=(), geolocation=()',
+      },
+    ];
+    
     return [
+      {
+        source: '/:path*',
+        headers: securityHeaders,
+      },
       {
         source: '/api/:path*',
         headers: [
+          ...securityHeaders,
           {
             key: 'Access-Control-Allow-Origin',
             value: allowedOrigins.join(', '),
