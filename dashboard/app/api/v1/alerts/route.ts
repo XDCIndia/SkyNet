@@ -19,8 +19,15 @@ const AlertQuerySchema = z.object({
 /**
  * GET /api/v1/alerts
  * List alerts/incidents with optional filters
+ * REQUIRES AUTHENTICATION to prevent information disclosure
  */
 async function getHandler(request: NextRequest) {
+  // Security: Authenticate request to protect sensitive alert/incident data
+  const auth = await authenticateRequest(request);
+  if (!auth.valid) {
+    return unauthorizedResponse(auth.error);
+  }
+
   const { searchParams } = new URL(request.url);
   
   const params = AlertQuerySchema.parse({
