@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useWebSocket } from '@/lib/hooks/useWebSocket';
+import { formatTimeAgo } from '@/lib/formatters';
 import { 
   Server, 
   AlertTriangle, 
@@ -93,16 +94,6 @@ function SeverityBadge({ severity }: { severity: 'critical' | 'warning' | 'info'
       {severity.toUpperCase()}
     </span>
   );
-}
-
-function formatTimeAgo(timestamp: string): string {
-  const diff = Date.now() - new Date(timestamp).getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(minutes / 60);
-  
-  if (hours > 0) return `${hours}h ago`;
-  if (minutes > 0) return `${minutes}m ago`;
-  return 'just now';
 }
 
 function getNodeStatus(lastSeen: string | null): NodeStatus {

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
+import { formatTimeAgo } from '@/lib/formatters';
 import { 
   Globe, 
   CheckCircle2, 
@@ -55,17 +56,6 @@ type SortDirection = 'asc' | 'desc';
 function truncateEnode(enode: string, length = 20): string {
   if (enode.length <= length * 2 + 3) return enode;
   return `${enode.slice(0, length)}...${enode.slice(-length)}`;
-}
-
-function formatTimeAgo(timestamp: string): string {
-  const diff = Date.now() - new Date(timestamp).getTime();
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  
-  if (hours > 0) return `${hours}h ago`;
-  if (minutes > 0) return `${minutes}m ago`;
-  return `${seconds}s ago`;
 }
 
 function PortStatus({ open }: { open: boolean }) {

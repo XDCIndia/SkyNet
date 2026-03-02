@@ -7,6 +7,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import ClientDistributionChart from '@/components/ClientDistributionChart';
 import NetworkFilter from '@/components/NetworkFilter';
 import IncidentsPanel from '@/components/IncidentsPanel';
+import { formatTimeAgo } from '@/lib/formatters';
 import { 
   Server, 
   Activity, 
@@ -337,17 +338,6 @@ function SecurityBadge({ score }: { score?: number }) {
       {score}
     </span>
   );
-}
-
-function formatTimeAgo(timestamp: string): string {
-  const diff = Date.now() - new Date(timestamp).getTime();
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-
-  if (hours > 0) return `${hours}h ago`;
-  if (minutes > 0) return `${minutes}m ago`;
-  return `${seconds}s ago`;
 }
 
 // Check if a node should be filtered out (no heartbeat in >24h)
