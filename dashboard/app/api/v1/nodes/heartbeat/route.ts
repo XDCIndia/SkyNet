@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { Pool } from 'pg';
+
+// Create pool directly
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || 'postgresql://gateway:gateway@localhost:5433/xdc_gateway'
+});
 
 export async function POST(request: NextRequest) {
+  const client = await pool.connect();
   try {
     const body = await request.json();
     const { 
@@ -22,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Upsert node
-    await query(
+    await client.query(
       `INSERT INTO skynet.nodes (id, name, network, status, last_heartbeat, client_type)
        VALUES ($1, $2, $3, 'active', NOW(), $4)
        ON CONFLICT (id) DO UPDATE SET
@@ -34,7 +40,7 @@ export async function POST(request: NextRequest) {
     );
     
     // Insert metrics
-    await query(
+    await client.query(
       `INSERT INTO skynet.node_metrics 
        (node_id, block_height, peer_count, is_syncing, collected_at)
        VALUES ($1, $2, $3, $4, NOW())`,
@@ -45,11 +51,13 @@ export async function POST(request: NextRequest) {
       success: true,
       data: { ok: true }
     });
-  } catch (error) {
-    console.error('Heartbeat error:', error);
+  } catch (error: any) {
+    console.error('Heartbeat error:', error.message);
     return NextResponse.json(
-      { success: false, error: 'Failed to process heartbeat' },
+      { success: false, error: error.message || 'Failed to process heartbeat' },
       { status: 500 }
     );
+  } finally {
+    client.release();
   }
 }
