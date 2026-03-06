@@ -7,20 +7,26 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
     const network = searchParams.get('network');
     
+    // Simple query without complex LATERAL join
     let sql = `
-      SELECT n.id, n.name, n.network, n.role, n.status,
-             n.ipv4, n.client_type, n.created_at,
-             COALESCE(m.block_height, 0) as latest_block,
-             COALESCE(m.peer_count, 0) as peer_count,
-             COALESCE(m.is_syncing, true) as syncing
+      SELECT 
+        n.id, n.name, n.network, n.role, n.status,
+        n.ipv4, n.client_type, n.created_at, n.last_heartbeat,
+        COALESCE((
+          SELECT block_height 
+          FROM skynet.node_metrics 
+          WHERE node_id = n.id 
+          ORDER BY collected_at DESC 
+          LIMIT 1
+        ), 0) as latest_block,
+        COALESCE((
+          SELECT peer_count 
+          FROM skynet.node_metrics 
+          WHERE node_id = n.id 
+          ORDER BY collected_at DESC 
+          LIMIT 1
+        ), 0) as peer_count
       FROM skynet.nodes n
-      LEFT JOIN LATERAL (
-        SELECT block_height, peer_count, is_syncing
-        FROM skynet.node_metrics
-        WHERE node_id = n.id
-        ORDER BY collected_at DESC
-        LIMIT 1
-      ) m ON true
       WHERE 1=1
     `;
     const params: any[] = [];
