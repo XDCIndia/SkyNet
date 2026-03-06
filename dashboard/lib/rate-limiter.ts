@@ -30,20 +30,19 @@ interface RateLimitEntry {
 // =============================================================================
 
 export const RATE_LIMIT_TIERS = {
-  // Public/unauthenticated: 60 req/min per IP
+  // DISABLED for development - effectively unlimited
+  // TODO: Re-enable for production with proper limits
   public: {
     windowMs: 60_000,
-    maxRequests: 60,
+    maxRequests: 100000, // Effectively unlimited
   },
-  // Authenticated (API key): 600 req/min per key
   authenticated: {
     windowMs: 60_000,
-    maxRequests: 600,
+    maxRequests: 1000000, // Effectively unlimited
   },
-  // Heartbeat endpoint: 120 req/min per node
   heartbeat: {
     windowMs: 60_000,
-    maxRequests: 120,
+    maxRequests: 100000, // Effectively unlimited
   },
 } as const;
 
