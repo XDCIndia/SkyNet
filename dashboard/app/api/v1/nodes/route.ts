@@ -36,7 +36,28 @@ export async function GET(request: NextRequest) {
           WHERE m.node_id = n.id 
           ORDER BY m.collected_at DESC 
           LIMIT 1
-        ), 0) as peer_count
+        ), 0) as peer_count,
+        COALESCE((
+          SELECT m.disk_percent 
+          FROM skynet.node_metrics m 
+          WHERE m.node_id = n.id 
+          ORDER BY m.collected_at DESC 
+          LIMIT 1
+        ), 0) as disk_percent,
+        COALESCE((
+          SELECT m.memory_percent 
+          FROM skynet.node_metrics m 
+          WHERE m.node_id = n.id 
+          ORDER BY m.collected_at DESC 
+          LIMIT 1
+        ), 0) as memory_percent,
+        COALESCE((
+          SELECT m.cpu_percent 
+          FROM skynet.node_metrics m 
+          WHERE m.node_id = n.id 
+          ORDER BY m.collected_at DESC 
+          LIMIT 1
+        ), 0) as cpu_percent
       FROM skynet.nodes n
       WHERE n.is_active = true
     `;

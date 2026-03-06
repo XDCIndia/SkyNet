@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 
-// Create pool directly
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://gateway:gateway@localhost:5433/xdc_gateway'
 });
@@ -17,7 +16,10 @@ export async function POST(request: NextRequest) {
       network = 'mainnet',
       chainId = 50,
       isSyncing = false,
-      clientType = 'unknown'
+      clientType = 'unknown',
+      diskPercent = 0,
+      memoryPercent = 0,
+      cpuPercent = 0
     } = body;
     
     if (!nodeId) {
@@ -39,12 +41,12 @@ export async function POST(request: NextRequest) {
       [nodeId, nodeId.split('-')[0] || nodeId, network, clientType]
     );
     
-    // Insert metrics
+    // Insert metrics with system data
     await client.query(
       `INSERT INTO skynet.node_metrics 
-       (node_id, block_height, peer_count, is_syncing, collected_at)
-       VALUES ($1, $2, $3, $4, NOW())`,
-      [nodeId, blockHeight, peerCount, isSyncing]
+       (node_id, block_height, peer_count, is_syncing, disk_percent, memory_percent, cpu_percent, collected_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+      [nodeId, blockHeight, peerCount, isSyncing, diskPercent, memoryPercent, cpuPercent]
     );
     
     return NextResponse.json({
