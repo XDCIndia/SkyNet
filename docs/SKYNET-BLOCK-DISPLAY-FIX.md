@@ -204,3 +204,97 @@ echo "curl -s https://net.xdc.network/api/nodes/{NODE_ID} | jq '.node.block_heig
 - This fix applies to ALL client types (reth, geth, erigon, nethermind)
 - The root cause was architectural: history table vs. current state table
 - Future improvement: Consider triggers to auto-update nodes table from node_metrics
+
+
+---
+
+## Troubleshooting: Block Not Increasing
+
+If your node shows on SkyNet but **block number stays at 0** or doesn't increase:
+
+### Symptom: Block=0, Peers=0
+
+```
+[SkyNet] Sending heartbeat: block=0 peers=0 network=apothem chainId=51 syncing=true
+```
+
+**Root causes:**
+1. **No peer connections** — Snappy/Rlpx handshake failures
+2. **Wrong bootnodes** — connecting to mainnet instead of apothem
+3. **Firewall blocking P2P port** — port 30309 needs to be open
+
+**Diagnosis steps:**
+
+```bash
+# Check peer count
+curl -s -X POST http://localhost:8588 -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"net_peerCount","params":[],"id":1}'
+
+# Check sync status
+curl -s -X POST http://localhost:8588 -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_syncing","params":[],"id":1}'
+
+# Check logs for errors
+docker logs xdc-node-reth-apothem 2>&1 | grep -i "error\|failed\|disconnect" | tail -10
+```
+
+**Common errors:**
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `snappy: corrupt input` | P2P stream Snappy mismatch | Update to `cap-fix10` or later |
+| `ParseVersionError("100")` | eth/100 not recognized | Update to `cap-fix6` or later |
+| `TooManyPeers` | Bootnode at capacity | Use different bootnodes or local peers |
+| `ECIES TagCheckDecryptFailed` | Non-standard RLPx MAC (mainnet only) | Apothem uses standard ECIES, should work |
+
+### Fix for GCX Reth (Snappy Corruption)
+
+GCX Reth was experiencing Snappy header mismatch errors:
+```
+snappy: corrupt input (header mismatch; expected 15216 decompressed bytes but got 118)
+```
+
+**Root cause:** P2PStream Snappy handling mismatch with XDC geth peers.
+
+**Solution applied in `cap-fix10`:**
+- Remove `skip_snappy` from P2PStream (always use Snappy compression)
+- Let XdcEthHandshake delegate Snappy to P2PStream
+- Preserve negotiated version but handle Snappy at stream level
+
+**If still having issues:**
+1. Ensure using latest image: `anilchinchawale/rethx:apothem-cap-fix10`
+2. Check that peer is local (127.0.0.1) not remote (higher latency = more Snappy issues)
+3. Add local peers via `admin_addPeer` with trusted local nodes
+
+### GCX Specific Configuration
+
+GCX Reth should use **local peers on GCX** first:
+```bash
+# Add GCX local peers (not APO peers)
+curl -X POST http://localhost:8588 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "admin_addPeer",
+    "params": ["enode://...local_gcx_stable..."],
+    "id": 1
+  }'
+```
+
+**Don't** use APO peers from GCX — cross-datacenter latency causes Snappy timeouts.
+
+---
+
+## Server-Specific Node IDs
+
+| Server | Node Name | Node ID | Status |
+|--------|-----------|---------|--------|
+| APO (185.180.220.183) | apo-reth-185 | `1f17c6b2-b21c-48b5-8f48-a1a5dfcb2069` | ✅ Block 6,260,262+ |
+| GCX (175.110.113.12) | gcx-reth-apothem | `e935cf27-7f88-452f-8b2c-fc39be05641c` | ⚠️ Block 0, investigating |
+
+---
+
+## Related Documentation
+
+- [Reth P2P Fixes](./RETH-P2P-FIXES.md) — Snappy, eth/100, handshake fixes
+- [Multi-Client Setup](./MULTI-CLIENT-SETUP.md) — Running Reth alongside other clients
