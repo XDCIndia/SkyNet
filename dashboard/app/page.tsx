@@ -324,6 +324,48 @@ function CompactMetricBar({ value, label }: { value: number | null; label: strin
   );
 }
 
+// Mini SVG ring gauge — compact radial indicator for table rows
+function MiniRingGauge({ value, label }: { value: number | null; label: string }) {
+  const pct = value ?? 0;
+  const r = 9;
+  const circ = 2 * Math.PI * r;
+  const stroke = pct > 80 ? '#EF4444' : pct > 60 ? '#F59E0B' : '#10B981';
+  const trackColor = 'var(--border-subtle)';
+  const arc = (pct / 100) * circ;
+  return (
+    <div className="flex flex-col items-center gap-0.5" title={`${label}: ${value !== null ? pct + '%' : 'N/A'}`}>
+      <svg width="26" height="26" viewBox="0 0 26 26">
+        {/* Track */}
+        <circle cx="13" cy="13" r={r} fill="none" stroke={trackColor} strokeWidth="3" />
+        {/* Arc */}
+        {value !== null && (
+          <circle
+            cx="13" cy="13" r={r}
+            fill="none"
+            stroke={stroke}
+            strokeWidth="3"
+            strokeDasharray={`${arc} ${circ - arc}`}
+            strokeLinecap="round"
+            transform="rotate(-90 13 13)"
+          />
+        )}
+        {/* Value text */}
+        <text
+          x="13" y="16"
+          textAnchor="middle"
+          fontSize="6.5"
+          fontWeight="700"
+          fill={value !== null ? stroke : 'var(--text-tertiary)'}
+          fontFamily="monospace"
+        >
+          {value !== null ? pct : '—'}
+        </text>
+      </svg>
+      <span className="text-[8px] text-[var(--text-tertiary)] uppercase tracking-wide leading-none">{label}</span>
+    </div>
+  );
+}
+
 // Security score badge
 function SecurityBadge({ score }: { score?: number }) {
   if (score === undefined || score === null) return <span className="text-[var(--text-tertiary)]">—</span>;
@@ -1010,23 +1052,14 @@ function TableRow({
         <span className="text-sm font-mono-nums">{node.peerCount || 0}</span>
       </td>
       
-      {/* Resources: CPU / Mem / Disk / OS — compact single cell */}
+      {/* Resources: mini ring gauges for CPU / Mem / Disk + OS icon */}
       <td className="py-2 px-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs" style={{ color: node.cpuPercent >= 80 ? 'var(--critical)' : node.cpuPercent >= 50 ? 'var(--warning)' : 'var(--success)' }}>
-            CPU {node.cpuPercent?.toFixed(0) ?? '—'}%
-          </span>
-          <span className="text-[var(--text-tertiary)] text-xs">·</span>
-          <span className="text-xs" style={{ color: node.memoryPercent >= 80 ? 'var(--critical)' : node.memoryPercent >= 50 ? 'var(--warning)' : 'var(--success)' }}>
-            Mem {node.memoryPercent?.toFixed(0) ?? '—'}%
-          </span>
-          <span className="text-[var(--text-tertiary)] text-xs">·</span>
-          <span className="text-xs" style={{ color: node.diskPercent >= 80 ? 'var(--critical)' : node.diskPercent >= 50 ? 'var(--warning)' : 'var(--success)' }}>
-            Disk {node.diskPercent?.toFixed(0) ?? '—'}%
-          </span>
-          <span className="text-[var(--text-tertiary)] text-xs">·</span>
-          <span className="text-xs text-[var(--text-tertiary)]" title={node.os_info?.type}>
-            {OSIcon({ osType: node.os_info?.type })} {node.os_info?.type?.split(' ')[0] ?? 'Linux'}
+        <div className="flex items-center gap-2">
+          <MiniRingGauge value={node.cpuPercent} label="CPU" />
+          <MiniRingGauge value={node.memoryPercent} label="MEM" />
+          <MiniRingGauge value={node.diskPercent} label="DSK" />
+          <span className="text-base leading-none ml-0.5" title={node.os_info?.type}>
+            {OSIcon({ osType: node.os_info?.type })}
           </span>
         </div>
       </td>
