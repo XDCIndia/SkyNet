@@ -127,8 +127,8 @@ export async function POST(
        WHERE id = $1`,
       [
         nodeId,
-        blockHeight ?? null,
-        peerCount ?? null,
+        blockHeight ? Number(blockHeight) : null,
+        peerCount ? Number(peerCount) : null,
         isSyncing ?? null,
         clientType || null, 
         version || null, 
