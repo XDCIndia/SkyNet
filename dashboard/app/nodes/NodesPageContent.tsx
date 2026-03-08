@@ -250,7 +250,7 @@ export default function NodesPageContent() {
     
     if (hours > 0) return `${hours}h ago`;
     if (minutes > 0) return `${minutes}m ago`;
-    return `${seconds}s ago`;
+    return 'just now';
   };
 
   if (loading) {
@@ -460,17 +460,14 @@ export default function NodesPageContent() {
                   </div>
                 )}
 
-                {/* Client Badge + OS Icon */}
-                <div className="flex items-center justify-between mb-3">
+                {/* Client Badge */}
+                <div className="flex items-center mb-3">
                   <span
                     className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getClientColor(
                       node.clientType
                     )}`}
                   >
                     {getClientDisplayName(node.clientType, node.clientVersion)}
-                  </span>
-                  <span className="text-lg" title={node.osType || 'Linux'}>
-                    {getOSIcon(node.osType)}
                   </span>
                 </div>
 
@@ -502,77 +499,25 @@ export default function NodesPageContent() {
                       style={{ width: `${Math.min(node.syncPercent, 100)}%` }}
                     />
                   </div>
-                  {node.syncPercent < 100 && (
-                    <div className={`text-xs mt-1 ${
-                      node.syncPercent >= 99.9 ? 'text-green-400' :
-                      node.syncPercent >= 95 ? 'text-yellow-400' :
-                      'text-red-400'
-                    }`}>
-                      Behind: {(100 - node.syncPercent).toFixed(2)}%
-                    </div>
-                  )}
                 </div>
 
-                {/* Compact Resource Display */}
-                <div className="mb-3 p-2 rounded-lg bg-[rgba(255,255,255,0.03)]">
-                  <div className="flex items-center gap-3">
-                    {/* CPU */}
-                    <div className="flex-1" title={`CPU: ${node.cpuPercent.toFixed(1)}%`}>
-                      <div className="flex items-center justify-between text-[10px] mb-0.5">
-                        <Cpu className="w-3 h-3 text-[#6B7280]" />
-                        <span style={{ color: getResourceColor(node.cpuPercent) }}>
-                          {node.cpuPercent.toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{ 
-                            width: `${Math.min(node.cpuPercent, 100)}%`,
-                            backgroundColor: getResourceColor(node.cpuPercent)
-                          }}
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Memory */}
-                    <div className="flex-1" title={`Memory: ${node.memoryPercent.toFixed(1)}%`}>
-                      <div className="flex items-center justify-between text-[10px] mb-0.5">
-                        <MemoryStick className="w-3 h-3 text-[#6B7280]" />
-                        <span style={{ color: getResourceColor(node.memoryPercent) }}>
-                          {node.memoryPercent.toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{ 
-                            width: `${Math.min(node.memoryPercent, 100)}%`,
-                            backgroundColor: getResourceColor(node.memoryPercent)
-                          }}
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Disk */}
-                    <div className="flex-1" title={`Disk: ${node.diskPercent.toFixed(1)}%`}>
-                      <div className="flex items-center justify-between text-[10px] mb-0.5">
-                        <HardDrive className="w-3 h-3 text-[#6B7280]" />
-                        <span style={{ color: getResourceColor(node.diskPercent) }}>
-                          {node.diskPercent.toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="w-full h-1 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{ 
-                            width: `${Math.min(node.diskPercent, 100)}%`,
-                            backgroundColor: getResourceColor(node.diskPercent)
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                {/* Compact Resource + OS Row */}
+                <div className="mb-3 flex items-center gap-1.5 flex-wrap">
+                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.05)] text-[10px]">
+                    <Cpu className="w-2.5 h-2.5 text-[#6B7280]" />
+                    <span style={{ color: getResourceColor(node.cpuPercent) }}>{node.cpuPercent.toFixed(0)}%</span>
+                  </span>
+                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.05)] text-[10px]">
+                    <MemoryStick className="w-2.5 h-2.5 text-[#6B7280]" />
+                    <span style={{ color: getResourceColor(node.memoryPercent) }}>{node.memoryPercent.toFixed(0)}%</span>
+                  </span>
+                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.05)] text-[10px]">
+                    <HardDrive className="w-2.5 h-2.5 text-[#6B7280]" />
+                    <span style={{ color: getResourceColor(node.diskPercent) }}>{node.diskPercent.toFixed(0)}%</span>
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.05)] text-[10px] text-[#6B7280]" title={node.osType || 'Linux'}>
+                    {getOSIcon(node.osType)} {node.osType ? node.osType.split(' ')[0] : 'Linux'}
+                  </span>
                 </div>
 
                 {/* Block Diff */}
