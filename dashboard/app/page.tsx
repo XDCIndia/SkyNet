@@ -991,20 +991,6 @@ function TableRow({
         </div>
       </td>
       
-      {/* Behind */}
-      <td className="py-2 px-3">
-        <div className="flex flex-col">
-          <span className={`text-xs font-mono-nums ${node.blocksBehind > 100 ? 'text-[var(--critical)]' : node.blocksBehind > 10 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}`}>
-            {node.blocksBehind || 0}
-          </span>
-          {node.blocksBehind > 0 && node.networkHeight && (
-            <span className="text-[12px] text-[var(--text-tertiary)]">
-              {((node.blockHeight / node.networkHeight) * 100).toFixed(1)}%
-            </span>
-          )}
-        </div>
-      </td>
-
       {/* Peak Block */}
       <td className="py-2 px-3">
         <div className="flex flex-col">
@@ -1024,34 +1010,25 @@ function TableRow({
         <span className="text-sm font-mono-nums">{node.peerCount || 0}</span>
       </td>
       
-      {/* CPU */}
-      <td className="py-2 px-3 w-20">
-        <CompactMetricBar value={node.cpuPercent} label="CPU" />
-      </td>
-      
-      {/* Memory */}
-      <td className="py-2 px-3 w-20">
-        <CompactMetricBar value={node.memoryPercent} label="Mem" />
-      </td>
-      
-      {/* Disk */}
-      <td className="py-2 px-3 w-20">
-        <CompactMetricBar value={node.diskPercent} label="Disk" />
-      </td>
-      
-      {/* OS */}
+      {/* Resources: CPU / Mem / Disk / OS — compact single cell */}
       <td className="py-2 px-3">
-        <div className="flex items-center gap-1">
-          <span>{OSIcon({ osType: node.os_info?.type })}</span>
-          <span className="text-xs text-[var(--text-tertiary)] truncate max-w-[100px]">
-            {formatOSInfo(node.os_info, node.clientVersion)}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs" style={{ color: node.cpuPercent >= 80 ? 'var(--critical)' : node.cpuPercent >= 50 ? 'var(--warning)' : 'var(--success)' }}>
+            CPU {node.cpuPercent?.toFixed(0) ?? '—'}%
+          </span>
+          <span className="text-[var(--text-tertiary)] text-xs">·</span>
+          <span className="text-xs" style={{ color: node.memoryPercent >= 80 ? 'var(--critical)' : node.memoryPercent >= 50 ? 'var(--warning)' : 'var(--success)' }}>
+            Mem {node.memoryPercent?.toFixed(0) ?? '—'}%
+          </span>
+          <span className="text-[var(--text-tertiary)] text-xs">·</span>
+          <span className="text-xs" style={{ color: node.diskPercent >= 80 ? 'var(--critical)' : node.diskPercent >= 50 ? 'var(--warning)' : 'var(--success)' }}>
+            Disk {node.diskPercent?.toFixed(0) ?? '—'}%
+          </span>
+          <span className="text-[var(--text-tertiary)] text-xs">·</span>
+          <span className="text-xs text-[var(--text-tertiary)]" title={node.os_info?.type}>
+            {OSIcon({ osType: node.os_info?.type })} {node.os_info?.type?.split(' ')[0] ?? 'Linux'}
           </span>
         </div>
-      </td>
-      
-      {/* Security */}
-      <td className="py-2 px-3">
-        <SecurityBadge score={node.security_score} />
       </td>
       
       {/* Last Heartbeat */}
@@ -1165,14 +1142,9 @@ function VirtualTable({
               <TableHeader label="Type" field="node_type" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="Client" field="client_type" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="Block" field="blockHeight" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
-              <TableHeader label="Behind" field="blocksBehind" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="Peak" field="peakBlock" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="Peers" field="peerCount" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
-              <TableHeader label="CPU" field="cpuPercent" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
-              <TableHeader label="Mem" field="memoryPercent" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
-              <TableHeader label="Disk" field="diskPercent" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
-              <TableHeader label="OS" field="os_info" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
-              <TableHeader label="Sec" field="security_score" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="Resources" field="cpuPercent" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="Last Seen" field="lastSeen" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
             </tr>
           </thead>
