@@ -188,12 +188,25 @@ const getOSIcon = (osType?: string): string => {
 
 // Client badge component
 function ClientBadge({ clientType }: { clientType?: string }) {
+  const normalized = clientType?.toLowerCase() || '';
   const styles: Record<string, { bg: string; text: string; icon: string; label: string }> = {
-    geth: { 
-      bg: 'bg-blue-500/15', 
-      text: 'text-blue-400',
-      icon: '🔷',
-      label: 'geth'
+    gp5: {
+      bg: 'bg-green-500/15',
+      text: 'text-green-400',
+      icon: '🟢',
+      label: 'GP5'
+    },
+    'geth-pr5': {
+      bg: 'bg-green-500/15',
+      text: 'text-green-400',
+      icon: '🟢',
+      label: 'GP5'
+    },
+    geth: {
+      bg: 'bg-green-500/15',
+      text: 'text-green-400',
+      icon: '🟢',
+      label: 'GP5'
     },
     erigon: { 
       bg: 'bg-orange-500/15', 
@@ -201,31 +214,37 @@ function ClientBadge({ clientType }: { clientType?: string }) {
       icon: '🔶',
       label: 'Erigon'
     },
-    'geth-pr5': { 
-      bg: 'bg-green-500/15', 
-      text: 'text-green-400',
-      icon: '🟢',
-      label: 'geth'
-    },
     nethermind: { 
       bg: 'bg-purple-500/15', 
       text: 'text-purple-400',
       icon: '🟣',
       label: 'NM'
     },
-    xdc: { 
-      bg: 'bg-[#1E90FF]/15', 
-      text: 'text-[#1E90FF]',
-      icon: '⚡',
-      label: 'XDC'
+    nm: { 
+      bg: 'bg-purple-500/15', 
+      text: 'text-purple-400',
+      icon: '🟣',
+      label: 'NM'
+    },
+    reth: {
+      bg: 'bg-pink-500/15',
+      text: 'text-pink-400',
+      icon: '🩷',
+      label: 'Reth'
+    },
+    xdc: {
+      bg: 'bg-green-500/15',
+      text: 'text-green-400',
+      icon: '🟢',
+      label: 'GP5'
     },
   };
   
-  const style = styles[clientType?.toLowerCase() || ''] || { 
-    bg: 'bg-gray-500/15', 
-    text: 'text-gray-400',
-    icon: '⚪',
-    label: clientType || 'Unknown'
+  const style = styles[normalized] || { 
+    bg: 'bg-green-500/15',
+    text: 'text-green-400',
+    icon: '🟢',
+    label: 'GP5'
   };
   
   return (
@@ -574,7 +593,31 @@ export default function FleetOverview() {
     setSelectedNodes(newSelected);
   };
 
-  const handleBulkAction = (action: string) => {
+  const handleBulkAction = async (action: string) => {
+    if (action === 'delete') {
+      if (!confirm(`Delete ${selectedNodes.size} selected node(s)? This cannot be undone.`)) return;
+      const ids = Array.from(selectedNodes);
+      try {
+        const res = await fetch('/api/v1/nodes/bulk-delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': 'xdc-netown-key-2026-prod',
+          },
+          body: JSON.stringify({ nodeIds: ids, confirm: true }),
+        });
+        if (res.ok) {
+          setNodes(prev => prev.filter(n => !selectedNodes.has(n.id)));
+          setSelectedNodes(new Set());
+        } else {
+          const err = await res.json();
+          alert(`Delete failed: ${err.error || res.statusText}`);
+        }
+      } catch (e) {
+        alert('Delete failed: network error');
+      }
+      return;
+    }
     console.log(`Bulk ${action} for nodes:`, Array.from(selectedNodes));
     setSelectedNodes(new Set());
   };
@@ -944,9 +987,12 @@ export default function FleetOverview() {
         </div>
       </div>
 
-      {/* Bulk Actions */}
-      {selectedNodes.size > 0 && (
-        <div className="flex items-center gap-3 mb-4 p-3 rounded-xl bg-[rgba(30,144,255,0.1)] border border-[rgba(30,144,255,0.3)]">
+      {/* Bulk Actions - always rendered to prevent layout shift (table vibration fix) */}
+      <div className={`flex items-center gap-3 mb-4 p-3 rounded-xl border transition-all duration-150 ${
+        selectedNodes.size > 0
+          ? 'bg-[rgba(30,144,255,0.1)] border-[rgba(30,144,255,0.3)] opacity-100 visible'
+          : 'opacity-0 invisible h-0 overflow-hidden mb-0 py-0 border-transparent'
+      }`}>
           <span className="text-sm text-[#F9FAFB]">{selectedNodes.size} nodes selected</span>
           <div className="flex items-center gap-2 ml-auto">
             <button 
@@ -964,6 +1010,13 @@ export default function FleetOverview() {
               Update
             </button>
             <button 
+              onClick={() => handleBulkAction('delete')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(239,68,68,0.15)] text-red-400 hover:bg-[rgba(239,68,68,0.25)] transition-colors text-sm"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              Delete
+            </button>
+            <button 
               onClick={() => setSelectedNodes(new Set())}
               className="px-3 py-1.5 rounded-lg text-[#6B7280] hover:text-[#F9FAFB] transition-colors text-sm"
             >
@@ -971,11 +1024,10 @@ export default function FleetOverview() {
             </button>
           </div>
         </div>
-      )}
 
       {/* Grid View */}
       {viewMode === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 auto-rows-fr" style={{ contain: 'layout' }}>
           {filteredNodes.map((node) => {
             const statusStyle = getStatusColor(node.status);
             const StatusIcon = statusStyle.icon;
@@ -1267,11 +1319,11 @@ export default function FleetOverview() {
 
       {/* List View */}
       {viewMode === 'list' && (
-        <div className="overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.06)]">
-          <table className="w-full min-w-[1400px]">
+        <div className="overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.06)]" style={{ contain: 'layout' }}>
+          <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1400px' }}>
             <thead className="bg-[var(--bg-card)]">
               <tr className="border-b border-[rgba(255,255,255,0.06)]">
-                <th className="text-left py-3 px-4">
+                <th className="text-left py-3 px-2" style={{ width: '40px' }}>
                   <button onClick={handleSelectAll} className="flex items-center gap-2">
                     <div className={`w-4 h-4 rounded border flex items-center justify-center ${
                       selectedNodes.size === filteredNodes.length && filteredNodes.length > 0

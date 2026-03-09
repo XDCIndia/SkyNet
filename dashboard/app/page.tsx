@@ -1108,37 +1108,9 @@ function VirtualTable({
   onDeleteSelected: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scrollTop, setScrollTop] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(0);
-  
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    
-    const updateHeight = () => {
-      setContainerHeight(container.clientHeight);
-    };
-    
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
-  }, []);
-  
+
   const allSelected = nodes.length > 0 && selectedNodes.size === nodes.length;
-  
-  // Calculate visible range
-  const totalHeight = nodes.length * TABLE_ROW_HEIGHT;
-  const startIndex = Math.max(0, Math.floor(scrollTop / TABLE_ROW_HEIGHT) - BUFFER_ROWS);
-  const visibleCount = Math.ceil(containerHeight / TABLE_ROW_HEIGHT) + 2 * BUFFER_ROWS;
-  const endIndex = Math.min(nodes.length, startIndex + visibleCount);
-  
-  const visibleNodes = nodes.slice(startIndex, endIndex);
-  const offsetY = startIndex * TABLE_ROW_HEIGHT;
-  
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
-  };
-  
+
   const handleSelectNode = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
     onSelectNode(nodeId, !selectedNodes.has(nodeId));
@@ -1150,7 +1122,6 @@ function VirtualTable({
         ref={containerRef}
         className="overflow-auto"
         style={{ maxHeight: 'calc(100vh - 400px)' }}
-        onScroll={handleScroll}
       >
         <table className="w-full">
           <thead className="sticky top-0 bg-[var(--bg-card)] z-10">
@@ -1181,9 +1152,8 @@ function VirtualTable({
               <TableHeader label="Last Seen" field="lastSeen" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
             </tr>
           </thead>
-          <tbody className="relative">
-            <tr style={{ height: offsetY }} />
-            {visibleNodes.map((node) => (
+          <tbody>
+            {nodes.map((node) => (
               <TableRow
                 key={node.id}
                 node={node}
@@ -1192,7 +1162,6 @@ function VirtualTable({
                 onSelect={(e) => handleSelectNode(e, node.id)}
               />
             ))}
-            <tr style={{ height: totalHeight - offsetY - visibleNodes.length * TABLE_ROW_HEIGHT }} />
           </tbody>
         </table>
       </div>
@@ -1201,7 +1170,7 @@ function VirtualTable({
       <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border-subtle)] bg-[var(--bg-body)]">
         <div className="flex items-center gap-4">
           <span className="text-sm text-[var(--text-tertiary)]">
-            Showing {startIndex + 1}-{Math.min(endIndex, nodes.length)} of {nodes.length} nodes
+            Showing {nodes.length} nodes
           </span>
           {selectedNodes.size > 0 && (
             <>
@@ -1227,7 +1196,7 @@ function VirtualTable({
             Jump to Top
           </button>
           <button
-            onClick={() => containerRef.current?.scrollTo({ top: totalHeight, behavior: 'smooth' })}
+            onClick={() => containerRef.current?.scrollTo({ top: containerRef.current.scrollHeight, behavior: 'smooth' })}
             className="px-3 py-1.5 text-xs bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)] rounded transition-colors"
           >
             Jump to Bottom
@@ -1900,7 +1869,10 @@ function HomeContent() {
     try {
       const response = await fetch('/api/v1/nodes/bulk-delete', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer xdc-netown-key-2026-prod',
+        },
         body: JSON.stringify({
           nodeIds: Array.from(selectedNodes),
           confirm: true,
