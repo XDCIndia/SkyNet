@@ -187,9 +187,19 @@ const getOSIcon = (osType?: string): string => {
 };
 
 // Client badge component
-function ClientBadge({ clientType }: { clientType?: string }) {
+function ClientBadge({ clientType, clientVersion }: { clientType?: string; clientVersion?: string }) {
   const normalized = clientType?.toLowerCase() || '';
+  
+  // v2.6.8 binary = official XDC stable client
+  const isXDCStable = clientVersion?.includes('2.6.8') || normalized === 'xdc';
+
   const styles: Record<string, { bg: string; text: string; icon: string; label: string }> = {
+    xdc: {
+      bg: 'bg-[#1E90FF]/15',
+      text: 'text-[#1E90FF]',
+      icon: '⚡',
+      label: 'XDC'
+    },
     gp5: {
       bg: 'bg-green-500/15',
       text: 'text-green-400',
@@ -232,20 +242,11 @@ function ClientBadge({ clientType }: { clientType?: string }) {
       icon: '🩷',
       label: 'Reth'
     },
-    xdc: {
-      bg: 'bg-green-500/15',
-      text: 'text-green-400',
-      icon: '🟢',
-      label: 'GP5'
-    },
   };
   
-  const style = styles[normalized] || { 
-    bg: 'bg-green-500/15',
-    text: 'text-green-400',
-    icon: '🟢',
-    label: 'GP5'
-  };
+  // v2.6.8 → XDC stable client takes priority
+  const key = isXDCStable ? 'xdc' : normalized;
+  const style = styles[key] || styles['gp5'];
   
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${style.bg} ${style.text}`}>
@@ -1103,7 +1104,7 @@ export default function FleetOverview() {
                 
                 {/* Client Badge + Node Type */}
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <ClientBadge clientType={node.clientType} />
+                  <ClientBadge clientType={node.clientType} clientVersion={node.clientVersion} />
                   <NodeTypeBadge nodeType={node.nodeType} syncMode={node.syncMode} />
                 </div>
                 
@@ -1385,7 +1386,7 @@ export default function FleetOverview() {
                     </td>
                     <td className="py-3 px-3">
                       <div className="flex flex-col gap-1">
-                        <ClientBadge clientType={node.clientType} />
+                        <ClientBadge clientType={node.clientType} clientVersion={node.clientVersion} />
                         <span className="text-xs text-[#6B7280]">{node.nodeType || 'fullnode'}</span>
                       </div>
                     </td>
