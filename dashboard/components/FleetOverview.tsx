@@ -1319,7 +1319,10 @@ export default function FleetOverview() {
 
       {/* List View */}
       {viewMode === 'list' && (
-        <div className="overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.06)]" style={{ contain: 'layout' }}>
+        <div 
+          className="overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.06)]" 
+          style={{ contain: 'layout', willChange: 'transform' }}
+        >
           <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1400px' }}>
             <thead className="bg-[var(--bg-card)]">
               <tr className="border-b border-[rgba(255,255,255,0.06)]">
@@ -1334,16 +1337,16 @@ export default function FleetOverview() {
                     </div>
                   </button>
                 </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Node</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Client</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Status</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Block Height</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Sync</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Peers</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Storage</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Resources</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#6B7280]">Last Seen</th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-[#6B7280]">Actions</th>
+                <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]" style={{ width: '180px' }}>Node</th>
+                <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]" style={{ width: '100px' }}>Client</th>
+                <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]" style={{ width: '110px' }}>Status</th>
+                <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]" style={{ width: '140px' }}>Block Height</th>
+                <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]" style={{ width: '130px' }}>Sync</th>
+                <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]" style={{ width: '80px' }}>Peers</th>
+                <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]" style={{ width: '100px' }}>Storage</th>
+                <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]" style={{ width: '180px' }}>Resources</th>
+                <th className="text-left py-3 px-3 text-xs font-medium text-[#6B7280]" style={{ width: '100px' }}>Last Seen</th>
+                <th className="text-right py-3 px-3 text-xs font-medium text-[#6B7280]" style={{ width: '120px' }}>Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[rgba(255,255,255,0.03)]">
@@ -1359,7 +1362,7 @@ export default function FleetOverview() {
                 
                 return (
                   <tr key={node.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3">
                       <div 
                         className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer ${
                           isSelected ? 'bg-[var(--accent-blue)] border-[var(--accent-blue)]' : 'border-[#6B7280]'
@@ -1369,7 +1372,7 @@ export default function FleetOverview() {
                         {isSelected && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${statusStyle.bg}`}>
                           {getRoleIcon(node.role)}
@@ -1380,13 +1383,13 @@ export default function FleetOverview() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3">
                       <div className="flex flex-col gap-1">
                         <ClientBadge clientType={node.clientType} />
                         <span className="text-xs text-[#6B7280]">{node.nodeType || 'fullnode'}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3">
                       <div className="flex flex-col gap-1">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${statusStyle.bg} ${statusStyle.text} text-xs font-medium`}>
                           <StatusIcon className="w-3.5 h-3.5" />
@@ -1401,7 +1404,7 @@ export default function FleetOverview() {
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3">
                       <div className="font-mono text-[#1E90FF] font-semibold">{node.blockHeight.toLocaleString()}</div>
                       <div className="flex items-center gap-2 text-xs">
                         {blockIncrease > 0 && (
@@ -1413,7 +1416,7 @@ export default function FleetOverview() {
                       </div>
                     </td>
                     {/* Sync Progress with color coding (Issue #68) */}
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3">
                       <div className="w-28">
                         <div className="flex items-center justify-between text-xs mb-1">
                           <span className={`font-semibold ${
@@ -1442,18 +1445,18 @@ export default function FleetOverview() {
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3">
                       <div className="flex items-center gap-2">
                         <Users className={`w-4 h-4 ${getPeerColor(node.peers)}`} />
                         <span className={`font-semibold ${getPeerColor(node.peers)}`}>{node.peers}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3">
                       <span className="text-sm text-[#F9FAFB]">
                         {formatBytes(node.chainDataSize || node.databaseSize)}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3">
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1.5" title={`CPU: ${node.cpuUsage.toFixed(1)}%`}>
                           <Cpu className="w-3.5 h-3.5" style={{ color: getResourceColor(node.cpuUsage) }} />
