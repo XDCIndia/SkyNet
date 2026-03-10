@@ -138,7 +138,8 @@ export async function POST(
            disk_total_gb = COALESCE($20, disk_total_gb),
            storage_type = COALESCE($21, storage_type),
            security_score = COALESCE($22, security_score),
-           security_issues = COALESCE($23, security_issues)
+           security_issues = COALESCE($23, security_issues),
+           ipv4 = COALESCE($24, ipv4)
        WHERE id = $1`,
       [
         nodeId,
@@ -163,7 +164,8 @@ export async function POST(
         system?.diskTotalGb ?? null,
         storageType || null,
         security?.score ?? null,
-        security?.issues ? JSON.stringify(security.issues) : null
+        security?.issues ? JSON.stringify(security.issues) : null,
+        os?.ipv4 || null
       ]
     );
 
