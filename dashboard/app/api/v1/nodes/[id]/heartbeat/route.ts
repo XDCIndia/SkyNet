@@ -109,12 +109,20 @@ export async function POST(
                            WHEN client_type IN ('reth','nethermind','erigon') THEN client_type
                            ELSE COALESCE($5, client_type)
                          END,
-           client_version = COALESCE($6, client_version),
+           client_version = CASE
+                              WHEN client_type IN ('reth','nethermind','erigon')
+                                   AND $5 IS NOT NULL AND $5 != client_type THEN client_version
+                              ELSE COALESCE($6, client_version)
+                            END,
            network = CASE
                       WHEN network = 'apothem' THEN 'apothem'
                       ELSE COALESCE($7, network)
                     END,
-           chain_id = COALESCE($8, chain_id),
+           chain_id = CASE
+                        WHEN network = 'apothem' THEN 51
+                        WHEN network = 'mainnet'  THEN 50
+                        ELSE COALESCE($8, chain_id)
+                      END,
            coinbase = COALESCE($9, coinbase),
            fingerprint = COALESCE($10, fingerprint),
            os_info = COALESCE($11, os_info),
