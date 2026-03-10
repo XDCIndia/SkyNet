@@ -73,7 +73,12 @@ async function rpcCall(method: string, params: unknown[] = [], url: string = RPC
 }
 
 async function getActiveNodes(): Promise<Node[]> {
-  const result = await query<Node>('SELECT * FROM skynet.nodes WHERE is_active = true');
+  // Only poll nodes that have a valid RPC host URL configured.
+  // Nodes with empty/null host use SkyOne agent heartbeats exclusively — polling them
+  // with a broken URL would insert block_height=0 rows that overwrite real heartbeat data.
+  const result = await query<Node>(
+    "SELECT * FROM skynet.nodes WHERE is_active = true AND host IS NOT NULL AND host != ''"
+  );
   return result.rows;
 }
 
