@@ -105,9 +105,15 @@ export async function POST(
            block_height = COALESCE($2, block_height),
            peer_count = COALESCE($3, peer_count),
            is_syncing = COALESCE($4, is_syncing),
-           client_type = COALESCE($5, client_type),
+           client_type = CASE
+                           WHEN client_type IN ('reth','nethermind','erigon') THEN client_type
+                           ELSE COALESCE($5, client_type)
+                         END,
            client_version = COALESCE($6, client_version),
-           network = COALESCE($7, network),
+           network = CASE
+                      WHEN network = 'apothem' THEN 'apothem'
+                      ELSE COALESCE($7, network)
+                    END,
            chain_id = COALESCE($8, chain_id),
            coinbase = COALESCE($9, coinbase),
            fingerprint = COALESCE($10, fingerprint),
