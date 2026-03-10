@@ -47,6 +47,7 @@ export async function POST(
         const v = version.toLowerCase();
         if (v.includes('nethermind')) clientType = 'nethermind';
         else if (v.includes('erigon')) clientType = 'erigon';
+        else if (v.includes('reth')) clientType = 'reth';
         else if (v.includes('xdc') || v.includes('geth')) clientType = 'geth';
       }
     }
@@ -141,8 +142,8 @@ export async function POST(
        WHERE id = $1`,
       [
         nodeId,
-        blockHeight ? Number(blockHeight) : null,
-        peerCount ? Number(peerCount) : null,
+        blockHeight !== undefined && blockHeight !== null ? Number(blockHeight) : null,
+        peerCount !== undefined && peerCount !== null ? Number(peerCount) : null,
         isSyncing ?? null,
         clientType || null, 
         version || null, 
