@@ -4,7 +4,8 @@ export const dynamic = 'force-dynamic';
 import { query } from '@/lib/db';
 
 // Use a known healthy node for RPC calls
-const RPC_URL = process.env.XDC_RPC_URL || 'http://95.217.56.168:8989';
+// Fallback to a known-good public RPC — never a bare IP
+const RPC_URL = process.env.XDC_RPC_URL || 'https://rpc.xinfin.network';
 
 // Simple in-memory cache
 let cache: {

@@ -52,9 +52,21 @@ interface PeerInfo {
 const MAX_TRACKED_NODES = 1000;
 const previousMetrics = new Map<string, NodeMetric & { count: number }>();
 
+// Normalise a host/URL value to a full http:// endpoint.
+// Handles bare IPs ("1.2.3.4"), IP:port ("1.2.3.4:8545"),
+// and already-full URLs ("http://1.2.3.4:8545").
+function normalizeRpcUrl(raw: string, defaultPort = 8545): string {
+  if (!raw) return raw;
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+  // bare IP or IP:port — add scheme
+  const hasPort = raw.includes(':');
+  return `http://${raw}${hasPort ? '' : `:${defaultPort}`}`;
+}
+
 async function rpcCall(method: string, params: unknown[] = [], url: string = RPC_URL): Promise<unknown> {
+  const normalizedUrl = normalizeRpcUrl(url);
   try {
-    const res = await fetch(url, {
+    const res = await fetch(normalizedUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }),
