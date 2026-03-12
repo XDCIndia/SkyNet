@@ -1,14 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { queryWithResilience } from '@/lib/db/resilient-client';
+
+// Severity levels for incident classification (Issue #511)
+type Severity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+
+// Issue type to severity mapping (Issue #511)
+const ISSUE_SEVERITY_MAP: Record<string, Severity> = {
+  fork_detected: 'CRITICAL',
+  sync_stall: 'HIGH',
+  node_down: 'CRITICAL',
+};
+
+/**
+ * Determine severity for peer_drop based on duration
+ */
+function getPeerDropSeverity(durationMinutes: number): Severity {
+  return durationMinutes > 10 ? 'HIGH' : 'MEDIUM';
+}
+
+/**
+ * Determine severity for disk_critical based on disk usage percentage
+ */
+function getDiskSeverity(diskPercent: number): Severity {
+  if (diskPercent > 95) return 'CRITICAL';
+  if (diskPercent > 85) return 'HIGH';
+  return 'MEDIUM';
+}
+
+/**
+ * Create incident with proper severity (Issue #511)
+ */
+async function createIncident(
+  nodeId: string,
+  type: string,
+  severity: Severity,
+  message: string,
+  context?: Record<string, any>
+): Promise<void> {
+  try {
+    await query(
+      `INSERT INTO skynet.incidents 
+       (node_id, type, severity, message, context, detected_at, status)
+       VALUES ($1, $2, $3, $4, $5, NOW(), 'active')
+       ON CONFLICT DO NOTHING`,
+      [nodeId, type, severity, message, context ? JSON.stringify(context) : null]
+    );
+  } catch (error) {
+    console.error(`Failed to create incident for node ${nodeId}:`, error);
+  }
+}
 
 // POST /api/v1/nodes/[id]/heartbeat - Receive heartbeat from node agent
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const startTime = Date.now();
+  const nodeId = params.id;
+  
   try {
-    const nodeId = params.id;
-    
     // Parse heartbeat data with sanitization for malformed JSON (e.g., .03 -> 0.03)
     const rawBody = await request.text();
     const sanitizedBody = rawBody.replace(/":\s*\.(\d+)/g, '": 0.$1');
@@ -16,7 +67,7 @@ export async function POST(
     try {
       body = JSON.parse(sanitizedBody);
     } catch (e) {
-      console.error('Failed to parse heartbeat JSON:', rawBody.substring(0, 500));
+      console.error(`[Heartbeat:${nodeId}] Failed to parse JSON:`, rawBody.substring(0, 500));
       return NextResponse.json(
         { error: 'Invalid JSON in heartbeat' },
         { status: 400 }
@@ -38,7 +89,11 @@ export async function POST(
       security,
       storageType,
       stalled,
-      lastRestart
+      lastRestart,
+      // New fields for enhanced alerting
+      forkDetected,
+      peerDropDuration,
+      diskCritical,
     } = body;
 
     // Normalize clientType from version string if needed
@@ -52,10 +107,11 @@ export async function POST(
       }
     }
 
-    // Check if node exists
-    const nodeResult = await query(
+    // Check if node exists (with retry logic via queryWithResilience)
+    const nodeResult = await queryWithResilience(
       'SELECT id FROM skynet.nodes WHERE id = $1',
-      [nodeId]
+      [nodeId],
+      { maxRetries: 3, baseDelay: 100 }
     );
 
     if (nodeResult.rows.length === 0) {
@@ -65,8 +121,8 @@ export async function POST(
       );
     }
 
-    // Insert metrics with system resources
-    await query(
+    // Insert metrics with system resources (with retry)
+    await queryWithResilience(
       `INSERT INTO skynet.node_metrics 
        (node_id, block_height, peer_count, is_syncing, client_type, client_version, 
         cpu_percent, memory_percent, disk_percent, disk_used_gb, disk_total_gb,
@@ -93,13 +149,12 @@ export async function POST(
         os?.ipv4 || null,
         security?.score ?? null,
         security?.issues ? JSON.stringify(security.issues) : null
-      ]
+      ],
+      { maxRetries: 3, baseDelay: 100 }
     );
 
-    // Update node's last_seen and network info (Issue #68)
-    // Also update coinbase and fingerprint if provided (Issue #71)
-    // Extended data: os, system resources, security, storage (Task 2)
-    await query(
+    // Update node's last_seen and network info
+    await queryWithResilience(
       `UPDATE skynet.nodes 
        SET last_seen = NOW(), 
            is_active = true,
@@ -166,54 +221,109 @@ export async function POST(
         security?.score ?? null,
         security?.issues ? JSON.stringify(security.issues) : null,
         os?.ipv4 || null
-      ]
+      ],
+      { maxRetries: 3, baseDelay: 100 }
     );
 
     // Update enode if provided
     if (enode) {
-      await query(
+      await queryWithResilience(
         `UPDATE skynet.nodes SET enode = $1 WHERE id = $2 AND (enode IS NULL OR enode != $1)`,
-        [enode, nodeId]
+        [enode, nodeId],
+        { maxRetries: 2, baseDelay: 50 }
       );
     }
 
-    // SkyOne: Auto-create incident if stalled=true
+    // Enhanced Incident Creation with Severity Classification (Issue #511)
+    
+    // Fork detection - CRITICAL
+    if (forkDetected === true) {
+      await createIncident(
+        nodeId,
+        'fork_detected',
+        'CRITICAL',
+        `Fork detected at block ${blockHeight}`,
+        { blockHeight, clientType, version }
+      );
+    }
+    
+    // Sync stall - HIGH
     if (stalled === true) {
-      await query(
-        `INSERT INTO skynet.incidents 
-         (node_id, type, severity, message, created_at, status)
-         VALUES ($1, 'sync_stall', 'warning', $2, NOW(), 'open')
-         ON CONFLICT DO NOTHING`,
-        [nodeId, `Block stalled at ${blockHeight} for 5+ minutes with ${peerCount} peers`]
+      await createIncident(
+        nodeId,
+        'sync_stall',
+        'HIGH',
+        `Block stalled at ${blockHeight} for 5+ minutes with ${peerCount} peers`,
+        { blockHeight, peerCount, clientType }
+      );
+    }
+    
+    // Peer drop with duration
+    if (peerDropDuration && peerDropDuration > 0) {
+      const severity = getPeerDropSeverity(peerDropDuration);
+      await createIncident(
+        nodeId,
+        'peer_drop',
+        severity,
+        `Peer count dropped for ${peerDropDuration} minutes`,
+        { peerCount, durationMinutes: peerDropDuration }
+      );
+    }
+    
+    // Disk critical with severity based on usage
+    if (diskCritical === true && system?.diskPercent) {
+      const severity = getDiskSeverity(system.diskPercent);
+      await createIncident(
+        nodeId,
+        'disk_critical',
+        severity,
+        `Disk usage critical at ${system.diskPercent}%`,
+        { diskPercent: system.diskPercent, diskUsedGb: system.diskUsedGb }
       );
     }
 
-    // SkyOne: Update node with stalled status and last restart time
+    // Update node with stalled status and last restart time
     if (lastRestart) {
-      await query(
+      await queryWithResilience(
         `UPDATE skynet.nodes SET stalled = $2, last_restart = $3::timestamptz WHERE id = $1`,
-        [nodeId, stalled === true, lastRestart]
+        [nodeId, stalled === true, lastRestart],
+        { maxRetries: 2, baseDelay: 50 }
       );
     } else {
-      await query(
+      await queryWithResilience(
         `UPDATE skynet.nodes SET stalled = $2 WHERE id = $1`,
-        [nodeId, stalled === true]
+        [nodeId, stalled === true],
+        { maxRetries: 2, baseDelay: 50 }
       );
     }
 
+    const duration = Date.now() - startTime;
+    
     return NextResponse.json({
       success: true,
       message: 'Heartbeat recorded',
       nodeId,
+      durationMs: duration,
       timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('Error processing heartbeat:', error);
-    return NextResponse.json(
-      { error: 'Failed to process heartbeat' },
+    console.error(`[Heartbeat:${nodeId}] Error processing heartbeat:`, error);
+    
+    // Return 500 with Retry-After header for agent backoff (Issue #501)
+    const response = NextResponse.json(
+      { 
+        error: 'Failed to process heartbeat',
+        nodeId,
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     );
+    
+    // Add Retry-After header so agents back off properly
+    response.headers.set('Retry-After', '30');
+    
+    return response;
   }
 }
 
@@ -225,13 +335,14 @@ export async function GET(
   try {
     const nodeId = params.id;
 
-    const result = await query(
+    const result = await queryWithResilience(
       `SELECT block_height, peer_count, is_syncing, client_type, version, collected_at
        FROM skynet.node_metrics
        WHERE node_id = $1
        ORDER BY collected_at DESC
        LIMIT 1`,
-      [nodeId]
+      [nodeId],
+      { maxRetries: 2, baseDelay: 50 }
     );
 
     if (result.rows.length === 0) {

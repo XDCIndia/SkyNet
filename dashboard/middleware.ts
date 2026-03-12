@@ -14,6 +14,7 @@ import {
   getClientIP,
   getHeartbeatIdentifier,
 } from './lib/rate-limiter';
+import { csrfMiddleware } from './lib/csrf';
 
 // =============================================================================
 // Configuration
@@ -162,6 +163,41 @@ function applyRateLimit(
 }
 
 // =============================================================================
+// API Authentication (Issue #519)
+// =============================================================================
+
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
+
+/**
+ * Check if request is authenticated for admin endpoints
+ */
+function checkAdminAuth(req: NextRequest): boolean {
+  const adminSecret = req.headers.get('X-Admin-Secret');
+  if (!ADMIN_SECRET || !adminSecret) return false;
+  return adminSecret === ADMIN_SECRET;
+}
+
+/**
+ * Check API key for write endpoints (future-proofing)
+ */
+function checkApiKey(req: NextRequest): boolean {
+  // Heartbeat endpoints have their own auth - skip here
+  const path = req.nextUrl.pathname;
+  if (path.includes('/nodes/') && path.includes('/heartbeat')) {
+    return true; // Let heartbeat handler handle its own auth
+  }
+  
+  // Admin endpoints handled separately
+  if (path.startsWith('/api/v1/admin/')) {
+    return true; // Will be checked by checkAdminAuth
+  }
+  
+  // For now, allow all other requests (read-only GETs are public)
+  // Future write endpoints can check X-API-Key here
+  return true;
+}
+
+// =============================================================================
 // Main Middleware
 // =============================================================================
 
@@ -190,6 +226,31 @@ export async function middleware(req: NextRequest) {
           query: req.nextUrl.search,
           apiVersion,
         });
+        
+        // CSRF Protection for state-changing requests (Issue #610)
+        const csrfCheck = csrfMiddleware(req);
+        if (csrfCheck) {
+          return csrfCheck;
+        }
+        
+        // Admin endpoint authentication (Issue #519)
+        if (path.startsWith('/api/v1/admin/')) {
+          if (!checkAdminAuth(req)) {
+            logger.warn('Admin auth failed', { path, ip: getClientIP(req) });
+            return NextResponse.json(
+              { error: 'Unauthorized', code: 'ADMIN_AUTH_REQUIRED' },
+              { status: 401 }
+            );
+          }
+        }
+        
+        // API Key check for write endpoints (Issue #519)
+        if (!checkApiKey(req)) {
+          return NextResponse.json(
+            { error: 'Unauthorized', code: 'API_KEY_REQUIRED' },
+            { status: 401 }
+          );
+        }
 
         // Apply rate limiting for API routes (controlled by ENABLE_RATE_LIMIT env var)
         const enableRateLimit = process.env.ENABLE_RATE_LIMIT === 'true';
