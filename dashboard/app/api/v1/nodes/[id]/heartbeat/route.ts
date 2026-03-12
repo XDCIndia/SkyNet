@@ -75,6 +75,7 @@ export async function POST(
     }
     let { 
       blockHeight, 
+      blockHash,
       peerCount, 
       isSyncing, 
       clientType,
@@ -124,14 +125,15 @@ export async function POST(
     // Insert metrics with system resources (with retry)
     await queryWithResilience(
       `INSERT INTO skynet.node_metrics 
-       (node_id, block_height, peer_count, is_syncing, client_type, client_version, 
+       (node_id, block_height, block_hash, peer_count, is_syncing, client_type, client_version, 
         cpu_percent, memory_percent, disk_percent, disk_used_gb, disk_total_gb,
         storage_type, os_type, os_release, os_arch, kernel_version, ipv4,
         security_score, security_issues, collected_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW())`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW())`,
       [
         nodeId,
         blockHeight || 0,
+        blockHash || null,
         peerCount || 0,
         isSyncing || false,
         clientType || 'unknown',
@@ -297,8 +299,12 @@ export async function POST(
       );
     }
 
+    // Issue #452: Fork Detection - Check for divergence when blockHash is provided
+    if (blockHash && blockHeight) {
+      await checkForForkAndCreateIncident(nodeId, blockHeight, blockHash, clientType);
+    }
+
     const duration = Date.now() - startTime;
-    
     return NextResponse.json({
       success: true,
       message: 'Heartbeat recorded',
@@ -363,5 +369,85 @@ export async function GET(
       { error: 'Failed to fetch heartbeat' },
       { status: 500 }
     );
+  }
+}
+
+// Issue #452: Check for fork and create incident if divergence detected
+async function checkForForkAndCreateIncident(
+  nodeId: string, 
+  blockHeight: number, 
+  blockHash: string,
+  clientType: string = 'unknown'
+): Promise<void> {
+  try {
+    // Check if any other node has same block height but different block_hash
+    const result = await query(
+      `SELECT n2.id, n2.name, n2.block_hash, n2.client_type 
+       FROM skynet.nodes n2
+       WHERE n2.block_height = $1 
+         AND n2.id != $2 
+         AND n2.block_hash != $3
+         AND n2.is_active = true
+       LIMIT 1`,
+      [blockHeight, nodeId, blockHash]
+    );
+
+    if (result.rows.length === 0) {
+      return; // No fork detected
+    }
+
+    // Fork detected! Get this node's name
+    const nodeResult = await query(
+      'SELECT name FROM skynet.nodes WHERE id = $1',
+      [nodeId]
+    );
+    const nodeName = nodeResult.rows[0]?.name || nodeId;
+
+    // Create fingerprint for deduplication
+    const fingerprint = `fork-${blockHeight}-${blockHash.substring(0, 16)}`;
+
+    // Check if incident already exists for this block height
+    const existingResult = await query(
+      `SELECT id FROM skynet.incidents 
+       WHERE fingerprint = $1 AND status IN ('open', 'active')
+       LIMIT 1`,
+      [fingerprint]
+    );
+
+    if (existingResult.rows.length > 0) {
+      return; // Incident already exists
+    }
+
+    // Create CRITICAL incident (Issue #452)
+    const divergentNode = result.rows[0];
+
+    await query(
+      `INSERT INTO skynet.incidents 
+       (node_id, type, severity, fingerprint, message, title, description, context, status, first_seen, last_seen, occurrence_count, auto_detected)
+       VALUES ($1, 'fork_detected', 'CRITICAL', $2, $3, $4, $5, $6, 'active', NOW(), NOW(), 1, true)`,
+      [
+        nodeId,
+        fingerprint,
+        `Fork detected at block ${blockHeight}. ${nodeName} (${clientType}): ${blockHash} vs ${divergentNode.name} (${divergentNode.client_type}): ${divergentNode.block_hash}`,
+        `Fork Detected at Block #${blockHeight}`,
+        `Network fork detected at block height ${blockHeight}. Node ${nodeName} (${clientType}) has divergent block hash ${blockHash} compared to ${divergentNode.name}.`,
+        JSON.stringify({
+          blockHeight,
+          divergentNode: { id: nodeId, name: nodeName, blockHash, clientType },
+          otherNode: { 
+            id: divergentNode.id, 
+            name: divergentNode.name, 
+            blockHash: divergentNode.block_hash,
+            clientType: divergentNode.client_type 
+          },
+          detectedAt: new Date().toISOString()
+        })
+      ]
+    );
+
+    console.log(`🚨 FORK DETECTED at block ${blockHeight} by node ${nodeName}`);
+  } catch (error) {
+    console.error('Error checking for fork:', error);
+    // Don't throw - we don't want fork detection to break heartbeats
   }
 }
