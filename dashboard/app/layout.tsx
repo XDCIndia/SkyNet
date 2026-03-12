@@ -4,6 +4,9 @@ import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 
+// Import server initialization (only runs on server)
+import "@/lib/server-init";
+
 const firaSans = Fira_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
