@@ -1,203 +1,135 @@
+import Redis from 'ioredis';
+
+// Redis client singleton
+let redis: Redis | null = null;
+
+export function getRedisClient(): Redis {
+  if (!redis) {
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    
+    redis = new Redis(redisUrl, {
+      retryStrategy: (times) => {
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+      },
+      maxRetriesPerRequest: 3,
+      enableReadyCheck: true,
+    });
+
+    redis.on('error', (err) => {
+      console.error('Redis error:', err);
+    });
+
+    redis.on('connect', () => {
+      console.log('Redis connected');
+    });
+  }
+
+  return redis;
+}
+
+// Cache configuration
+const DEFAULT_TTL = 300; // 5 minutes
+
+interface CacheConfig {
+  ttl?: number;
+  key?: string;
+}
+
 /**
- * XDC SkyNet - Cache Layer
- * Provides API response caching and query result caching
+ * Get cached data or fetch from source
  */
+export async function getCached<T>(
+  key: string,
+  fetcher: () => Promise<T>,
+  ttl: number = DEFAULT_TTL
+): Promise<T> {
+  try {
+    const client = getRedisClient();
+    const cached = await client.get(key);
 
-import { getRedis, isRedisConnected, getCache, setCache, deleteCache, invalidatePattern } from './redis';
-import { LRUCache } from 'lru-cache';
-
-// =============================================================================
-// Cache Configuration
-// =============================================================================
-
-export const CACHE_TTLS = {
-  // API responses
-  nodeList: 30,           // 30 seconds
-  nodeDetails: 60,        // 1 minute
-  metrics: 15,            // 15 seconds
-  incidents: 30,          // 30 seconds
-  peers: 60,              // 1 minute
-  health: 10,             // 10 seconds
-  masternodes: 120,       // 2 minutes
-  networkStats: 60,       // 1 minute
-  
-  // Query results
-  queryResults: 60,       // 1 minute
-  aggregations: 300,      // 5 minutes
-} as const;
-
-// =============================================================================
-// LRU Fallback Cache
-// =============================================================================
-
-const lruCache = new LRUCache<string, { value: unknown; expiresAt: number }>({
-  max: 5000,
-  ttl: 300_000, // 5 minutes
-  allowStale: false,
-});
-
-// =============================================================================
-// Cache Key Generation
-// =============================================================================
-
-export function generateCacheKey(
-  type: string,
-  identifier: string,
-  params?: Record<string, unknown>
-): string {
-  const baseKey = `skynet:${type}:${identifier}`;
-  
-  if (!params || Object.keys(params).length === 0) {
-    return baseKey;
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (error) {
+    console.warn('Redis get failed, fetching from source:', error);
   }
-  
-  const paramHash = Object.entries(params)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
-    .join('&');
-  
-  return `${baseKey}:${Buffer.from(paramHash).toString('base64url')}`;
+
+  // Fetch fresh data
+  const data = await fetcher();
+
+  // Try to cache the result
+  try {
+    const client = getRedisClient();
+    await client.setex(key, ttl, JSON.stringify(data));
+  } catch (error) {
+    console.warn('Redis set failed:', error);
+  }
+
+  return data;
 }
 
-// =============================================================================
-// Cache Operations
-// =============================================================================
-
-export async function getCached<T>(key: string): Promise<T | null> {
-  // Try Redis first
-  if (isRedisConnected()) {
-    const value = await getCache<T>(key);
-    if (value !== null) return value;
-  }
-  
-  // Fallback to LRU
-  const entry = lruCache.get(key);
-  if (entry && entry.expiresAt > Date.now()) {
-    return entry.value as T;
-  }
-  
-  return null;
-}
-
-export async function setCached<T>(
+/**
+ * Set cache value
+ */
+export async function setCache<T>(
   key: string,
   value: T,
-  ttlSeconds: number
+  ttl: number = DEFAULT_TTL
 ): Promise<void> {
-  // Try Redis first
-  if (isRedisConnected()) {
-    await setCache(key, value, ttlSeconds);
-    return;
+  try {
+    const client = getRedisClient();
+    await client.setex(key, ttl, JSON.stringify(value));
+  } catch (error) {
+    console.warn('Redis set failed:', error);
   }
-  
-  // Fallback to LRU
-  lruCache.set(key, {
-    value,
-    expiresAt: Date.now() + ttlSeconds * 1000,
-  });
 }
 
-export async function deleteCached(key: string): Promise<void> {
-  await deleteCache(key);
-  lruCache.delete(key);
+/**
+ * Delete cached value
+ */
+export async function deleteCache(key: string): Promise<void> {
+  try {
+    const client = getRedisClient();
+    await client.del(key);
+  } catch (error) {
+    console.warn('Redis delete failed:', error);
+  }
 }
 
+/**
+ * Delete cached values by pattern
+ */
 export async function invalidateCache(pattern: string): Promise<void> {
-  await invalidatePattern(pattern);
-  
-  // Also clear matching LRU entries
-  for (const key of lruCache.keys()) {
-    if (key.includes(pattern.replace('*', ''))) {
-      lruCache.delete(key);
+  try {
+    const client = getRedisClient();
+    const keys = await client.keys(pattern);
+    if (keys.length > 0) {
+      await client.del(...keys);
     }
+  } catch (error) {
+    console.warn('Redis invalidate failed:', error);
   }
 }
 
-// =============================================================================
-// Cache Middleware Helper
-// =============================================================================
+// Cache key builders
+export const CacheKeys = {
+  fleetStatus: () => 'skynet:fleet:status',
+  nodeDetail: (nodeId: string) => `skynet:node:${nodeId}`,
+  nodeMetrics: (nodeId: string) => `skynet:node:${nodeId}:metrics`,
+  networkHealth: () => 'skynet:network:health',
+  masternodeList: () => 'skynet:masternodes:list',
+  blockHeight: () => 'skynet:block:height',
+  peerCount: (nodeId: string) => `skynet:node:${nodeId}:peers`,
+};
 
-export interface CacheConfig {
-  ttl: number;
-  keyGenerator?: (req: Request) => string;
-  varyByHeaders?: string[];
-  condition?: (req: Request) => boolean;
-}
-
-export function generateRequestCacheKey(
-  req: Request,
-  type: string,
-  varyByHeaders?: string[]
-): string {
-  const url = new URL(req.url);
-  const baseKey = `${type}:${url.pathname}:${url.search}`;
-  
-  if (!varyByHeaders || varyByHeaders.length === 0) {
-    return baseKey;
-  }
-  
-  const headerValues = varyByHeaders
-    .map(h => req.headers.get(h.toLowerCase()))
-    .filter(Boolean);
-  
-  if (headerValues.length > 0) {
-    return `${baseKey}:h=${headerValues.join('|')}`;
-  }
-  
-  return baseKey;
-}
-
-// =============================================================================
-// Cache Tags for Invalidation
-// =============================================================================
-
-export const CACHE_TAGS = {
-  nodes: 'skynet:nodes:*',
-  metrics: 'skynet:metrics:*',
-  incidents: 'skynet:incidents:*',
-  peers: 'skynet:peers:*',
-  health: 'skynet:health:*',
-  masternodes: 'skynet:masternodes:*',
-  network: 'skynet:network:*',
-  all: 'skynet:*',
-} as const;
-
-export async function invalidateByTag(tag: keyof typeof CACHE_TAGS): Promise<void> {
-  await invalidateCache(CACHE_TAGS[tag]);
-}
-
-// =============================================================================
-// Query Result Caching
-// =============================================================================
-
-export async function withCache<T>(
-  key: string,
-  fn: () => Promise<T>,
-  ttlSeconds: number
-): Promise<T> {
-  // Try to get from cache
-  const cached = await getCached<T>(key);
-  if (cached !== null) {
-    return cached;
-  }
-  
-  // Execute function
-  const result = await fn();
-  
-  // Store in cache (don't await, fire and forget)
-  setCached(key, result, ttlSeconds).catch(console.error);
-  
-  return result;
-}
-
-export async function withConditionalCache<T>(
-  key: string,
-  fn: () => Promise<T>,
-  ttlSeconds: number,
-  condition: boolean
-): Promise<T> {
-  if (!condition) {
-    return fn();
-  }
-  return withCache(key, fn, ttlSeconds);
-}
+// Cache TTL configuration
+export const CacheTTL = {
+  fleetStatus: 5,        // 5 seconds
+  nodeDetail: 10,        // 10 seconds
+  nodeMetrics: 30,       // 30 seconds
+  networkHealth: 30,     // 30 seconds
+  masternodeList: 60,    // 1 minute
+  blockHeight: 2,        // 2 seconds
+  peerCount: 10,         // 10 seconds
+};
