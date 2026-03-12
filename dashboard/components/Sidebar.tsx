@@ -23,6 +23,7 @@ import {
   AlertCircle,
   Server,
   Layers,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface NavItem {
@@ -46,6 +47,7 @@ const navItems: NavItem[] = [
   { id: 'network', label: 'Network Stats', icon: <BarChart3 className="w-5 h-5" />, path: '/network', section: 'Network' },
   { id: 'peers', label: 'Peers', icon: <Globe className="w-5 h-5" />, path: '/peers', section: 'Network' },
   { id: 'masternodes', label: 'Masternodes', icon: <Pickaxe className="w-5 h-5" />, path: '/masternodes', section: 'Network' },
+  { id: 'consensus', label: 'Consensus', icon: <ShieldCheck className="w-5 h-5" />, path: '/dashboard/consensus', section: 'Network' },
   { id: 'skyone', label: 'SkyOne Dashboard', icon: <Monitor className="w-5 h-5" />, path: '/skyone', section: 'Tools' },
   { id: 'multi-client', label: 'Multi-Client', icon: <Layers className="w-5 h-5" />, path: '/dashboard/multi-client', section: 'Tools' },
   { id: 'explorer', label: 'Explorer', icon: <Globe className="w-5 h-5" />, path: '/explorer', section: 'Public', isPublic: true },

@@ -1,51 +1,97 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { queryWithResilience } from '@/lib/db/resilient-client';
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || 'postgresql://gateway:gateway@localhost:5433/xdc_gateway'
+});
+
+export const dynamic = 'force-dynamic';
+
+const EPOCH_LENGTH = 900; // XDC epoch = 900 blocks
+const GAP_START = 450;
+const GAP_END = 454;
+
+interface EpochStatus {
+  currentEpoch: number;
+  currentBlock: number;
+  blocksInEpoch: number;
+  blocksRemaining: number;
+  epochProgressPercent: number;
+  epochStartBlock: number;
+  epochEndBlock: number;
+  estimatedTimeToNextEpoch: number; // seconds
+  averageBlockTime: number; // seconds
+  nextEpochStartTime: string; // ISO timestamp
+}
 
 /**
- * Epoch Boundary Monitoring API
- * 
- * Provides monitoring around XDPoS 2.0 epoch boundaries (every 900 blocks)
- * Issue #690
- * 
  * GET /api/v1/consensus/epoch-status
+ * Returns current epoch information and progress
+ * Merged: Enhanced epoch boundary monitoring (#690) + XDPoS 2.0 Consensus Dashboard (#693)
  */
 export async function GET(request: NextRequest) {
+  const client = await pool.connect();
   try {
-    const EPOCH_LENGTH = 900;
-    const GAP_START = 450;
-    const GAP_END = 454;
-
-    // Get latest block from metrics
-    const blockResult = await query(`
-      SELECT 
-        (metrics->>'blockHeight')::bigint as block_height,
-        (metrics->>'epoch')::int as epoch,
-        collected_at
+    // Get the latest block from node_metrics (from #693)
+    const blockResult = await client.query(`
+      SELECT block_height, collected_at, 
+        LAG(block_height) OVER (ORDER BY collected_at) as prev_height,
+        LAG(collected_at) OVER (ORDER BY collected_at) as prev_time
       FROM skynet.node_metrics
-      WHERE collected_at > NOW() - INTERVAL '1 minute'
-      ORDER BY (metrics->>'blockHeight')::bigint DESC
-      LIMIT 1
+      WHERE block_height IS NOT NULL
+      ORDER BY collected_at DESC
+      LIMIT 10
     `);
 
     if (blockResult.rows.length === 0) {
-      return NextResponse.json(
-        { error: 'No recent block data available' },
-        { status: 404 }
-      );
+      return NextResponse.json({
+        success: false,
+        error: 'No block data available'
+      }, { status: 404 });
     }
 
-    const currentBlock = parseInt(blockResult.rows[0].block_height);
+    const latest = blockResult.rows[0];
+    const currentBlock = parseInt(latest.block_height);
     const currentEpoch = Math.floor(currentBlock / EPOCH_LENGTH);
+    const epochStartBlock = currentEpoch * EPOCH_LENGTH;
+    const epochEndBlock = epochStartBlock + EPOCH_LENGTH - 1;
+    const blocksInEpoch = currentBlock - epochStartBlock;
+    const blocksRemaining = EPOCH_LENGTH - blocksInEpoch;
+    const blocksToNextEpoch = blocksRemaining;
+    const epochProgressPercent = (blocksInEpoch / EPOCH_LENGTH) * 100;
     const nextEpoch = currentEpoch + 1;
-    const blocksInEpoch = currentBlock % EPOCH_LENGTH;
-    const blocksToNextEpoch = EPOCH_LENGTH - blocksInEpoch;
     const nextEpochBlock = nextEpoch * EPOCH_LENGTH;
 
-    // Check if in gap period (blocks 450-454)
+    // Calculate average block time from recent samples (from #693)
+    let totalBlockTime = 0;
+    let sampleCount = 0;
+    for (let i = 0; i < blockResult.rows.length - 1; i++) {
+      const row = blockResult.rows[i];
+      const prev = blockResult.rows[i + 1];
+      if (row.prev_height && row.prev_time) {
+        const blocksDiff = parseInt(row.block_height) - parseInt(row.prev_height);
+        const timeDiff = new Date(row.collected_at).getTime() - new Date(row.prev_time).getTime();
+        if (blocksDiff > 0 && timeDiff > 0) {
+          totalBlockTime += timeDiff / blocksDiff / 1000;
+          sampleCount++;
+        }
+      }
+    }
+    const averageBlockTime = sampleCount > 0 ? totalBlockTime / sampleCount : 2.0; // Default to 2s
+
+    // Estimate time to next epoch
+    const estimatedTimeToNextEpoch = blocksRemaining * averageBlockTime;
+    const estimatedSecondsToEpoch = estimatedTimeToNextEpoch;
+    const estimatedEpochTime = new Date(Date.now() + estimatedSecondsToEpoch * 1000);
+    const nextEpochStartTime = estimatedEpochTime.toISOString();
+
+    // Check if in gap period (from #690)
     const isGapPeriod = blocksInEpoch >= GAP_START && blocksInEpoch <= GAP_END;
     const isApproachingEpoch = blocksToNextEpoch <= 50;
 
-    // Get masternode data
+    // Get masternode data (from #690)
     const masternodeResult = await query(`
       SELECT 
         COUNT(*) as total_masternodes,
@@ -57,7 +103,7 @@ export async function GET(request: NextRequest) {
     const totalMasternodes = parseInt(masternodeResult.rows[0]?.total_masternodes) || 108;
     const activeMasternodes = parseInt(masternodeResult.rows[0]?.active_masternodes) || 108;
 
-    // Calculate alert status
+    // Calculate alert status (from #690)
     const alerts = [];
     
     if (isGapPeriod) {
@@ -77,53 +123,68 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Calculate epoch progress
-    const epochProgress = ((blocksInEpoch / EPOCH_LENGTH) * 100).toFixed(2);
-
-    // Estimate time to next epoch (assuming 2-second block time)
-    const estimatedSecondsToEpoch = blocksToNextEpoch * 2;
-    const estimatedEpochTime = new Date(Date.now() + estimatedSecondsToEpoch * 1000);
+    const status: EpochStatus = {
+      currentEpoch,
+      currentBlock,
+      blocksInEpoch,
+      blocksRemaining,
+      epochProgressPercent: parseFloat(epochProgressPercent.toFixed(2)),
+      epochStartBlock,
+      epochEndBlock,
+      estimatedTimeToNextEpoch: Math.round(estimatedTimeToNextEpoch),
+      averageBlockTime: parseFloat(averageBlockTime.toFixed(3)),
+      nextEpochStartTime
+    };
 
     return NextResponse.json({
-      current: {
-        block: currentBlock,
-        epoch: currentEpoch,
-        blocks_in_epoch: blocksInEpoch,
-        epoch_progress_percent: parseFloat(epochProgress),
+      success: true,
+      data: {
+        ...status,
+        current: {
+          block: currentBlock,
+          epoch: currentEpoch,
+          blocks_in_epoch: blocksInEpoch,
+          epoch_progress_percent: parseFloat(epochProgressPercent.toFixed(2)),
+        },
+        next: {
+          epoch: nextEpoch,
+          block: nextEpochBlock,
+          blocks_remaining: blocksToNextEpoch,
+          estimated_time: nextEpochStartTime,
+          estimated_seconds: estimatedSecondsToEpoch,
+        },
+        gap: {
+          is_gap_period: isGapPeriod,
+          gap_start_block: currentEpoch * EPOCH_LENGTH + GAP_START,
+          gap_end_block: currentEpoch * EPOCH_LENGTH + GAP_END,
+        },
+        masternodes: {
+          total: totalMasternodes,
+          active: activeMasternodes,
+          readiness_percent: Math.round((activeMasternodes / totalMasternodes) * 100),
+        },
+        alerts,
       },
-      next: {
-        epoch: nextEpoch,
-        block: nextEpochBlock,
-        blocks_remaining: blocksToNextEpoch,
-        estimated_time: estimatedEpochTime.toISOString(),
-        estimated_seconds: estimatedSecondsToEpoch,
-      },
-      gap: {
-        is_gap_period: isGapPeriod,
-        gap_start_block: currentEpoch * EPOCH_LENGTH + GAP_START,
-        gap_end_block: currentEpoch * EPOCH_LENGTH + GAP_END,
-      },
-      masternodes: {
-        total: totalMasternodes,
-        active: activeMasternodes,
-        readiness_percent: Math.round((activeMasternodes / totalMasternodes) * 100),
-      },
-      alerts,
-      timestamp: new Date().toISOString(),
-    }, { status: 200 });
-
-  } catch (error) {
-    console.error('Epoch status error:', error);
-    return NextResponse.json(
-      { error: 'Failed to get epoch status' },
-      { status: 500 }
-    );
+      timestamp: new Date().toISOString()
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=5'
+      }
+    });
+  } catch (error: any) {
+    console.error('Epoch status error:', error.message);
+    return NextResponse.json({
+      success: false,
+      error: error.message
+    }, { status: 500 });
+  } finally {
+    client.release();
   }
 }
 
 /**
  * Monitor script for epoch boundaries
- * This would be run as a background job
+ * This would be run as a background job (from #690)
  */
 export async function monitorEpochBoundaries() {
   try {
@@ -131,19 +192,19 @@ export async function monitorEpochBoundaries() {
     const data = await response.json();
 
     // Alert if approaching epoch boundary
-    if (data.next.blocks_remaining <= 10) {
-      console.log(`⚠️ Approaching epoch ${data.next.epoch} in ${data.next.blocks_remaining} blocks`);
+    if (data.data?.next?.blocks_remaining <= 10) {
+      console.log(`⚠️ Approaching epoch ${data.data.next.epoch} in ${data.data.next.blocks_remaining} blocks`);
       
       // Check masternode readiness
-      if (data.masternodes.readiness_percent < 90) {
-        console.error(`🚨 Low masternode readiness: ${data.masternodes.readiness_percent}%`);
+      if (data.data.masternodes?.readiness_percent < 90) {
+        console.error(`🚨 Low masternode readiness: ${data.data.masternodes.readiness_percent}%`);
         // TODO: Send alert notification
       }
     }
 
     // Alert during gap period
-    if (data.gap.is_gap_period) {
-      console.log(`📍 In gap period. Next block production in ${data.gap.gap_end_block - data.current.block} blocks`);
+    if (data.data?.gap?.is_gap_period) {
+      console.log(`📍 In gap period. Next block production in ${data.data.gap.gap_end_block - data.data.current.block} blocks`);
     }
 
   } catch (error) {
