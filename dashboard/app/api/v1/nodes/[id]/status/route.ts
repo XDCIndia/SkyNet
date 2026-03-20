@@ -62,7 +62,8 @@ export async function GET(
         ipv4, ipv6, os_type, os_release, os_arch, kernel_version,
         client_type, node_type, security_score, security_issues,
         chain_data_size, database_size, storage_type, storage_model, iops_estimate, mount_point, mount_percent, sentries,
-        consensus_epoch, consensus_round, consensus_v2, epoch_progress, chain_id
+        consensus_epoch, consensus_round, consensus_v2, epoch_progress, chain_id,
+        health_score
        FROM skynet.node_metrics 
        WHERE node_id = $1 
        ORDER BY collected_at DESC 
@@ -235,6 +236,8 @@ export async function GET(
           round: latestMetrics.consensus_round,
           chainId: latestMetrics.chain_id,
         } : null,
+        // Composite health score (0-100)
+        healthScore: latestMetrics?.health_score ?? 0,
       },
       incidents: {
         active: incidentsResult.rows,

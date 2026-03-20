@@ -245,6 +245,32 @@ export default function HeroSection({ node, status, metrics }: HeroSectionProps)
               <span className="text-xs font-medium text-[var(--warning)]">Syncing</span>
             </div>
           )}
+          {/* Health Score Badge */}
+          {(() => {
+            const score = status.healthScore ?? 0;
+            const healthColor = score >= 80 ? '#10B981' : score >= 50 ? '#F59E0B' : '#EF4444';
+            const healthLabel = score >= 80 ? 'Healthy' : score >= 50 ? 'Fair' : 'Poor';
+            return (
+              <div
+                title={`Health Score: ${score}/100 — ${healthLabel}`}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full border"
+                style={{
+                  backgroundColor: `${healthColor}18`,
+                  borderColor: `${healthColor}35`,
+                }}
+              >
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
+                  style={{ backgroundColor: healthColor, color: '#fff' }}
+                >
+                  {score}
+                </div>
+                <span className="text-xs font-medium" style={{ color: healthColor }}>
+                  Health
+                </span>
+              </div>
+            );
+          })()}
         </div>
         {/* P2P Protocol Badges */}
         <ProtocolBadges clientType={status.clientType || node.client_type} />

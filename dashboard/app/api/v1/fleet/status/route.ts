@@ -78,6 +78,7 @@ async function getHandler(request: NextRequest) {
           kernel_version,
           stall_hours,
           stalled_at_block,
+          health_score,
           collected_at
         FROM skynet.node_metrics
         WHERE collected_at > NOW() - INTERVAL '5 minutes'
@@ -135,6 +136,7 @@ async function getHandler(request: NextRequest) {
         m.kernel_version,
         m.stall_hours,
         m.stalled_at_block,
+        m.health_score,
         m.collected_at,
         pm.prev_block_height,
         pk.peak_block_height,
@@ -299,6 +301,7 @@ async function getHandler(request: NextRequest) {
       os_info: parseOsInfo(n),
       stallHours: Number(n.stall_hours) || 0,
       stalledAtBlock: Number(n.stalled_at_block) || 0,
+      healthScore: Number(n.health_score) || 0,
       // Block diff tracking
       prevBlock: Number(n.prev_block_height) || 0,
       blockDiff: Number(n.block_diff) || 0,

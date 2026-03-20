@@ -132,6 +132,7 @@ export interface SkyNetNode {
   blockDiff?: number;
   os?: string;
   osType?: string;
+  healthScore?: number;
 }
 
 export interface ClientDistributionItem {

@@ -98,6 +98,7 @@ export interface NodeStatus {
     round?: number;
     chainId?: number;
   } | null;
+  healthScore?: number;
 }
 
 export interface SentryInfo {

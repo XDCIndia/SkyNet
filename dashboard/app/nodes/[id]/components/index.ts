@@ -13,6 +13,7 @@ export { default as ComparisonPanel } from './ComparisonPanel';
 export { default as RPCMatrix } from './RPCMatrix';
 export { default as ContainerPanel } from './ContainerPanel';
 export { default as ConsensusPanel } from './ConsensusPanel';
+export { default as RestartHistory } from './RestartHistory';
 
 // Export types
 export * from './types';

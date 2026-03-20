@@ -89,6 +89,7 @@ export default function NodesPageContent() {
         blockDiff: node.blockDiff || undefined,
         os: node.os || node.os_type,
         osType: node.osType || node.os_type,
+        healthScore: node.healthScore ?? 0,
       }));
       
       setNodes(mappedNodes);

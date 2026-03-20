@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     const kernelVer  = body.os?.kernel   ?? null;
     const secScore   = body.security?.score ?? null;
     const dockerImg  = body.dockerImage ?? null;
+    const healthScore = body.healthScore ?? null;
 
     // Consensus fields
     const consensus       = body.consensus ?? {};
@@ -64,8 +65,8 @@ export async function POST(request: NextRequest) {
     // Upsert node record — never downgrade network from apothem→mainnet
     await client.query(
       `INSERT INTO skynet.nodes
-         (id, name, network, status, last_heartbeat, client_type, ipv4, coinbase, is_active, docker_image)
-       VALUES ($1, $2, $3, 'active', NOW(), $4, $5, $6, true, $10)
+         (id, name, network, status, last_heartbeat, client_type, ipv4, coinbase, is_active, docker_image, health_score)
+       VALUES ($1, $2, $3, 'active', NOW(), $4, $5, $6, true, $10, $11)
        ON CONFLICT (id) DO UPDATE SET
          network        = CASE
                             WHEN skynet.nodes.network = 'apothem' THEN 'apothem'
@@ -80,8 +81,9 @@ export async function POST(request: NextRequest) {
          client_type    = EXCLUDED.client_type,
          ipv4           = COALESCE(EXCLUDED.ipv4, skynet.nodes.ipv4),
          coinbase       = COALESCE(EXCLUDED.coinbase, skynet.nodes.coinbase),
-         docker_image   = COALESCE(EXCLUDED.docker_image, skynet.nodes.docker_image)`,
-      [nodeId, nodeId, network, clientType, ipv4, coinbase, blockHeight, peerCount, isSyncing, dockerImg]
+         docker_image   = COALESCE(EXCLUDED.docker_image, skynet.nodes.docker_image),
+         health_score   = COALESCE(EXCLUDED.health_score, skynet.nodes.health_score)`,
+      [nodeId, nodeId, network, clientType, ipv4, coinbase, blockHeight, peerCount, isSyncing, dockerImg, healthScore]
     );
 
     // Insert full metrics row (including DB size columns)
@@ -94,6 +96,7 @@ export async function POST(request: NextRequest) {
          ipv4, os_type, os_release, os_arch, kernel_version,
          db_engine, db_total_size, db_chaindata_size, db_ancient_size, db_state_size,
          consensus_epoch, consensus_round, consensus_v2, epoch_progress, chain_id,
+         health_score,
          collected_at
        ) VALUES (
          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
@@ -101,6 +104,7 @@ export async function POST(request: NextRequest) {
          $19,$20,$21,$22,$23,
          $24,$25,$26,$27,$28,
          $29,$30,$31,$32,$33,
+         $34,
          NOW()
        )`,
       [
@@ -111,6 +115,7 @@ export async function POST(request: NextRequest) {
         ipv4, osType, osRelease, osArch, kernelVer,
         dbEngine, dbTotal, dbChaindata, dbAncient, dbState,
         consensusEpoch, consensusRound, consensusV2, epochProgress, chainId,
+        healthScore,
       ]
     );
 

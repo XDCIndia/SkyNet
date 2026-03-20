@@ -53,6 +53,7 @@ import {
   RPCMatrix,
   ContainerPanel,
   ConsensusPanel,
+  RestartHistory,
   type NodeDetail,
   type NodeStatus,
   type MetricHistory,
@@ -1057,6 +1058,9 @@ export default function NodeDetailPage() {
 
         {/* Troubleshoot Panel */}
         <TroubleshootPanel nodeId={nodeId} status={status} />
+
+        {/* Auto-Heal & Restart History (#599) */}
+        <RestartHistory nodeId={nodeId} />
 
         {/* Grid: Incidents */}
         <div className="card-xdc">
