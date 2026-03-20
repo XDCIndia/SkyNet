@@ -3,7 +3,7 @@
 This document provides comprehensive instructions for recreating the entire XDC SkyNet infrastructure from scratch.
 
 **Server:** 95.217.56.168  
-**Domain:** net.xdc.network  
+**Domain:** xdc.openscan.ai  
 **Last Updated:** 2026-02-13
 
 ---
@@ -500,14 +500,14 @@ curl http://localhost:3005/api/v1/fleet/status
 ### 1. Create Site Configuration
 
 ```bash
-sudo nano /etc/nginx/sites-available/net.xdc.network
+sudo nano /etc/nginx/sites-available/xdc.openscan.ai
 ```
 
 Add configuration:
 
 ```nginx
 server {
-    server_name net.xdc.network;
+    server_name xdc.openscan.ai;
 
     location / {
         proxy_pass http://127.0.0.1:3005;
@@ -534,7 +534,7 @@ server {
 # HTTP to HTTPS redirect (add after SSL setup)
 server {
     listen 80;
-    server_name net.xdc.network;
+    server_name xdc.openscan.ai;
     return 301 https://$host$request_uri;
 }
 ```
@@ -542,7 +542,7 @@ server {
 ### 2. Enable Site
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/net.xdc.network /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/xdc.openscan.ai /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 ```
@@ -551,7 +551,7 @@ sudo systemctl restart nginx
 
 | Domain | Port | Service |
 |--------|------|---------|
-| net.xdc.network | 3005 | SkyNet Dashboard |
+| xdc.openscan.ai | 3005 | SkyNet Dashboard |
 | grafana.xdc.network | 3300 | Grafana |
 | burn.xdc.network | 3002 | Burn Tracker |
 | canton.xdc.network | 3001 | Privacy Frontend |
@@ -569,7 +569,7 @@ sudo systemctl restart nginx
 sudo apt install -y certbot python3-certbot-nginx
 
 # Obtain certificate
-sudo certbot --nginx -d net.xdc.network
+sudo certbot --nginx -d xdc.openscan.ai
 
 # Follow interactive prompts
 ```
@@ -586,8 +586,8 @@ sudo certbot renew --dry-run
 ### 3. Certificate Locations
 
 ```
-/etc/letsencrypt/live/net.xdc.network/fullchain.pem
-/etc/letsencrypt/live/net.xdc.network/privkey.pem
+/etc/letsencrypt/live/xdc.openscan.ai/fullchain.pem
+/etc/letsencrypt/live/xdc.openscan.ai/privkey.pem
 ```
 
 ---
@@ -798,7 +798,7 @@ sudo certbot renew --force-renewal
 sudo certbot certificates
 
 # Debug SSL
-openssl s_client -connect net.xdc.network:443
+openssl s_client -connect xdc.openscan.ai:443
 ```
 
 ### Port Conflicts

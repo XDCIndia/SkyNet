@@ -356,7 +356,7 @@ http://localhost:7070
 
 Access fleet-wide monitoring at:
 ```
-https://net.xdc.network
+https://xdc.openscan.ai
 ```
 
 ### Prometheus Metrics

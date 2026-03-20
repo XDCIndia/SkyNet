@@ -38,7 +38,7 @@ Nodes receive unique API keys upon registration:
 
 ```bash
 # Register node
-curl -X POST https://net.xdc.network/api/v1/nodes/register \
+curl -X POST https://xdc.openscan.ai/api/v1/nodes/register \
   -H "Authorization: Bearer MASTER_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -59,7 +59,7 @@ curl -X POST https://net.xdc.network/api/v1/nodes/register \
 ### Node Heartbeat
 
 ```bash
-curl -X POST https://net.xdc.network/api/v1/nodes/heartbeat \
+curl -X POST https://xdc.openscan.ai/api/v1/nodes/heartbeat \
   -H "Authorization: Bearer xdc_a1b2c3d4e5f6..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -72,7 +72,7 @@ curl -X POST https://net.xdc.network/api/v1/nodes/heartbeat \
 ### Fleet Status (Master Key)
 
 ```bash
-curl https://net.xdc.network/api/v1/fleet/status \
+curl https://xdc.openscan.ai/api/v1/fleet/status \
   -H "Authorization: Bearer xdc-netown-key-2026-prod"
 ```
 
@@ -169,7 +169,7 @@ class SkyNetClient {
   private apiKey: string;
   private baseUrl: string;
   
-  constructor(apiKey: string, baseUrl = 'https://net.xdc.network') {
+  constructor(apiKey: string, baseUrl = 'https://xdc.openscan.ai') {
     this.apiKey = apiKey;
     this.baseUrl = baseUrl;
   }
@@ -203,7 +203,7 @@ class SkyNetClient {
 import requests
 
 class SkyNetClient:
-    def __init__(self, api_key: str, base_url: str = 'https://net.xdc.network'):
+    def __init__(self, api_key: str, base_url: str = 'https://xdc.openscan.ai'):
         self.api_key = api_key
         self.base_url = base_url
         self.session = requests.Session()

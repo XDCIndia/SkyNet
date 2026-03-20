@@ -3,7 +3,7 @@
 **Date**: 2026-02-12  
 **Auditor**: DesignGuru  
 **App**: XDCNetOwn — XDC Network Ownership Dashboard  
-**URL**: https://net.xdc.network/
+**URL**: https://xdc.openscan.ai/
 
 ---
 

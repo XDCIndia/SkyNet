@@ -22,7 +22,7 @@
 
 ```
 Development: http://localhost:3000
-Production: https://net.xdc.network
+Production: https://xdc.openscan.ai
 ```
 
 ### API Version
@@ -49,7 +49,7 @@ All API requests require authentication using a Bearer token:
 
 ```bash
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-  https://net.xdc.network/api/v1/fleet/status
+  https://xdc.openscan.ai/api/v1/fleet/status
 ```
 
 ### API Key Types

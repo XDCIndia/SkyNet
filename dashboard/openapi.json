@@ -11,7 +11,7 @@
   },
   "servers": [
     {
-      "url": "https://net.xdc.network/api/v1",
+      "url": "https://xdc.openscan.ai/api/v1",
       "description": "Production server"
     },
     {

@@ -237,7 +237,7 @@ xdc node --register-skynet
 ### Node Not Showing in Dashboard
 ```bash
 # Check node registration
-curl -s https://net.xdc.network/api/v1/nodes/$(cat mainnet/.xdc-node/skynet.conf | grep SKYNET_NODE_ID | cut -d= -f2)
+curl -s https://xdc.openscan.ai/api/v1/nodes/$(cat mainnet/.xdc-node/skynet.conf | grep SKYNET_NODE_ID | cut -d= -f2)
 
 # If not found, re-register
 xdc node --register-skynet --email your@email.com
@@ -249,7 +249,7 @@ xdc node --register-skynet --email your@email.com
 cat mainnet/.xdc-node/skynet.conf | grep -E "(EMAIL|TELEGRAM)"
 
 # Test alert delivery
-curl -X POST https://net.xdc.network/api/v1/alerts/test \
+curl -X POST https://xdc.openscan.ai/api/v1/alerts/test \
   -H "Authorization: Bearer $(cat mainnet/.xdc-node/skynet.conf | grep API_KEY | cut -d= -f2)"
 ```
 
@@ -368,7 +368,7 @@ tar czf xdc-debug-logs-$(date +%Y%m%d).tar.gz xdc-debug-logs/
 
 ### Community Resources
 - **GitHub Issues:** https://github.com/AnilChinchawale/xdc-node-setup/issues
-- **SkyNet Dashboard:** https://net.xdc.network
+- **SkyNet Dashboard:** https://xdc.openscan.ai
 - **XDC Documentation:** https://docs.xdc.network
 
 ---

@@ -3,7 +3,7 @@
 ## Base URL
 
 ```
-Production: https://net.xdc.network/api/v1
+Production: https://xdc.openscan.ai/api/v1
 Local:      http://localhost:3000/api/v1
 ```
 
@@ -383,12 +383,12 @@ Mark an issue as resolved.
 
 Real-time updates via WebSocket.
 
-**Endpoint:** `wss://net.xdc.network/api/v1/ws`
+**Endpoint:** `wss://xdc.openscan.ai/api/v1/ws`
 
 ### Subscribe to Events
 
 ```javascript
-const ws = new WebSocket('wss://net.xdc.network/api/v1/ws');
+const ws = new WebSocket('wss://xdc.openscan.ai/api/v1/ws');
 
 ws.onopen = () => {
   ws.send(JSON.stringify({
@@ -422,7 +422,7 @@ import { SkyNetClient } from '@xdc/skynet-client';
 
 const client = new SkyNetClient({
   apiKey: 'your-api-key',
-  baseUrl: 'https://net.xdc.network/api/v1'
+  baseUrl: 'https://xdc.openscan.ai/api/v1'
 });
 
 // Register node
@@ -454,7 +454,7 @@ console.log(`Health score: ${fleet.healthScore}`);
 import requests
 
 API_KEY = 'your-api-key'
-BASE_URL = 'https://net.xdc.network/api/v1'
+BASE_URL = 'https://xdc.openscan.ai/api/v1'
 headers = {'Authorization': f'Bearer {API_KEY}'}
 
 # Register node
@@ -485,7 +485,7 @@ requests.post(
 
 ```bash
 # Register node
-curl -X POST https://net.xdc.network/api/v1/nodes/register \
+curl -X POST https://xdc.openscan.ai/api/v1/nodes/register \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -495,7 +495,7 @@ curl -X POST https://net.xdc.network/api/v1/nodes/register \
   }'
 
 # Send heartbeat
-curl -X POST https://net.xdc.network/api/v1/nodes/heartbeat \
+curl -X POST https://xdc.openscan.ai/api/v1/nodes/heartbeat \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -505,7 +505,7 @@ curl -X POST https://net.xdc.network/api/v1/nodes/heartbeat \
   }'
 
 # Get fleet status
-curl https://net.xdc.network/api/v1/fleet/status \
+curl https://xdc.openscan.ai/api/v1/fleet/status \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 

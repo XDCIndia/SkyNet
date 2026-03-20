@@ -51,7 +51,7 @@ await query(
 If the agent is using a wrong node ID, register a new node:
 
 ```bash
-curl -X POST "https://net.xdc.network/api/v1/nodes/register" \
+curl -X POST "https://xdc.openscan.ai/api/v1/nodes/register" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "apo-reth-185",
@@ -137,12 +137,12 @@ docker logs agent-reth-apo | grep heartbeat
 
 2. **Check API response:**
 ```bash
-curl -s "https://net.xdc.network/api/nodes/{NODE_ID}" | jq '.node.block_height'
+curl -s "https://xdc.openscan.ai/api/nodes/{NODE_ID}" | jq '.node.block_height'
 # Should show: 6260262 (not null)
 ```
 
 3. **Check dashboard:**
-Visit https://net.xdc.network - node should show block, peers, and sync status.
+Visit https://xdc.openscan.ai - node should show block, peers, and sync status.
 
 ---
 
@@ -177,7 +177,7 @@ echo "Restarting xdcnetown..."
 pm2 restart xdcnetown
 
 echo "=== Fix applied. Verify with: ==="
-echo "curl -s https://net.xdc.network/api/nodes/{NODE_ID} | jq '.node.block_height'"
+echo "curl -s https://xdc.openscan.ai/api/nodes/{NODE_ID} | jq '.node.block_height'"
 ```
 
 ---

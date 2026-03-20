@@ -177,7 +177,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Access-Control-Allow-Origin',
-            value: process.env.ALLOWED_ORIGINS || 'https://net.xdc.network',
+            value: process.env.ALLOWED_ORIGINS || 'https://xdc.openscan.ai',
           },
           {
             key: 'Access-Control-Allow-Methods',

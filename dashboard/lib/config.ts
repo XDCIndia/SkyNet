@@ -114,7 +114,7 @@ export const branding = {
   shortName: 'SkyNet',
   tagline: 'Own Your Network',
   description: 'The definitive dashboard and API platform for XDC Network owners and operators',
-  url: 'https://net.xdc.network',
+  url: 'https://xdc.openscan.ai',
   repository: 'https://github.com/AnilChinchawale/XDCSkyNet',
   
   colors: {

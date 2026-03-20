@@ -40,7 +40,7 @@ Set up a daily cron job or Vercel Cron:
 }
 
 # Or external cron (daily at 3 AM)
-0 3 * * * curl -X POST https://net.xdc.network/api/cron/cleanup \
+0 3 * * * curl -X POST https://xdc.openscan.ai/api/cron/cleanup \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 

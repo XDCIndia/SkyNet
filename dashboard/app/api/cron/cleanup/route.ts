@@ -6,7 +6,7 @@ import { queryAll } from '@/lib/db';
  * Issue #281: Implement data retention policy
  * 
  * Configure Vercel Cron or external cron to call daily:
- * curl -X POST https://net.xdc.network/api/cron/cleanup \
+ * curl -X POST https://xdc.openscan.ai/api/cron/cleanup \
  *   -H "Authorization: Bearer $CRON_SECRET"
  */
 export async function POST(request: NextRequest) {

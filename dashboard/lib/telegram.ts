@@ -151,7 +151,7 @@ function formatAlertMessage(alert: AlertPayload): string {
     msg += `\n${alert.description}\n`;
   }
 
-  const dashUrl = alert.dashboardUrl || process.env.DASHBOARD_URL || 'https://net.xdc.network';
+  const dashUrl = alert.dashboardUrl || process.env.DASHBOARD_URL || 'https://xdc.openscan.ai';
   if (alert.nodeId) {
     msg += `\n<a href="${dashUrl}/nodes/${alert.nodeId}">View Dashboard</a>`;
   }

@@ -361,7 +361,7 @@ Using Nginx as reverse proxy:
 ```nginx
 server {
     listen 443 ssl http2;
-    server_name net.xdc.network;
+    server_name xdc.openscan.ai;
 
     ssl_certificate /path/to/cert.pem;
     ssl_certificate_key /path/to/key.pem;

@@ -302,15 +302,15 @@ retention:
 
 ```bash
 # Get latest metrics for a node
-curl "https://net.xdc.network/api/v1/nodes/{nodeId}/metrics/latest" \
+curl "https://xdc.openscan.ai/api/v1/nodes/{nodeId}/metrics/latest" \
   -H "Authorization: Bearer YOUR_API_KEY"
 
 # Query historical metrics
-curl "https://net.xdc.network/api/v1/nodes/{nodeId}/metrics?metric=blockHeight&from=2026-02-25T00:00:00Z&to=2026-02-26T00:00:00Z&interval=1h" \
+curl "https://xdc.openscan.ai/api/v1/nodes/{nodeId}/metrics?metric=blockHeight&from=2026-02-25T00:00:00Z&to=2026-02-26T00:00:00Z&interval=1h" \
   -H "Authorization: Bearer YOUR_API_KEY"
 
 # Query multiple metrics
-curl -X POST "https://net.xdc.network/api/v1/nodes/{nodeId}/metrics/query" \
+curl -X POST "https://xdc.openscan.ai/api/v1/nodes/{nodeId}/metrics/query" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{

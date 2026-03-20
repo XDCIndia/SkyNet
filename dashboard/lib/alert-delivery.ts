@@ -150,7 +150,7 @@ function formatTelegramMessage(
 
   // Add dashboard link if node id is available
   if (node.id) {
-    const dashboardUrl = process.env.DASHBOARD_URL || 'https://net.xdc.network';
+    const dashboardUrl = process.env.DASHBOARD_URL || 'https://xdc.openscan.ai';
     message += `\n<a href="${dashboardUrl}/nodes/${node.id}">View Dashboard</a>`;
   }
 

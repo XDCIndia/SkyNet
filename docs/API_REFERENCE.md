@@ -3,7 +3,7 @@
 ## Base URL
 
 ```
-Production: https://net.xdc.network/api/v1
+Production: https://xdc.openscan.ai/api/v1
 Local:      http://localhost:3000/api/v1
 ```
 
@@ -433,7 +433,7 @@ Get detailed information about a specific candidate.
 Connect to real-time updates:
 
 ```javascript
-const ws = new WebSocket('wss://net.xdc.network/ws');
+const ws = new WebSocket('wss://xdc.openscan.ai/ws');
 
 ws.onopen = () => {
   ws.send(JSON.stringify({
@@ -457,7 +457,7 @@ class SkyNetClient {
   private apiKey: string;
   private baseUrl: string;
 
-  constructor(apiKey: string, baseUrl = 'https://net.xdc.network/api/v1') {
+  constructor(apiKey: string, baseUrl = 'https://xdc.openscan.ai/api/v1') {
     this.apiKey = apiKey;
     this.baseUrl = baseUrl;
   }
@@ -503,7 +503,7 @@ class SkyNetClient {
 import requests
 
 class SkyNetClient:
-    def __init__(self, api_key, base_url='https://net.xdc.network/api/v1'):
+    def __init__(self, api_key, base_url='https://xdc.openscan.ai/api/v1'):
         self.api_key = api_key
         self.base_url = base_url
         self.headers = {

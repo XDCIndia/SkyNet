@@ -478,7 +478,7 @@ ORDER BY date;
 
 ```bash
 # Send test alert
-curl -X POST https://net.xdc.network/api/v1/alerts/test \
+curl -X POST https://xdc.openscan.ai/api/v1/alerts/test \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{

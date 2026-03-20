@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const ALLOWED_ORIGINS = [
   process.env.NEXTAUTH_URL,
   process.env.NEXT_PUBLIC_APP_URL,
-  'https://net.xdc.network',
+  'https://xdc.openscan.ai',
   'http://localhost:3000',
   'http://localhost:3005',
 ].filter(Boolean) as string[];

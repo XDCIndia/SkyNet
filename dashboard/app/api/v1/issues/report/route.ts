@@ -268,7 +268,7 @@ ${issue.description || 'No description provided.'}
     body += `\n**PR Target Repo:** \`${solution.repo}\`\n`;
   }
 
-  body += `\n---\n\n> Detected by **XDC SkyNet** monitoring · [Dashboard](https://net.xdc.network)\n`;
+  body += `\n---\n\n> Detected by **XDC SkyNet** monitoring · [Dashboard](https://xdc.openscan.ai)\n`;
 
   return body;
 }

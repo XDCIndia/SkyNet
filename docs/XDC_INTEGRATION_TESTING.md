@@ -434,7 +434,7 @@ rm /tmp/fill-disk.tmp
 # test-skynet-heartbeat.sh
 
 API_KEY="your-api-key"
-SKYNET_URL="https://net.xdc.network"
+SKYNET_URL="https://xdc.openscan.ai"
 
 # Test heartbeat payload
 heartbeat_payload='{

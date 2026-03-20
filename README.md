@@ -4,13 +4,13 @@
 
 ![XDC SkyNet](https://img.shields.io/badge/XDC-SkyNet-blue?style=for-the-badge&logo=server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Live-brightgreen?style=for-the-badge)](https://net.xdc.network)
+[![Status](https://img.shields.io/badge/Status-Live-brightgreen?style=for-the-badge)](https://xdc.openscan.ai)
 
 **Mission Control for XDC Network**
 
 *The definitive dashboard and API platform for XDC Network owners and operators*
 
-[🌐 Live Dashboard](https://net.xdc.network) • [API Docs](#api-documentation) • [Quick Start](#quick-start) • [Architecture](#architecture)
+[🌐 Live Dashboard](https://xdc.openscan.ai) • [API Docs](#api-documentation) • [Quick Start](#quick-start) • [Architecture](#architecture)
 
 </div>
 
@@ -704,7 +704,7 @@ npm run test       # Run tests
 |---------|-------------|------|
 | **XDC Node Setup** | Node deployment toolkit (CLI, scripts, Docker) | [GitHub](https://github.com/AnilChinchawale/XDC-Node-Setup) |
 | **XDC Gateway** | Enterprise RPC infrastructure | [gateway.xdc.network](https://gateway.xdc.network) |
-| **XDC SkyNet** | Dashboard + API platform (this repo) | [net.xdc.network](https://net.xdc.network) |
+| **XDC SkyNet** | Dashboard + API platform (this repo) | [xdc.openscan.ai](https://xdc.openscan.ai) |
 
 ---
 
@@ -728,6 +728,6 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 *XDC SkyNet — Own Your Network.*
 
-[🌐 Live Dashboard](https://net.xdc.network) • [📚 Documentation](docs/) • [💬 Discord](https://discord.gg/xdc)
+[🌐 Live Dashboard](https://xdc.openscan.ai) • [📚 Documentation](docs/) • [💬 Discord](https://discord.gg/xdc)
 
 </div>

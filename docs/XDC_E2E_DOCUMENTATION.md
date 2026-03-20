@@ -168,7 +168,7 @@ xdc start --client <client-name>
 ```bash
 # Automatic during setup
 # Or manual registration:
-curl -X POST https://net.xdc.network/api/v1/nodes/register \
+curl -X POST https://xdc.openscan.ai/api/v1/nodes/register \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{

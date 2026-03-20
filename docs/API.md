@@ -7,7 +7,7 @@ This document provides comprehensive API documentation for XDCNetOwn (SkyNet), t
 ## Base URL
 
 ```
-Production: https://net.xdc.network/api/v1
+Production: https://xdc.openscan.ai/api/v1
 Development: http://localhost:3000/api/v1
 ```
 
@@ -491,7 +491,7 @@ Authorization: Bearer YOUR_API_KEY
 Connect to WebSocket for real-time updates.
 
 ```javascript
-const ws = new WebSocket('wss://net.xdc.network/ws');
+const ws = new WebSocket('wss://xdc.openscan.ai/ws');
 
 ws.onopen = () => {
   // Authenticate
@@ -570,7 +570,7 @@ const SkyNetClient = require('@xdc/skynet-client');
 
 const client = new SkyNetClient({
   apiKey: 'YOUR_API_KEY',
-  baseUrl: 'https://net.xdc.network/api/v1'
+  baseUrl: 'https://xdc.openscan.ai/api/v1'
 });
 
 // Register node

@@ -34,7 +34,7 @@ Log in to your XDCNetOwn dashboard and generate an API key:
 Use the following curl command to register your node:
 
 ```bash
-curl -X POST https://net.xdc.network/api/v1/nodes/register \
+curl -X POST https://xdc.openscan.ai/api/v1/nodes/register \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -70,7 +70,7 @@ Edit your node's configuration file at `/etc/xdc-node/notify.conf`:
 
 ```bash
 # XDCNetOwn Platform API Configuration
-NOTIFY_PLATFORM_URL=https://net.xdc.network/api/v1/notifications
+NOTIFY_PLATFORM_URL=https://xdc.openscan.ai/api/v1/notifications
 NOTIFY_PLATFORM_API_KEY=xdc_a1b2c3d4e5f6...
 ```
 
@@ -81,7 +81,7 @@ The `xdc-node-setup` scripts automatically send heartbeats. Enable metrics colle
 ```bash
 # Edit /opt/xdc-node-setup/config/health.conf
 HEARTBEAT_INTERVAL=30
-HEARTBEAT_URL=https://net.xdc.network/api/v1/nodes/heartbeat
+HEARTBEAT_URL=https://xdc.openscan.ai/api/v1/nodes/heartbeat
 METRICS_ENABLED=true
 ```
 
@@ -154,8 +154,8 @@ For issues with `xdc-node-setup`:
 - Documentation: See README in the repository
 
 For issues with XDCNetOwn platform:
-- Dashboard: https://net.xdc.network
-- API Documentation: https://net.xdc.network/docs/api
+- Dashboard: https://xdc.openscan.ai
+- API Documentation: https://xdc.openscan.ai/docs/api
 
 ## Example Scripts
 
@@ -167,7 +167,7 @@ API_KEY="xdc_your_key_here"
 NODE_ID="your-node-id"
 
 curl -s -H "Authorization: Bearer $API_KEY" \
-  "https://net.xdc.network/api/v1/nodes/$NODE_ID/status" | jq
+  "https://xdc.openscan.ai/api/v1/nodes/$NODE_ID/status" | jq
 ```
 
 ### Fleet Overview
@@ -177,7 +177,7 @@ curl -s -H "Authorization: Bearer $API_KEY" \
 API_KEY="xdc_your_key_here"
 
 curl -s -H "Authorization: Bearer $API_KEY" \
-  "https://net.xdc.network/api/v1/fleet/status" | jq '.fleet'
+  "https://xdc.openscan.ai/api/v1/fleet/status" | jq '.fleet'
 ```
 
 ### Queue Restart Command
@@ -191,5 +191,5 @@ curl -X POST \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"command":"restart"}' \
-  "https://net.xdc.network/api/v1/nodes/$NODE_ID/commands"
+  "https://xdc.openscan.ai/api/v1/nodes/$NODE_ID/commands"
 ```
