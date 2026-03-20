@@ -47,11 +47,13 @@ import {
   DatabasePanel,
   TroubleshootPanel,
   PeerMap,
+  PeerQuality,
   TxPoolPanel,
   ComparisonPanel,
   RPCMatrix,
   ContainerPanel,
   ConsensusPanel,
+  PeerQuality,
   type NodeDetail,
   type NodeStatus,
   type MetricHistory,
@@ -1050,6 +1052,9 @@ export default function NodeDetailPage() {
 
         {/* Peer Map */}
         {peers.length > 0 && <PeerMap peers={peers} />}
+
+        {/* Peer Quality Panel - Client Diversity & Connection Analysis */}
+        <PeerQuality nodeId={node.id} />
 
         {/* Troubleshoot Panel */}
         <TroubleshootPanel nodeId={nodeId} status={status} />
