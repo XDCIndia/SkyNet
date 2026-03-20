@@ -34,6 +34,7 @@ import {
   ShieldAlert,
   Info,
   Trash2,
+  HardDrive,
 } from 'lucide-react';
 
 // Import the new components
@@ -779,6 +780,44 @@ export default function NodeDetailPage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Docker Image Card */}
+            {(status.dockerImage || node.docker_image) && (
+              <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:border-[#06B6D4]/20 transition-all duration-300 md:col-span-2 lg:col-span-1">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-lg bg-[#06B6D4]/10 flex items-center justify-center">
+                    <span className="text-sm">🐳</span>
+                  </div>
+                  <div className="text-[12px] uppercase text-[#64748B] font-medium tracking-wider">Docker Image</div>
+                </div>
+                <div className="text-sm font-mono text-[#06B6D4] bg-[#06B6D4]/5 px-3 py-2 rounded-lg break-all">
+                  {status.dockerImage || node.docker_image}
+                </div>
+              </div>
+            )}
+
+            {/* Database Type Card */}
+            {(status.clientType || node.client_type) && (() => {
+              const ct = (status.clientType || node.client_type || '').toLowerCase();
+              const dbType = ct.includes('erigon') ? 'MDBX'
+                : ct.includes('nethermind') ? 'RocksDB'
+                : ct.includes('reth') ? 'MDBX'
+                : ct.includes('geth') || ct.includes('gp5') || ct.includes('xdc') ? 'LevelDB / PebbleDB'
+                : null;
+              if (!dbType) return null;
+              const dbColor = dbType === 'MDBX' ? '#F59E0B' : dbType === 'RocksDB' ? '#8B5CF6' : '#10B981';
+              return (
+                <div className="bg-white/5 rounded-xl p-4 border border-white/5 transition-all duration-300" style={{ borderColor: `${dbColor}20` }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: `${dbColor}15` }}>
+                      <HardDrive className="w-3 h-3" style={{ color: dbColor }} />
+                    </div>
+                    <div className="text-[12px] uppercase text-[#64748B] font-medium tracking-wider">Database Type</div>
+                  </div>
+                  <div className="text-lg font-bold font-mono" style={{ color: dbColor }}>{dbType}</div>
+                </div>
+              );
+            })()}
+
             {parsedVersion && (
               <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:border-[#1E90FF]/20 transition-all duration-300 hover:[transform:translateZ(10px)]">
                 <div className="flex items-center gap-2 mb-3">

@@ -465,19 +465,21 @@ export default function NodesPageContent() {
                   </div>
                 )}
 
-                {/* Client Badge + Docker Image */}
+                {/* Client Badge */}
                 <div className="flex items-center gap-2 mb-2">
                   <span
                     className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getClientColor(
                       node.clientType
                     )}`}
+                    title={node.clientVersion && node.clientVersion !== 'Unknown' ? node.clientVersion : undefined}
                   >
                     {getClientDisplayName(node.clientType, node.clientVersion)}
                   </span>
                 </div>
-                {(node.dockerImage || (node.clientVersion && node.clientVersion !== 'Unknown')) && (
-                  <div className="mb-3 text-[10px] font-mono text-[#6B7280] truncate" title={node.dockerImage || node.clientVersion}>
-                    🐳 {node.dockerImage || node.clientVersion}
+                {/* Docker Image - show prominently if available */}
+                {node.dockerImage && (
+                  <div className="mb-3 text-[10px] font-mono text-[#6B7280] truncate" title={node.dockerImage}>
+                    🐳 {node.dockerImage}
                   </div>
                 )}
 

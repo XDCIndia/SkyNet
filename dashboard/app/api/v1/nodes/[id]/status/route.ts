@@ -38,7 +38,8 @@ export async function GET(
       `SELECT 
         id, name, host, role, is_active, created_at, updated_at,
         location_city, location_country, location_lat, location_lng,
-        tags, ipv4, ipv6, os_info, client_type, node_type, sync_mode, network
+        tags, ipv4, ipv6, os_info, client_type, node_type, sync_mode, network,
+        docker_image
        FROM skynet.nodes 
        WHERE id = $1`,
       [id]
@@ -164,6 +165,7 @@ export async function GET(
         sync_mode: node.sync_mode,
         security_score: node.security_score,
         security_issues: node.security_issues,
+        docker_image: node.docker_image,
       },
       status: {
         blockHeight: parseInt(latestMetrics?.block_height || '0', 10),
@@ -212,6 +214,8 @@ export async function GET(
         lastSeen: latestMetrics?.collected_at,
         // Erigon dual sentry monitoring (Issue #14)
         sentries: latestMetrics?.sentries,
+        // Docker image from nodes table
+        dockerImage: node.docker_image,
       },
       incidents: {
         active: incidentsResult.rows,

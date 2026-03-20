@@ -29,6 +29,7 @@ export interface NodeDetail {
   sync_mode?: string;
   security_score?: number;
   security_issues?: string;
+  docker_image?: string;
 }
 
 export interface NodeStatus {
@@ -80,6 +81,7 @@ export interface NodeStatus {
     issues?: string;
   };
   sentries?: SentryInfo[];
+  dockerImage?: string;
 }
 
 export interface SentryInfo {
