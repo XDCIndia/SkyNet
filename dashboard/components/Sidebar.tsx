@@ -139,6 +139,7 @@ export default function Sidebar() {
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus | null>(null);
   const [lastFetched, setLastFetched] = useState<number>(0);
   const [openIssueCount, setOpenIssueCount] = useState<number>(0);
+  const [activeAlertCount, setActiveAlertCount] = useState<number>(0);
   const [networkHealth, setNetworkHealth] = useState<NetworkHealth | null>(null);
   const [, setTick] = useState(0);
 
@@ -183,17 +184,31 @@ export default function Sidebar() {
     }
   }, []);
 
+  const fetchActiveAlerts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/alerts/active?status=active&limit=1', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setActiveAlertCount(data.meta?.activeCount || 0);
+      }
+    } catch {
+      // Ignore errors
+    }
+  }, []);
+
   useEffect(() => {
     fetchNetworkStatus();
     fetchIssueCount();
     fetchNetworkHealth();
+    fetchActiveAlerts();
     const interval = setInterval(() => {
       fetchNetworkStatus();
       fetchIssueCount();
       fetchNetworkHealth();
+      fetchActiveAlerts();
     }, 30000);
     return () => clearInterval(interval);
-  }, [fetchNetworkStatus, fetchIssueCount, fetchNetworkHealth]);
+  }, [fetchNetworkStatus, fetchIssueCount, fetchNetworkHealth, fetchActiveAlerts]);
 
   // Tick every 10s to update "last updated" display
   useEffect(() => {
@@ -304,7 +319,12 @@ export default function Sidebar() {
                     }`}
                     title={collapsed && !isMobile ? item.label : undefined}
                   >
-                    <span className="flex-shrink-0">{item.icon}</span>
+                    <span className="flex-shrink-0 relative">
+                      {item.icon}
+                      {collapsed && !isMobile && item.id === 'alerts' && activeAlertCount > 0 && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[var(--critical)]" />
+                      )}
+                    </span>
                     {(!collapsed || isMobile) && (
                       <span className="text-sm font-medium truncate">{item.label}</span>
                     )}
@@ -316,6 +336,11 @@ export default function Sidebar() {
                     {(!collapsed || isMobile) && item.id === 'issues' && openIssueCount > 0 && (
                       <span className="ml-auto text-[12px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--critical)]/20 text-[var(--critical)]">
                         {openIssueCount > 99 ? '99+' : openIssueCount}
+                      </span>
+                    )}
+                    {(!collapsed || isMobile) && item.id === 'alerts' && activeAlertCount > 0 && (
+                      <span className="ml-auto text-[12px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--critical)]/20 text-[var(--critical)]">
+                        {activeAlertCount > 99 ? '99+' : activeAlertCount}
                       </span>
                     )}
                     {(!collapsed || isMobile) && item.isPublic && (

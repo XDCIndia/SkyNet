@@ -133,6 +133,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Async alert evaluation — fire-and-forget, don't block heartbeat response
+    // Evaluate every 5th heartbeat to reduce DB load (use modulo on timestamp minutes)
+    const now = new Date();
+    if (now.getMinutes() % 5 === 0) {
+      // Fire-and-forget: call the evaluate API internally via relative URL
+      // Use the pool directly to avoid circular HTTP calls
+      evaluateAlertsAsync(client, nodeId).catch(err => 
+        console.error('Background alert evaluation error:', err)
+      );
+    }
+
     return NextResponse.json({ success: true, data: { ok: true } });
   } catch (error: any) {
     console.error('Heartbeat error:', error.message);
@@ -142,5 +153,75 @@ export async function POST(request: NextRequest) {
     );
   } finally {
     client.release();
+  }
+}
+
+// Lightweight alert evaluation — only checks the node that just sent a heartbeat
+async function evaluateAlertsAsync(client: any, nodeId: string): Promise<void> {
+  try {
+    // Get latest metrics for this node
+    const metricsResult = await client.query(`
+      SELECT disk_percent, cpu_percent, peer_count
+      FROM skynet.node_metrics
+      WHERE node_id = $1
+      ORDER BY collected_at DESC
+      LIMIT 1
+    `, [nodeId]);
+
+    const metrics = metricsResult.rows[0];
+    if (!metrics) return;
+
+    // Get enabled rules
+    const rulesResult = await client.query(`
+      SELECT * FROM skynet.alert_rules
+      WHERE enabled = true AND rule_type IN ('disk_full', 'high_cpu', 'low_peers')
+        AND (node_id IS NULL OR node_id = $1)
+    `, [nodeId]);
+
+    const nodeResult = await client.query(`
+      SELECT name FROM skynet.nodes WHERE id = $1
+    `, [nodeId]);
+    const nodeName = nodeResult.rows[0]?.name || nodeId;
+
+    for (const rule of rulesResult.rows) {
+      let breached = false;
+      switch (rule.rule_type) {
+        case 'disk_full':
+          breached = metrics.disk_percent > (rule.threshold || 90);
+          break;
+        case 'high_cpu':
+          breached = metrics.cpu_percent > (rule.threshold || 95);
+          break;
+        case 'low_peers':
+          breached = metrics.peer_count < (rule.threshold || 2);
+          break;
+      }
+
+      if (!breached) continue;
+
+      const cooldown = rule.cooldown_minutes || 30;
+      const recent = await client.query(`
+        SELECT id FROM skynet.alerts
+        WHERE rule_id = $1 AND node_id = $2
+          AND status != 'resolved'
+          AND triggered_at > NOW() - INTERVAL '${cooldown} minutes'
+      `, [rule.id, nodeId]);
+
+      if (recent.rows.length === 0) {
+        await client.query(`
+          INSERT INTO skynet.alerts (rule_id, node_id, node_name, severity, title, message)
+          VALUES ($1, $2, $3, $4, $5, $6)
+        `, [
+          rule.id,
+          nodeId,
+          nodeName,
+          rule.severity || 'warning',
+          `${rule.name}: ${nodeName}`,
+          `${rule.rule_type} threshold (${rule.threshold}) breached on ${nodeName}`,
+        ]);
+      }
+    }
+  } catch (err) {
+    console.error('evaluateAlertsAsync error:', err);
   }
 }

@@ -62,6 +62,22 @@ interface AlertHistory {
   firedAt: string;
 }
 
+interface ActiveAlert {
+  id: number;
+  rule_id?: number;
+  node_id?: string;
+  node_name?: string;
+  rule_name?: string;
+  rule_type?: string;
+  severity: 'critical' | 'warning';
+  title: string;
+  message?: string;
+  status: 'active' | 'acknowledged' | 'resolved';
+  triggered_at: string;
+  acknowledged_at?: string;
+  resolved_at?: string;
+}
+
 const CONDITION_TYPES = [
   { value: 'node_offline', label: 'Node Offline', icon: <Server className="w-4 h-4" />, unit: 'min' },
   { value: 'sync_behind', label: 'Sync Behind', icon: <Clock className="w-4 h-4" />, unit: 'blocks' },
@@ -92,10 +108,12 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function AlertsPage() {
-  const [activeTab, setActiveTab] = useState<'rules' | 'channels' | 'history'>('rules');
+  const [activeTab, setActiveTab] = useState<'active' | 'rules' | 'channels' | 'history'>('active');
   const [rules, setRules] = useState<AlertRule[]>([]);
   const [channels, setChannels] = useState<AlertChannel[]>([]);
   const [history, setHistory] = useState<AlertHistory[]>([]);
+  const [activeAlerts, setActiveAlerts] = useState<ActiveAlert[]>([]);
+  const [activeAlertCount, setActiveAlertCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [showChannelModal, setShowChannelModal] = useState(false);
@@ -105,10 +123,11 @@ export default function AlertsPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [rulesRes, channelsRes, historyRes] = await Promise.all([
+      const [rulesRes, channelsRes, historyRes, activeRes] = await Promise.all([
         fetch('/api/v1/alerts/rules'),
         fetch('/api/v1/alerts/channels'),
         fetch('/api/v1/alerts/history?limit=20'),
+        fetch('/api/v1/alerts/active?status=all&limit=50'),
       ]);
 
       if (rulesRes.ok) {
@@ -125,12 +144,46 @@ export default function AlertsPage() {
         const data = await historyRes.json();
         if (data.success) setHistory(data.data);
       }
+
+      if (activeRes.ok) {
+        const data = await activeRes.json();
+        if (data.success) {
+          setActiveAlerts(data.data);
+          setActiveAlertCount(data.meta?.activeCount || 0);
+        }
+      }
     } catch (err) {
       console.error('Error fetching alert data:', err);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const handleAcknowledge = async (id: number) => {
+    try {
+      const res = await fetch('/api/v1/alerts/active', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'acknowledge' }),
+      });
+      if (res.ok) fetchData();
+    } catch (err) {
+      console.error('Error acknowledging alert:', err);
+    }
+  };
+
+  const handleResolve = async (id: number) => {
+    try {
+      const res = await fetch('/api/v1/alerts/active', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'resolve' }),
+      });
+      if (res.ok) fetchData();
+    } catch (err) {
+      console.error('Error resolving alert:', err);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -201,6 +254,7 @@ export default function AlertsPage() {
         {/* Tabs */}
         <div className="flex items-center gap-1 bg-[var(--bg-hover)] p-1 rounded-lg w-fit">
           {[
+            { id: 'active', label: 'Active Alerts', count: activeAlertCount },
             { id: 'rules', label: 'Alert Rules', count: rules.length },
             { id: 'channels', label: 'Channels', count: channels.length },
             { id: 'history', label: 'History', count: history.filter(h => h.status === 'firing').length },
@@ -223,6 +277,103 @@ export default function AlertsPage() {
             </button>
           ))}
         </div>
+
+        {/* Active Alerts Tab */}
+        {activeTab === 'active' && (
+          <>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                Active Alerts
+                {activeAlertCount > 0 && (
+                  <span className="ml-2 px-2 py-0.5 text-sm font-bold rounded-full bg-[var(--critical)]/20 text-[var(--critical)]">
+                    {activeAlertCount}
+                  </span>
+                )}
+              </h2>
+              <button
+                onClick={fetchData}
+                className="p-2 hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
+                title="Refresh"
+              >
+                <RefreshCw className={`w-4 h-4 text-[var(--text-tertiary)] ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {activeAlerts.map(alert => (
+                <div
+                  key={alert.id}
+                  className={`bg-[var(--bg-card)] rounded-xl border p-4 ${
+                    alert.severity === 'critical'
+                      ? 'border-[var(--critical)]/30'
+                      : 'border-[var(--warning)]/30'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className={`p-2 rounded-lg flex-shrink-0 ${SEVERITY_COLORS[alert.severity] || SEVERITY_COLORS.warning}`}>
+                        {alert.severity === 'critical' ? (
+                          <AlertTriangle className="w-4 h-4" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-[var(--text-primary)] truncate">{alert.title}</p>
+                        {alert.message && (
+                          <p className="text-sm text-[var(--text-secondary)] mt-0.5">{alert.message}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-[var(--text-tertiary)]">
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                            alert.status === 'active' ? 'bg-[var(--critical)]/10 text-[var(--critical)]' :
+                            alert.status === 'acknowledged' ? 'bg-[var(--warning)]/10 text-[var(--warning)]' :
+                            'bg-[var(--success)]/10 text-[var(--success)]'
+                          }`}>
+                            {alert.status}
+                          </span>
+                          {alert.node_name && (
+                            <span className="text-[var(--accent-blue)]">{alert.node_name}</span>
+                          )}
+                          <span>{new Date(alert.triggered_at).toLocaleString()}</span>
+                          {alert.rule_type && (
+                            <span className="bg-[var(--bg-hover)] px-1.5 py-0.5 rounded">{alert.rule_type}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {alert.status === 'active' && (
+                        <button
+                          onClick={() => handleAcknowledge(alert.id)}
+                          className="px-3 py-1.5 text-xs font-medium bg-[var(--warning)]/10 text-[var(--warning)] border border-[var(--warning)]/20 rounded-lg hover:bg-[var(--warning)]/20 transition-colors"
+                        >
+                          Ack
+                        </button>
+                      )}
+                      {alert.status !== 'resolved' && (
+                        <button
+                          onClick={() => handleResolve(alert.id)}
+                          className="px-3 py-1.5 text-xs font-medium bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20 rounded-lg hover:bg-[var(--success)]/20 transition-colors"
+                        >
+                          Resolve
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {activeAlerts.length === 0 && (
+                <div className="text-center py-12 text-[var(--text-tertiary)]">
+                  <CheckCircle className="w-12 h-12 mx-auto mb-4 opacity-50 text-[var(--success)]" />
+                  <p className="text-[var(--success)]">All clear — no active alerts</p>
+                  <p className="text-sm mt-1">Alert evaluation runs every 5 minutes via heartbeat</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Rules Tab */}
         {activeTab === 'rules' && (
