@@ -134,7 +134,8 @@ function NodeCard({
   const clientStyle = getClientStyle(parsed.client);
   const networkStyle = getNetworkStyle(parsed.network);
   const blockHeight = node.blockHeight ?? 0;
-  const syncPct = node.syncPercent ?? 0;
+  // Recalculate sync % against real network tip
+  const syncPct = maxBlockHeight > 0 ? Math.min(100, Math.round((blockHeight / maxBlockHeight) * 10000) / 100) : (node.syncPercent ?? 0);
   const stateScheme = node.state_scheme;
   const isPBSS = stateScheme === 'path';
   const blockColor = getBlockHeightColor(blockHeight, maxBlockHeight);
@@ -219,6 +220,7 @@ function NodeCard({
 export default function ComparisonPanel({ currentNodeId, currentNodeName }: ComparisonPanelProps) {
   const [expanded, setExpanded] = useState(true);
   const [nodes, setNodes] = useState<FleetNode[]>([]);
+  const [networkHeights, setNetworkHeights] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -228,8 +230,12 @@ export default function ComparisonPanel({ currentNodeId, currentNodeName }: Comp
         const res = await fetch('/api/v1/fleet/status', { cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        const allNodes: FleetNode[] = data?.data?.nodes ?? data?.nodes ?? [];
+        const inner = data?.data ?? data;
+        const allNodes: FleetNode[] = inner?.nodes ?? [];
         setNodes(allNodes);
+        // Get real network tip from RPC (fetched by fleet API)
+        const nh = inner?.networkHeights ?? {};
+        setNetworkHeights(nh);
       } catch (e) {
         setError('Failed to load fleet data');
       } finally {
@@ -267,11 +273,11 @@ export default function ComparisonPanel({ currentNodeId, currentNodeName }: Comp
     );
   });
 
-  // Max block height across same-server group for color coding
-  const maxBlockHeight = Math.max(
-    ...sameServerNodes.map((n) => n.blockHeight ?? 0).filter(Boolean),
-    currentBlockHeight,
-  );
+  // Use real network tip from RPCs for color coding and sync %
+  const mainnetTip = networkHeights['mainnet'] || 0;
+  const apothemTip = networkHeights['apothem'] || 0;
+  const getNetworkTip = (network: string) => network === 'apothem' ? apothemTip : mainnetTip;
+  const maxBlockHeight = getNetworkTip(currentParsed.network);
 
   const hasComparisons = sameServerNodes.length > 1 || sameClientNodes.length > 0;
 
@@ -337,7 +343,7 @@ export default function ComparisonPanel({ currentNodeId, currentNodeName }: Comp
                       node={n}
                       parsed={parsed}
                       isCurrent={isCurrent}
-                      maxBlockHeight={maxBlockHeight}
+                      maxBlockHeight={getNetworkTip(parsed.network)}
                       currentBlockHeight={currentBlockHeight}
                     />
                   );
@@ -361,7 +367,7 @@ export default function ComparisonPanel({ currentNodeId, currentNodeName }: Comp
                     node={currentFleetNode}
                     parsed={currentParsed}
                     isCurrent={true}
-                    maxBlockHeight={maxBlockHeight}
+                    maxBlockHeight={getNetworkTip(currentParsed.network)}
                     currentBlockHeight={currentBlockHeight}
                   />
                 )}
@@ -373,7 +379,7 @@ export default function ComparisonPanel({ currentNodeId, currentNodeName }: Comp
                       node={n}
                       parsed={parsed}
                       isCurrent={false}
-                      maxBlockHeight={maxBlockHeight}
+                      maxBlockHeight={getNetworkTip(parsed.network)}
                       currentBlockHeight={currentBlockHeight}
                     />
                   );
