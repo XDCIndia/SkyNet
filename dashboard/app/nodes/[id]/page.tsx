@@ -1040,7 +1040,7 @@ export default function NodeDetailPage() {
         </div>
 
         {/* Database Deep-Dive Panel */}
-        <DatabasePanel nodeId={node.id} dbEngine={status.dbEngine} />
+        <DatabasePanel status={status} />
 
         {/* Fleet Comparison Panel */}
         <ComparisonPanel currentNodeId={node.id} currentNodeName={node.name} />
