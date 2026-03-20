@@ -108,18 +108,39 @@ export async function POST(
       }
     }
 
-    // Check if node exists (with retry logic via queryWithResilience)
-    const nodeResult = await queryWithResilience(
-      'SELECT id FROM skynet.nodes WHERE id = $1',
-      [nodeId],
-      { maxRetries: 3, baseDelay: 100 }
-    );
+    // Check if node exists — support both UUID and name lookups
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(nodeId);
+    let resolvedNodeId = nodeId;
+    
+    let nodeResult;
+    if (isUUID) {
+      nodeResult = await queryWithResilience(
+        'SELECT id FROM skynet.nodes WHERE id = $1',
+        [nodeId],
+        { maxRetries: 3, baseDelay: 100 }
+      );
+    } else {
+      // nodeId is a name string, look up by name
+      nodeResult = await queryWithResilience(
+        'SELECT id FROM skynet.nodes WHERE name = $1',
+        [nodeId],
+        { maxRetries: 3, baseDelay: 100 }
+      );
+      if (nodeResult.rows.length > 0) {
+        resolvedNodeId = nodeResult.rows[0].id;
+      }
+    }
 
     if (nodeResult.rows.length === 0) {
-      return NextResponse.json(
-        { error: 'Node not found' },
-        { status: 404 }
+      // Auto-create node if it doesn't exist
+      const newNode = await queryWithResilience(
+        `INSERT INTO skynet.nodes (name, network, status, is_active, last_seen, client_type)
+         VALUES ($1, $2, 'active', true, NOW(), $3)
+         RETURNING id`,
+        [nodeId, network || 'mainnet', clientType || 'unknown'],
+        { maxRetries: 2, baseDelay: 100 }
       );
+      resolvedNodeId = newNode.rows[0].id;
     }
 
     // Insert metrics with system resources (with retry)
@@ -131,7 +152,7 @@ export async function POST(
         security_score, security_issues, collected_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW())`,
       [
-        nodeId,
+        resolvedNodeId,
         blockHeight || 0,
         blockHash || null,
         peerCount || 0,
@@ -199,7 +220,7 @@ export async function POST(
            ipv4 = COALESCE($24, ipv4)
        WHERE id = $1`,
       [
-        nodeId,
+        resolvedNodeId,
         blockHeight !== undefined && blockHeight !== null ? Number(blockHeight) : null,
         peerCount !== undefined && peerCount !== null ? Number(peerCount) : null,
         isSyncing ?? null,
@@ -231,7 +252,7 @@ export async function POST(
     if (enode) {
       await queryWithResilience(
         `UPDATE skynet.nodes SET enode = $1 WHERE id = $2 AND (enode IS NULL OR enode != $1)`,
-        [enode, nodeId],
+        [enode, resolvedNodeId],
         { maxRetries: 2, baseDelay: 50 }
       );
     }
@@ -241,7 +262,7 @@ export async function POST(
     // Fork detection - CRITICAL
     if (forkDetected === true) {
       await createIncident(
-        nodeId,
+        resolvedNodeId,
         'fork_detected',
         'CRITICAL',
         `Fork detected at block ${blockHeight}`,
@@ -252,7 +273,7 @@ export async function POST(
     // Sync stall - HIGH
     if (stalled === true) {
       await createIncident(
-        nodeId,
+        resolvedNodeId,
         'sync_stall',
         'HIGH',
         `Block stalled at ${blockHeight} for 5+ minutes with ${peerCount} peers`,
@@ -264,7 +285,7 @@ export async function POST(
     if (peerDropDuration && peerDropDuration > 0) {
       const severity = getPeerDropSeverity(peerDropDuration);
       await createIncident(
-        nodeId,
+        resolvedNodeId,
         'peer_drop',
         severity,
         `Peer count dropped for ${peerDropDuration} minutes`,
@@ -276,7 +297,7 @@ export async function POST(
     if (diskCritical === true && system?.diskPercent) {
       const severity = getDiskSeverity(system.diskPercent);
       await createIncident(
-        nodeId,
+        resolvedNodeId,
         'disk_critical',
         severity,
         `Disk usage critical at ${system.diskPercent}%`,
@@ -288,20 +309,20 @@ export async function POST(
     if (lastRestart) {
       await queryWithResilience(
         `UPDATE skynet.nodes SET stalled = $2, last_restart = $3::timestamptz WHERE id = $1`,
-        [nodeId, stalled === true, lastRestart],
+        [resolvedNodeId, stalled === true, lastRestart],
         { maxRetries: 2, baseDelay: 50 }
       );
     } else {
       await queryWithResilience(
         `UPDATE skynet.nodes SET stalled = $2 WHERE id = $1`,
-        [nodeId, stalled === true],
+        [resolvedNodeId, stalled === true],
         { maxRetries: 2, baseDelay: 50 }
       );
     }
 
     // Issue #452: Fork Detection - Check for divergence when blockHash is provided
     if (blockHash && blockHeight) {
-      await checkForForkAndCreateIncident(nodeId, blockHeight, blockHash, clientType);
+      await checkForForkAndCreateIncident(resolvedNodeId, blockHeight, blockHash, clientType);
     }
 
     const duration = Date.now() - startTime;

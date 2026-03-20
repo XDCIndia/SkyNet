@@ -15,6 +15,7 @@ import {
   Cpu,
   HardDrive,
   MemoryStick,
+  Wifi,
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import ClientDistributionChart from '@/components/ClientDistributionChart';
@@ -81,6 +82,7 @@ export default function NodesPageContent() {
         ipv4: node.ipv4 || node.host || undefined,
         ipv6: node.ipv6 || undefined,
         networkHeight: node.networkHeight || undefined,
+        peakBlock: node.peakBlock || undefined,
         prevBlock: node.prevBlock || undefined,
         blockDiff: node.blockDiff || undefined,
         os: node.os || node.os_type,
@@ -460,8 +462,8 @@ export default function NodesPageContent() {
                   </div>
                 )}
 
-                {/* Client Badge */}
-                <div className="flex items-center mb-3">
+                {/* Client Badge + Docker Image */}
+                <div className="flex items-center gap-2 mb-2">
                   <span
                     className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getClientColor(
                       node.clientType
@@ -470,10 +472,25 @@ export default function NodesPageContent() {
                     {getClientDisplayName(node.clientType, node.clientVersion)}
                   </span>
                 </div>
+                {node.clientVersion && node.clientVersion !== 'Unknown' && (
+                  <div className="mb-3 text-[10px] font-mono text-[#6B7280] truncate" title={node.clientVersion}>
+                    🐳 {node.clientVersion}
+                  </div>
+                )}
 
-                {/* Block Height */}
+                {/* Block Height + Peak + Last Seen */}
                 <div className="mb-3 p-2 rounded-lg bg-[rgba(30,144,255,0.1)]">
-                  <div className="text-xs text-[#6B7280] mb-1">Block Height</div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-[#6B7280]">Block Height</span>
+                    {node.peakBlock && node.peakBlock > 0 && (
+                      <span className="text-[10px] text-[#6B7280] flex items-center gap-1">
+                        Peak: <span className="text-[#F59E0B] font-mono">{node.peakBlock.toLocaleString()}</span>
+                        <span className="text-[#4B5563]">·</span>
+                        <Clock className="w-2.5 h-2.5" />
+                        <span>{formatTimeAgo(node.lastSeen)}</span>
+                      </span>
+                    )}
+                  </div>
                   <div className="text-lg font-bold font-mono text-[#1E90FF]">
                     {node.blockHeight.toLocaleString()}
                   </div>
@@ -536,10 +553,17 @@ export default function NodesPageContent() {
 
                 {/* Footer */}
                 <div className="pt-3 border-t border-[rgba(255,255,255,0.06)] flex items-center justify-between text-xs text-[#6B7280]">
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {formatTimeAgo(node.lastSeen)}
-                  </span>
+                  {!node.peakBlock || node.peakBlock === 0 ? (
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {formatTimeAgo(node.lastSeen)}
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      <Wifi className="w-3 h-3" />
+                      {node.peerCount} peers
+                    </span>
+                  )}
                   <span className="capitalize">{node.network}</span>
                 </div>
               </div>

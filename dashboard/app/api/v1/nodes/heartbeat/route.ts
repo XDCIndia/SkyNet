@@ -56,10 +56,14 @@ export async function POST(request: NextRequest) {
                           END,
          status         = 'active',
          last_heartbeat = NOW(),
+         last_seen      = NOW(),
+         block_height   = $7,
+         peer_count     = $8,
+         is_syncing     = $9,
          client_type    = EXCLUDED.client_type,
          ipv4           = COALESCE(EXCLUDED.ipv4, skynet.nodes.ipv4),
          coinbase       = COALESCE(EXCLUDED.coinbase, skynet.nodes.coinbase)`,
-      [nodeId, nodeId, network, clientType, ipv4, coinbase]
+      [nodeId, nodeId, network, clientType, ipv4, coinbase, blockHeight, peerCount, isSyncing]
     );
 
     // Insert full metrics row

@@ -84,14 +84,32 @@ async function postHandler(request: NextRequest) {
     const result = await withTransaction(async (client) => {
       // First, try to find existing node by fingerprint
       const existingByFingerprint = await client.query(
-        'SELECT id, name, api_key FROM skynet.nodes WHERE fingerprint = $1',
+        'SELECT id, name, api_key, fingerprint FROM skynet.nodes WHERE fingerprint = $1',
         [data.fingerprint]
       );
 
-      if (existingByFingerprint.rows.length > 0) {
-        // Node recovery - fingerprint found
-        const node = existingByFingerprint.rows[0];
+      // If not found by fingerprint, try by exact name match (handles container rebuilds)
+      let existingNode = existingByFingerprint.rows[0] || null;
+      if (!existingNode && data.name) {
+        const existingByName = await client.query(
+          'SELECT id, name, api_key, fingerprint FROM skynet.nodes WHERE name = $1',
+          [data.name]
+        );
+        existingNode = existingByName.rows[0] || null;
+      }
+
+      if (existingNode) {
+        // Node recovery - found by fingerprint or name
+        const node = existingNode;
         
+        // Update fingerprint if it changed (container rebuild)
+        if (node.fingerprint !== data.fingerprint) {
+          await client.query(
+            'UPDATE skynet.nodes SET fingerprint = $1, updated_at = NOW() WHERE id = $2',
+            [data.fingerprint, node.id]
+          );
+        }
+
         // Update coinbase if provided and different
         if (data.coinbase) {
           await client.query(
@@ -114,7 +132,8 @@ async function postHandler(request: NextRequest) {
 
         logger.info('Node identity recovery', { 
           nodeId: node.id, 
-          fingerprint: data.fingerprint 
+          fingerprint: data.fingerprint,
+          matchedBy: node.fingerprint === data.fingerprint ? 'fingerprint' : 'name'
         });
 
         return {

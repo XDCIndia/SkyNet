@@ -133,3 +133,40 @@ export const CacheTTL = {
   blockHeight: 2,        // 2 seconds
   peerCount: 10,         // 10 seconds
 };
+
+// Aliases used by API routes
+export const CACHE_TTLS = {
+  health: 5,
+  nodes: 10,
+  metrics: 30,
+  incidents: 15,
+  fleet: 5,
+};
+
+/**
+ * Generate a deterministic cache key from segments + params
+ */
+export function generateCacheKey(...parts: any[]): string {
+  const segments = parts.map(p =>
+    typeof p === 'object' ? JSON.stringify(p, Object.keys(p).sort()) : String(p)
+  );
+  return `skynet:${segments.join(':')}`;
+}
+
+/**
+ * withCache — wrapper around getCached for route handlers
+ */
+export async function withCache<T>(
+  key: string,
+  fetcher: () => Promise<T>,
+  ttl: number = DEFAULT_TTL
+): Promise<T> {
+  return getCached(key, fetcher, ttl);
+}
+
+/**
+ * Invalidate cache entries by tag/pattern prefix
+ */
+export async function invalidateByTag(tag: string): Promise<void> {
+  return invalidateCache(`skynet:${tag}:*`);
+}

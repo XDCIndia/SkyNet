@@ -126,6 +126,7 @@ export interface SkyNetNode {
   ipv4?: string;
   ipv6?: string;
   networkHeight?: number;
+  peakBlock?: number;
   prevBlock?: number;
   blockDiff?: number;
   os?: string;
