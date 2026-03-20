@@ -207,14 +207,14 @@ async function getHandler(request: NextRequest) {
     const networkHeights: Record<string, number> = {};
     const rpcEndpoints: Record<string, string[]> = {
       mainnet: [
-        'https://rpc.openscan.ai/50',    // OpenScan - Primary
-        'https://rpc.xinfin.network',     // XinFin - Fallback
-        'https://erpc.xinfin.network'     // XinFin Extended - Fallback
+        'https://rpc.xdc.network',        // XDC Official - Primary
+        'https://rpc.openscan.ai/50',      // OpenScan - Fallback
+        'https://erpc.xinfin.network'      // XinFin Extended - Fallback
       ],
       apothem: [
-        'https://rpc.openscan.ai/51',    // OpenScan - Primary
-        'https://rpc.apothem.network',    // XinFin - Fallback
-        'https://erpc.apothem.network'    // XinFin Extended - Fallback
+        'https://rpc.apothem.network',     // XDC Apothem - Primary
+        'https://rpc.openscan.ai/51',      // OpenScan - Fallback
+        'https://erpc.apothem.network'     // XinFin Extended - Fallback
       ],
     };
 
