@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   Server, 
   RefreshCw, 
@@ -28,6 +28,7 @@ import type { SkyNetNode, FleetStatus } from '@/lib/types';
  * Auto-refreshes every 30 seconds
  */
 export default function NodesPageContent() {
+  const router = useRouter();
   const [nodes, setNodes] = useState<SkyNetNode[]>([]);
   const searchParams = useSearchParams();
   const [fleetStatus, setFleetStatus] = useState<FleetStatus | null>(null);
@@ -438,7 +439,8 @@ export default function NodesPageContent() {
             {filteredNodes.map((node) => (
               <div
                 key={node.id}
-                className="p-4 rounded-xl border bg-[#111827] border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)] transition-all"
+                onClick={() => router.push(`/nodes/${node.id}`)}
+                className="p-4 rounded-xl border bg-[#111827] border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)] transition-all cursor-pointer"
               >
                 {/* Node Header */}
                 <div className="flex items-start justify-between mb-3">
