@@ -53,6 +53,7 @@ async function postHandler(request: NextRequest) {
         await client.query('DELETE FROM skynet.incidents WHERE node_id = $1', [nodeId]);
         await client.query('DELETE FROM skynet.issues WHERE node_id = $1', [nodeId]);
         await client.query('DELETE FROM skynet.command_queue WHERE node_id = $1', [nodeId]);
+        await client.query('DELETE FROM skynet.api_keys WHERE node_id = $1', [nodeId]);
         
         // Delete node
         const result = await client.query(
