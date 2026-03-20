@@ -39,7 +39,7 @@ export async function GET(
         id, name, host, role, is_active, created_at, updated_at,
         location_city, location_country, location_lat, location_lng,
         tags, ipv4, ipv6, os_info, client_type, node_type, sync_mode, network,
-        docker_image
+        docker_image, startup_params, state_scheme
        FROM skynet.nodes 
        WHERE id = $1`,
       [id]
@@ -166,6 +166,8 @@ export async function GET(
         security_score: node.security_score,
         security_issues: node.security_issues,
         docker_image: node.docker_image,
+        startup_params: node.startup_params,
+        state_scheme: node.state_scheme,
       },
       status: {
         blockHeight: parseInt(latestMetrics?.block_height || '0', 10),

@@ -30,6 +30,8 @@ export interface NodeDetail {
   security_score?: number;
   security_issues?: string;
   docker_image?: string;
+  startup_params?: string;
+  state_scheme?: string;
 }
 
 export interface NodeStatus {

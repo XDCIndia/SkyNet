@@ -1008,7 +1008,7 @@ function TableRow({
       {/* Docker Image */}
       <td className="py-2 px-3">
         <span className="text-[11px] font-mono text-[var(--text-tertiary)] truncate max-w-[180px] block" title={node.dockerImage || ''}>
-          {node.dockerImage ? `🐳 ${node.dockerImage}` : '—'}
+          {node.dockerImage ? `🐳 ${node.dockerImage.split('/').pop()}` : '—'}
         </span>
       </td>
       

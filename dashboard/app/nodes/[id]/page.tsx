@@ -790,10 +790,38 @@ export default function NodeDetailPage() {
                   <div className="text-[12px] uppercase text-[#64748B] font-medium tracking-wider">Docker Image</div>
                 </div>
                 <div className="text-sm font-mono text-[#06B6D4] bg-[#06B6D4]/5 px-3 py-2 rounded-lg break-all">
-                  {status.dockerImage || node.docker_image}
+                  {(status.dockerImage || node.docker_image || '').split('/').pop()}
                 </div>
               </div>
             )}
+
+            {/* State Scheme Card (PBSS vs HBSS) */}
+            {(() => {
+              const ct = (status.clientType || node.client_type || '').toLowerCase();
+              const stateScheme = node.state_scheme || 'hash';
+              const isPBSS = stateScheme === 'path';
+              const label = isPBSS ? 'PBSS' : 'HBSS';
+              const fullLabel = isPBSS ? 'Path-Based State Scheme' : 'Hash-Based State Scheme';
+              const description = isPBSS 
+                ? 'Stores state by path — faster pruning, less disk' 
+                : ct.includes('erigon') || ct.includes('reth')
+                  ? 'Flat KV storage in MDBX — sequential access optimized'
+                  : 'Stores state by hash — traditional Merkle Patricia Trie';
+              const color = isPBSS ? '#8B5CF6' : '#10B981';
+              return (
+                <div className="bg-white/5 rounded-xl p-4 border border-white/5 transition-all duration-300" style={{ borderColor: `${color}20` }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: `${color}15` }}>
+                      <Layers className="w-3 h-3" style={{ color }} />
+                    </div>
+                    <div className="text-[12px] uppercase text-[#64748B] font-medium tracking-wider">State Scheme</div>
+                  </div>
+                  <div className="text-lg font-bold font-mono" style={{ color }}>{label}</div>
+                  <div className="text-[11px] text-[#64748B] mt-1">{fullLabel}</div>
+                  <div className="text-[10px] text-[#475569] mt-0.5">{description}</div>
+                </div>
+              );
+            })()}
 
             {/* Database Type Card */}
             {(status.clientType || node.client_type) && (() => {
@@ -817,6 +845,21 @@ export default function NodeDetailPage() {
                 </div>
               );
             })()}
+
+            {/* Startup Parameters Card */}
+            {node.startup_params && (
+              <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:border-[#F59E0B]/20 transition-all duration-300 md:col-span-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-lg bg-[#F59E0B]/10 flex items-center justify-center">
+                    <Terminal className="w-3 h-3 text-[#F59E0B]" />
+                  </div>
+                  <div className="text-[12px] uppercase text-[#64748B] font-medium tracking-wider">Startup Parameters</div>
+                </div>
+                <div className="text-[11px] font-mono text-[#94A3B8] bg-black/20 px-3 py-2 rounded-lg overflow-x-auto whitespace-pre-wrap break-all">
+                  {node.startup_params}
+                </div>
+              </div>
+            )}
 
             {parsedVersion && (
               <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:border-[#1E90FF]/20 transition-all duration-300 hover:[transform:translateZ(10px)]">

@@ -479,7 +479,7 @@ export default function NodesPageContent() {
                 {/* Docker Image - show prominently if available */}
                 {node.dockerImage && (
                   <div className="mb-3 text-[10px] font-mono text-[#6B7280] truncate" title={node.dockerImage}>
-                    🐳 {node.dockerImage}
+                    🐳 {node.dockerImage.split('/').pop()}
                   </div>
                 )}
 
