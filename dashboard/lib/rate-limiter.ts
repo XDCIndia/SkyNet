@@ -288,3 +288,15 @@ export function getRateLimitStats(): {
     lastCleanup: lastCleanupTime,
   };
 }
+
+// Stub exports for gateway route compatibility
+export class RateLimitError extends Error {
+  constructor(message: string = 'Rate limit exceeded') {
+    super(message);
+    this.name = 'RateLimitError';
+  }
+}
+
+export async function rateLimitRequest(_request: Request, _userId?: string): Promise<void> {
+  // No-op stub — real rate limiting handled by proxy layer
+}
