@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     const osArch     = body.os?.arch     ?? null;
     const kernelVer  = body.os?.kernel   ?? null;
     const secScore   = body.security?.score ?? null;
+    const dockerImg  = body.dockerImage ?? null;
 
     if (!nodeId) {
       return NextResponse.json({ success: false, error: 'nodeId required' }, { status: 400 });
@@ -47,8 +48,8 @@ export async function POST(request: NextRequest) {
     // Upsert node record — never downgrade network from apothem→mainnet
     await client.query(
       `INSERT INTO skynet.nodes
-         (id, name, network, status, last_heartbeat, client_type, ipv4, coinbase, is_active)
-       VALUES ($1, $2, $3, 'active', NOW(), $4, $5, $6, true)
+         (id, name, network, status, last_heartbeat, client_type, ipv4, coinbase, is_active, docker_image)
+       VALUES ($1, $2, $3, 'active', NOW(), $4, $5, $6, true, $10)
        ON CONFLICT (id) DO UPDATE SET
          network        = CASE
                             WHEN skynet.nodes.network = 'apothem' THEN 'apothem'
@@ -62,8 +63,9 @@ export async function POST(request: NextRequest) {
          is_syncing     = $9,
          client_type    = EXCLUDED.client_type,
          ipv4           = COALESCE(EXCLUDED.ipv4, skynet.nodes.ipv4),
-         coinbase       = COALESCE(EXCLUDED.coinbase, skynet.nodes.coinbase)`,
-      [nodeId, nodeId, network, clientType, ipv4, coinbase, blockHeight, peerCount, isSyncing]
+         coinbase       = COALESCE(EXCLUDED.coinbase, skynet.nodes.coinbase),
+         docker_image   = COALESCE(EXCLUDED.docker_image, skynet.nodes.docker_image)`,
+      [nodeId, nodeId, network, clientType, ipv4, coinbase, blockHeight, peerCount, isSyncing, dockerImg]
     );
 
     // Insert full metrics row

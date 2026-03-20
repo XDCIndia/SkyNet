@@ -84,6 +84,7 @@ export default function NodesPageContent() {
         ipv6: node.ipv6 || undefined,
         networkHeight: node.networkHeight || undefined,
         peakBlock: node.peakBlock || undefined,
+        dockerImage: node.dockerImage || undefined,
         prevBlock: node.prevBlock || undefined,
         blockDiff: node.blockDiff || undefined,
         os: node.os || node.os_type,
@@ -474,9 +475,9 @@ export default function NodesPageContent() {
                     {getClientDisplayName(node.clientType, node.clientVersion)}
                   </span>
                 </div>
-                {node.clientVersion && node.clientVersion !== 'Unknown' && (
-                  <div className="mb-3 text-[10px] font-mono text-[#6B7280] truncate" title={node.clientVersion}>
-                    🐳 {node.clientVersion}
+                {(node.dockerImage || (node.clientVersion && node.clientVersion !== 'Unknown')) && (
+                  <div className="mb-3 text-[10px] font-mono text-[#6B7280] truncate" title={node.dockerImage || node.clientVersion}>
+                    🐳 {node.dockerImage || node.clientVersion}
                   </div>
                 )}
 

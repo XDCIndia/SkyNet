@@ -95,6 +95,7 @@ export async function POST(
       forkDetected,
       peerDropDuration,
       diskCritical,
+      dockerImage,
     } = body;
 
     // Normalize clientType from version string if needed
@@ -217,7 +218,8 @@ export async function POST(
            storage_type = COALESCE($21, storage_type),
            security_score = COALESCE($22, security_score),
            security_issues = COALESCE($23, security_issues),
-           ipv4 = COALESCE($24, ipv4)
+           ipv4 = COALESCE($24, ipv4),
+           docker_image = COALESCE($25, docker_image)
        WHERE id = $1`,
       [
         resolvedNodeId,
@@ -243,7 +245,8 @@ export async function POST(
         storageType || null,
         security?.score ?? null,
         security?.issues ? JSON.stringify(security.issues) : null,
-        os?.ipv4 || null
+        os?.ipv4 || null,
+        dockerImage || null
       ],
       { maxRetries: 3, baseDelay: 100 }
     );
