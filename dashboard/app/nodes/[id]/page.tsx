@@ -1006,6 +1006,9 @@ export default function NodeDetailPage() {
           )}
         </div>
 
+        {/* RPC Compatibility Matrix (#872) */}
+        <RPCMatrix node={node} status={status} />
+
         {/* Sync Stage Pipeline */}
         <SyncStages clientType={status.clientType || node.client_type} syncPercent={status.syncPercent} isSyncing={status.isSyncing} />
 
@@ -1014,6 +1017,9 @@ export default function NodeDetailPage() {
           <SyncPanel status={status} metrics={metrics} />
           <ServerStats status={status} />
         </div>
+
+        {/* Container Info Panel (#870) */}
+        <ContainerPanel node={node} status={status} />
 
         {/* Grid: TxPool & Storage */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

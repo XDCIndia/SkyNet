@@ -7,6 +7,7 @@ export { default as StoragePanel } from './StoragePanel';
 export { default as TroubleshootPanel } from './TroubleshootPanel';
 export { default as PeerMap } from './PeerMap';
 export { default as TxPoolPanel } from './TxPoolPanel';
+export { default as ComparisonPanel } from './ComparisonPanel';
 export { default as RPCMatrix } from './RPCMatrix';
 export { default as ContainerPanel } from './ContainerPanel';
 
