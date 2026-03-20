@@ -41,6 +41,7 @@ import {
 import { 
   HeroSection,
   SyncPanel,
+  SyncStages,
   ServerStats,
   StoragePanel,
   TroubleshootPanel,
@@ -1001,6 +1002,9 @@ export default function NodeDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Sync Stage Pipeline */}
+        <SyncStages clientType={status.clientType || node.client_type} syncPercent={status.syncPercent} isSyncing={status.isSyncing} />
 
         {/* Grid: Sync & Server Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

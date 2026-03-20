@@ -1,6 +1,7 @@
 // Export all node detail components
 export { default as HeroSection } from './HeroSection';
 export { default as SyncPanel } from './SyncPanel';
+export { default as SyncStages } from './SyncStages';
 export { default as ServerStats } from './ServerStats';
 export { default as StoragePanel } from './StoragePanel';
 export { default as TroubleshootPanel } from './TroubleshootPanel';

@@ -99,6 +99,53 @@ function getClientName(clientType?: string, clientVersion?: string): string {
   return 'XDC';
 }
 
+interface Protocol {
+  name: string;
+  compatible: boolean; // true=green, false=yellow
+  tooltip?: string;
+}
+
+const PROTOCOL_MAP: Record<string, Protocol[]> = {
+  geth:        [{ name: 'eth/62', compatible: true }, { name: 'eth/63', compatible: true }, { name: 'eth/100', compatible: true }],
+  gp5:         [{ name: 'eth/62', compatible: true }, { name: 'eth/63', compatible: true }, { name: 'eth/100', compatible: true }],
+  xdc:         [{ name: 'eth/62', compatible: true }, { name: 'eth/63', compatible: true }, { name: 'eth/100', compatible: true }],
+  erigon:      [{ name: 'eth/63', compatible: true }, { name: 'eth/68', compatible: false, tooltip: 'not XDC compatible' }],
+  nethermind:  [{ name: 'eth/63', compatible: true }, { name: 'eth/100', compatible: true }],
+  reth:        [{ name: 'eth/68', compatible: false, tooltip: 'needs proxy' }],
+};
+
+function resolveClientKeyForProtocol(clientType?: string): string {
+  const t = (clientType || '').toLowerCase();
+  if (t.includes('nethermind')) return 'nethermind';
+  if (t.includes('erigon'))     return 'erigon';
+  if (t.includes('reth'))       return 'reth';
+  if (t === 'gp5' || t.includes('gp5') || t.includes('geth-pr5')) return 'gp5';
+  return 'geth';
+}
+
+function ProtocolBadges({ clientType }: { clientType?: string }) {
+  const key = resolveClientKeyForProtocol(clientType);
+  const protocols = PROTOCOL_MAP[key] || PROTOCOL_MAP['geth'];
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {protocols.map(p => (
+        <span
+          key={p.name}
+          title={p.tooltip}
+          className={[
+            'text-[10px] font-semibold px-2 py-0.5 rounded-full border',
+            p.compatible
+              ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20'
+              : 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20',
+          ].join(' ')}
+        >
+          {p.name}{p.tooltip ? ` ⚠` : ''}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function getNodeTypeLabel(nodeType?: string, syncMode?: string): string {
   if (!nodeType) return 'Full Node';
   const type = nodeType.toLowerCase();
@@ -176,27 +223,31 @@ export default function HeroSection({ node, status, metrics }: HeroSectionProps)
   return (
     <div className="card-hero">
       {/* Client Type & Node Type Badges */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--accent-blue-glow)] border border-[var(--border-blue-glow)]">
-          <span className="text-xl">{getClientIcon(status.clientType || node.client_type)}</span>
-          <span className="text-sm font-semibold text-[var(--accent-blue)]">{getClientName(status.clientType || node.client_type, status.clientVersion || node.client_version)}</span>
-        </div>
-        <div className="px-4 py-2 rounded-xl bg-[var(--bg-hover)] border border-[var(--border-subtle)]">
-          <span className="text-sm font-medium text-[var(--text-secondary)]">
-            {getNodeTypeLabel(status.nodeType || node.node_type, status.syncMode || node.sync_mode)}
-          </span>
-        </div>
-        {!status.isSyncing ? (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--success)]/10 border border-[var(--success)]/20">
-            <CheckCircle2 className="w-4 h-4 text-[var(--success)]" />
-            <span className="text-xs font-medium text-[var(--success)]">Synced</span>
+      <div className="mb-4 flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--accent-blue-glow)] border border-[var(--border-blue-glow)]">
+            <span className="text-xl">{getClientIcon(status.clientType || node.client_type)}</span>
+            <span className="text-sm font-semibold text-[var(--accent-blue)]">{getClientName(status.clientType || node.client_type, status.clientVersion || node.client_version)}</span>
           </div>
-        ) : (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--warning)]/10 border border-[var(--warning)]/20">
-            <Zap className="w-4 h-4 text-[var(--warning)] animate-pulse" />
-            <span className="text-xs font-medium text-[var(--warning)]">Syncing</span>
+          <div className="px-4 py-2 rounded-xl bg-[var(--bg-hover)] border border-[var(--border-subtle)]">
+            <span className="text-sm font-medium text-[var(--text-secondary)]">
+              {getNodeTypeLabel(status.nodeType || node.node_type, status.syncMode || node.sync_mode)}
+            </span>
           </div>
-        )}
+          {!status.isSyncing ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--success)]/10 border border-[var(--success)]/20">
+              <CheckCircle2 className="w-4 h-4 text-[var(--success)]" />
+              <span className="text-xs font-medium text-[var(--success)]">Synced</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--warning)]/10 border border-[var(--warning)]/20">
+              <Zap className="w-4 h-4 text-[var(--warning)] animate-pulse" />
+              <span className="text-xs font-medium text-[var(--warning)]">Syncing</span>
+            </div>
+          )}
+        </div>
+        {/* P2P Protocol Badges */}
+        <ProtocolBadges clientType={status.clientType || node.client_type} />
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
