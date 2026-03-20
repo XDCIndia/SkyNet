@@ -47,6 +47,9 @@ import {
   TroubleshootPanel,
   PeerMap,
   TxPoolPanel,
+  ComparisonPanel,
+  RPCMatrix,
+  ContainerPanel,
   type NodeDetail,
   type NodeStatus,
   type MetricHistory,
@@ -1017,6 +1020,9 @@ export default function NodeDetailPage() {
           <TxPoolPanel status={status} />
           <StoragePanel status={status} metrics={metrics} />
         </div>
+
+        {/* Fleet Comparison Panel */}
+        <ComparisonPanel currentNodeId={node.id} currentNodeName={node.name} />
 
         {/* Erigon Sentry Monitoring */}
         <SentryMonitor sentries={status.sentries} clientType={status.clientType || node.client_type} />
