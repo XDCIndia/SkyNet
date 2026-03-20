@@ -108,6 +108,7 @@ interface Node {
   blockDiff?: number;
   networkHeight?: number;
   peakBlock?: number;
+  dockerImage?: string;
 }
 
 interface Incident {
@@ -1004,6 +1005,13 @@ function TableRow({
         </div>
       </td>
       
+      {/* Docker Image */}
+      <td className="py-2 px-3">
+        <span className="text-[11px] font-mono text-[var(--text-tertiary)] truncate max-w-[180px] block" title={node.dockerImage || ''}>
+          {node.dockerImage ? `🐳 ${node.dockerImage}` : '—'}
+        </span>
+      </td>
+      
       {/* Block */}
       <td className="py-2 px-3">
         <div className="flex flex-col">
@@ -1145,6 +1153,7 @@ function VirtualTable({
               <TableHeader label="IPv4" field="ipv4" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="Type" field="node_type" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="Client" field="client_type" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+              <TableHeader label="Docker Image" field="dockerImage" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="Block" field="blockHeight" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="Peak" field="peakBlock" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
               <TableHeader label="Peers" field="peerCount" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
