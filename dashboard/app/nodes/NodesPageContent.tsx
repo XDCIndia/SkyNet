@@ -557,6 +557,26 @@ export default function NodesPageContent() {
                   <span className="text-[#F9FAFB] font-medium">{node.peerCount}</span>
                 </div>
 
+                {/* Health Score */}
+                {(() => {
+                  const score = node.healthScore ?? 0;
+                  const hColor = score >= 80 ? '#10B981' : score >= 50 ? '#F59E0B' : '#EF4444';
+                  return (
+                    <div className="flex items-center justify-between text-xs text-[#6B7280] mb-2">
+                      <span>Health</span>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-16 h-1.5 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${score}%`, backgroundColor: hColor }}
+                          />
+                        </div>
+                        <span className="font-semibold" style={{ color: hColor }}>{score}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Footer */}
                 <div className="pt-3 border-t border-[rgba(255,255,255,0.06)] flex items-center justify-between text-xs text-[#6B7280]">
                   {!node.peakBlock || node.peakBlock === 0 ? (
