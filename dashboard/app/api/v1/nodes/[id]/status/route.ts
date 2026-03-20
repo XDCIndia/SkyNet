@@ -105,8 +105,8 @@ export async function GET(
     let networkHeight = 0;
     
     const rpcEndpoints: Record<string, string[]> = {
-      mainnet: ['https://rpc.openscan.ai/50', 'https://rpc.xinfin.network'],
-      apothem: ['https://rpc.openscan.ai/51', 'https://rpc.apothem.network'],
+      mainnet: ['https://rpc.xdc.network', 'https://rpc.xdc.org', 'https://rpc.openscan.ai/50'],
+      apothem: ['https://rpc.apothem.network', 'https://rpc.openscan.ai/51'],
     };
     
     const rpcs = rpcEndpoints[nodeNetwork] || rpcEndpoints['mainnet'];

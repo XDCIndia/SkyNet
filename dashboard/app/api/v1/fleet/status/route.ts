@@ -209,8 +209,8 @@ async function getHandler(request: NextRequest) {
     const rpcEndpoints: Record<string, string[]> = {
       mainnet: [
         'https://rpc.xdc.network',        // XDC Official - Primary
+        'https://rpc.xdc.org',            // XDC Org - Backup
         'https://rpc.openscan.ai/50',      // OpenScan - Fallback
-        'https://erpc.xinfin.network'      // XinFin Extended - Fallback
       ],
       apothem: [
         'https://rpc.apothem.network',     // XDC Apothem - Primary
