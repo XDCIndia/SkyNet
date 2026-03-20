@@ -44,12 +44,14 @@ import {
   SyncStages,
   ServerStats,
   StoragePanel,
+  DatabasePanel,
   TroubleshootPanel,
   PeerMap,
   TxPoolPanel,
   ComparisonPanel,
   RPCMatrix,
   ContainerPanel,
+  ConsensusPanel,
   type NodeDetail,
   type NodeStatus,
   type MetricHistory,
@@ -774,6 +776,16 @@ export default function NodeDetailPage() {
         {/* Hero Section - NEW from SkyOne */}
         <HeroSection node={node} status={status} metrics={metrics} />
 
+        {/* XDPoS Consensus Panel */}
+        <ConsensusPanel
+          epoch={status.consensus?.epoch}
+          epochProgress={status.consensus?.epochProgress}
+          v2Active={status.consensus?.v2Active}
+          round={status.consensus?.round}
+          blockHeight={status.blockHeight}
+          chainId={status.consensus?.chainId}
+        />
+
         {/* System Information Card with 3D styling */}
         <div className="card-xdc [perspective:1000px]">
           <div className="flex items-center gap-3 mb-4">
@@ -1026,6 +1038,9 @@ export default function NodeDetailPage() {
           <TxPoolPanel status={status} />
           <StoragePanel status={status} metrics={metrics} />
         </div>
+
+        {/* Database Deep-Dive Panel */}
+        <DatabasePanel nodeId={node.id} dbEngine={status.dbEngine} />
 
         {/* Fleet Comparison Panel */}
         <ComparisonPanel currentNodeId={node.id} currentNodeName={node.name} />

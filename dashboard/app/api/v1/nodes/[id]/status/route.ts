@@ -39,7 +39,8 @@ export async function GET(
         id, name, host, role, is_active, created_at, updated_at,
         location_city, location_country, location_lat, location_lng,
         tags, ipv4, ipv6, os_info, client_type, node_type, sync_mode, network,
-        docker_image, startup_params, state_scheme
+        docker_image, startup_params, state_scheme,
+        db_engine, db_total_size, db_chaindata_size, db_ancient_size
        FROM skynet.nodes 
        WHERE id = $1`,
       [id]
@@ -60,7 +61,8 @@ export async function GET(
         disk_used_gb, disk_total_gb, rpc_latency_ms, collected_at,
         ipv4, ipv6, os_type, os_release, os_arch, kernel_version,
         client_type, node_type, security_score, security_issues,
-        chain_data_size, database_size, storage_type, storage_model, iops_estimate, mount_point, mount_percent, sentries
+        chain_data_size, database_size, storage_type, storage_model, iops_estimate, mount_point, mount_percent, sentries,
+        consensus_epoch, consensus_round, consensus_v2, epoch_progress, chain_id
        FROM skynet.node_metrics 
        WHERE node_id = $1 
        ORDER BY collected_at DESC 
@@ -218,6 +220,21 @@ export async function GET(
         sentries: latestMetrics?.sentries,
         // Docker image from nodes table
         dockerImage: node.docker_image,
+        // Database deep-dive metrics (from nodes table, updated every ~5 min)
+        database: (node.db_total_size) ? {
+          engine: node.db_engine,
+          totalSize: node.db_total_size,
+          chaindata: node.db_chaindata_size,
+          ancient: node.db_ancient_size,
+        } : null,
+        // XDPoS consensus data
+        consensus: latestMetrics ? {
+          epoch: latestMetrics.consensus_epoch,
+          epochProgress: latestMetrics.epoch_progress,
+          v2Active: latestMetrics.consensus_v2,
+          round: latestMetrics.consensus_round,
+          chainId: latestMetrics.chain_id,
+        } : null,
       },
       incidents: {
         active: incidentsResult.rows,

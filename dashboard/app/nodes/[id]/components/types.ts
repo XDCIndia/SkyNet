@@ -68,6 +68,7 @@ export interface NodeStatus {
     mountPoint?: string;
     mountPercent?: number;
   };
+  dbEngine?: string | null;
   os?: {
     type?: string;
     release?: string;
@@ -78,12 +79,25 @@ export interface NodeStatus {
   ipv6?: string;
   rpcLatencyMs: number;
   lastSeen: string;
+  database?: {
+    engine?: string;
+    totalSize?: number;
+    chaindata?: number;
+    ancient?: number;
+  };
   security?: {
     score?: number;
     issues?: string;
   };
   sentries?: SentryInfo[];
   dockerImage?: string;
+  consensus?: {
+    epoch?: number;
+    epochProgress?: number;
+    v2Active?: boolean;
+    round?: number;
+    chainId?: number;
+  } | null;
 }
 
 export interface SentryInfo {

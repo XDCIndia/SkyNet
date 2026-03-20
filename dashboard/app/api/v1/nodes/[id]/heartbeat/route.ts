@@ -96,6 +96,8 @@ export async function POST(
       peerDropDuration,
       diskCritical,
       dockerImage,
+      // Database metrics (sent every ~10th heartbeat)
+      database,
     } = body;
 
     // Normalize clientType from version string if needed
@@ -219,7 +221,11 @@ export async function POST(
            security_score = COALESCE($22, security_score),
            security_issues = COALESCE($23, security_issues),
            ipv4 = COALESCE($24, ipv4),
-           docker_image = COALESCE($25, docker_image)
+           docker_image = COALESCE($25, docker_image),
+           db_engine = COALESCE($26, db_engine),
+           db_total_size = COALESCE($27, db_total_size),
+           db_chaindata_size = COALESCE($28, db_chaindata_size),
+           db_ancient_size = COALESCE($29, db_ancient_size)
        WHERE id = $1`,
       [
         resolvedNodeId,
@@ -246,10 +252,27 @@ export async function POST(
         security?.score ?? null,
         security?.issues ? JSON.stringify(security.issues) : null,
         os?.ipv4 || null,
-        dockerImage || null
+        dockerImage || null,
+        database?.engine || null,
+        database?.totalSize ?? null,
+        database?.chaindata ?? null,
+        database?.ancient ?? null,
       ],
       { maxRetries: 3, baseDelay: 100 }
     );
+
+    // Record DB size history if database metrics present
+    if (database?.totalSize) {
+      await queryWithResilience(
+        `INSERT INTO skynet.db_size_history (node_id, total_size, chaindata_size, ancient_size)
+         VALUES ($1, $2, $3, $4)`,
+        [resolvedNodeId, database.totalSize, database.chaindata ?? null, database.ancient ?? null],
+        { maxRetries: 2, baseDelay: 50 }
+      ).catch((err: unknown) => {
+        // Non-fatal: don't break heartbeats for history writes
+        console.error(`[Heartbeat:${nodeId}] DB history insert failed:`, err);
+      });
+    }
 
     // Update enode if provided
     if (enode) {
@@ -326,6 +349,100 @@ export async function POST(
     // Issue #452: Fork Detection - Check for divergence when blockHash is provided
     if (blockHash && blockHeight) {
       await checkForForkAndCreateIncident(resolvedNodeId, blockHeight, blockHash, clientType);
+    }
+
+    // Peer details collection (sent every ~5th heartbeat from agent)
+    if (body.peerDetails && Array.isArray(body.peerDetails.peers) && body.peerDetails.peers.length > 0) {
+      try {
+        const peerDetails = body.peerDetails as {
+          peers: Array<{
+            ip?: string;
+            client?: string;
+            clientVersion?: string;
+            caps?: string[];
+            direction?: string;
+          }>;
+          diversity?: {
+            geth?: number;
+            erigon?: number;
+            nethermind?: number;
+            reth?: number;
+            unknown?: number;
+          };
+        };
+
+        // Delete old snapshots — keep only the 2 most recent batches
+        await queryWithResilience(
+          `DELETE FROM skynet.peer_snapshots
+           WHERE node_id = $1
+             AND collected_at < (
+               SELECT COALESCE(
+                 (SELECT collected_at
+                  FROM skynet.peer_snapshots
+                  WHERE node_id = $1
+                  ORDER BY collected_at DESC
+                  LIMIT 1 OFFSET 1),
+                 '1970-01-01'
+               )
+             )`,
+          [resolvedNodeId],
+          { maxRetries: 2, baseDelay: 50 }
+        );
+
+        // Bulk-insert new peers (up to 50)
+        const peerRows = peerDetails.peers.slice(0, 50);
+        if (peerRows.length > 0) {
+          const valuePlaceholders = peerRows.map((_, i) => {
+            const base = i * 5;
+            return `($1, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, NOW())`;
+          }).join(', ');
+
+          const flatValues: unknown[] = [resolvedNodeId];
+          for (const p of peerRows) {
+            flatValues.push(
+              p.ip ?? '',
+              p.client ?? 'unknown',
+              (p.clientVersion ?? '').slice(0, 200),
+              p.caps ?? [],
+              p.direction ?? 'outbound',
+            );
+          }
+
+          await queryWithResilience(
+            `INSERT INTO skynet.peer_snapshots
+               (node_id, remote_ip, client_type, client_version, protocols, direction, collected_at)
+             VALUES ${valuePlaceholders}`,
+            flatValues,
+            { maxRetries: 2, baseDelay: 50 }
+          );
+        }
+
+        // Update diversity counts in nodes table
+        const div = peerDetails.diversity ?? {};
+        await queryWithResilience(
+          `UPDATE skynet.nodes
+           SET peer_geth    = $2,
+               peer_erigon  = $3,
+               peer_nm      = $4,
+               peer_reth    = $5,
+               peer_unknown = $6
+           WHERE id = $1`,
+          [
+            resolvedNodeId,
+            div.geth ?? 0,
+            div.erigon ?? 0,
+            div.nethermind ?? 0,
+            div.reth ?? 0,
+            div.unknown ?? 0,
+          ],
+          { maxRetries: 2, baseDelay: 50 }
+        );
+
+        console.log(`[Heartbeat:${nodeId}] Stored ${peerRows.length} peer snapshots`);
+      } catch (peerErr) {
+        // Non-fatal — log but don't fail the heartbeat
+        console.error(`[Heartbeat:${nodeId}] Peer snapshot error:`, peerErr);
+      }
     }
 
     const duration = Date.now() - startTime;

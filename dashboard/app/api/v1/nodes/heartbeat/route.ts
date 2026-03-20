@@ -41,6 +41,22 @@ export async function POST(request: NextRequest) {
     const secScore   = body.security?.score ?? null;
     const dockerImg  = body.dockerImage ?? null;
 
+    // Consensus fields
+    const consensus       = body.consensus ?? {};
+    const consensusEpoch  = consensus.epoch   ?? null;
+    const consensusRound  = consensus.round   ?? null;
+    const consensusV2     = consensus.v2Active ?? false;
+    const epochProgress   = consensus.epochProgress ?? null;
+    const chainId         = consensus.chainId ?? null;
+
+    // Database metrics (from SkyOne DB collection, ~every 5 min)
+    const dbMetrics  = body.database ?? null;
+    const dbEngine   = dbMetrics?.engine ?? null;
+    const dbTotal    = dbMetrics?.totalSize ?? null;
+    const dbChaindata = dbMetrics?.chaindata ?? null;
+    const dbAncient  = dbMetrics?.ancient ?? null;
+    const dbState    = dbMetrics?.state ?? null;
+
     if (!nodeId) {
       return NextResponse.json({ success: false, error: 'nodeId required' }, { status: 400 });
     }
@@ -68,7 +84,7 @@ export async function POST(request: NextRequest) {
       [nodeId, nodeId, network, clientType, ipv4, coinbase, blockHeight, peerCount, isSyncing, dockerImg]
     );
 
-    // Insert full metrics row
+    // Insert full metrics row (including DB size columns)
     await client.query(
       `INSERT INTO skynet.node_metrics (
          node_id, block_height, peer_count, is_syncing, sync_percent,
@@ -76,20 +92,41 @@ export async function POST(request: NextRequest) {
          tx_pool_pending, tx_pool_queued, gas_price, rpc_latency_ms,
          client_type, client_version, node_type, coinbase,
          ipv4, os_type, os_release, os_arch, kernel_version,
+         db_engine, db_total_size, db_chaindata_size, db_ancient_size, db_state_size,
+         consensus_epoch, consensus_round, consensus_v2, epoch_progress, chain_id,
          collected_at
        ) VALUES (
          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
          $11,$12,$13,$14,$15,$16,$17,$18,
-         $19,$20,$21,$22,$23, NOW()
+         $19,$20,$21,$22,$23,
+         $24,$25,$26,$27,$28,
+         $29,$30,$31,$32,$33,
+         NOW()
        )`,
       [
         nodeId, blockHeight, peerCount, isSyncing, syncPct,
         cpuPct, memPct, diskPct, diskUsed, diskTotal,
         txPending, txQueued, gasPrice, rpcLatency,
         clientType, clientVer, nodeType, coinbase,
-        ipv4, osType, osRelease, osArch, kernelVer
+        ipv4, osType, osRelease, osArch, kernelVer,
+        dbEngine, dbTotal, dbChaindata, dbAncient, dbState,
+        consensusEpoch, consensusRound, consensusV2, epochProgress, chainId,
       ]
     );
+
+    // Record DB history snapshot (max 1 per 10 min per node) when DB data is present
+    if (dbTotal !== null) {
+      await client.query(
+        `INSERT INTO skynet.db_size_history (node_id, total_size, chaindata_size, ancient_size)
+         SELECT $1, $2, $3, $4
+         WHERE NOT EXISTS (
+           SELECT 1 FROM skynet.db_size_history
+           WHERE node_id = $1
+             AND recorded_at > NOW() - INTERVAL '10 minutes'
+         )`,
+        [nodeId, dbTotal, dbChaindata, dbAncient]
+      );
+    }
 
     return NextResponse.json({ success: true, data: { ok: true } });
   } catch (error: any) {
