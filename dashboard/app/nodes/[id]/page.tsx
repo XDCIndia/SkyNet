@@ -76,7 +76,7 @@ function RoleBadge({ role }: { role: string }) {
   
   return (
     <span className={`px-2 py-0.5 text-xs font-medium rounded border ${colors[role] || colors.fullnode}`}>
-      {role.toUpperCase()}
+      {(role || 'fullnode').toUpperCase()}
     </span>
   );
 }
@@ -134,7 +134,7 @@ function SeverityBadge({ severity }: { severity: 'critical' | 'warning' | 'info'
   
   return (
     <span className={`px-2 py-0.5 text-xs font-medium rounded border ${styles[severity]}`}>
-      {severity.toUpperCase()}
+      {(severity || 'info').toUpperCase()}
     </span>
   );
 }
@@ -501,7 +501,7 @@ export default function NodeDetailPage() {
       
       const [statusRes, incidentsRes, peersRes, metricsRes] = await Promise.all([
         fetch(`/api/v1/nodes/${nodeId}/status`, { cache: 'no-store' }),
-        fetch(`/api/incidents?nodeId=${nodeId}&limit=20`, { cache: 'no-store' }),
+        fetch(`/api/incidents?nodeId=${nodeId}&limit=20`, { cache: 'no-store' }).catch(() => null),
         fetch(`/api/v1/nodes/${nodeId}/peers`, { cache: 'no-store' }).catch(() => null),
         fetch(`/api/v1/nodes/${nodeId}/metrics/history?hours=${timeRange}`, { cache: 'no-store' }),
       ]);
@@ -515,9 +515,9 @@ export default function NodeDetailPage() {
         return;
       }
 
-      if (incidentsRes.ok) {
+      if (incidentsRes?.ok) {
         const incidentsData = await incidentsRes.json();
-        setIncidents(incidentsData.incidents);
+        setIncidents(incidentsData.incidents || []);
       }
 
       if (peersRes?.ok) {
