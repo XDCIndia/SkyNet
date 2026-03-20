@@ -53,7 +53,6 @@ import {
   RPCMatrix,
   ContainerPanel,
   ConsensusPanel,
-  PeerQuality,
   type NodeDetail,
   type NodeStatus,
   type MetricHistory,
