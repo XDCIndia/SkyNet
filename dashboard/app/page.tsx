@@ -1458,7 +1458,7 @@ function HomeContent() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [peers, setPeers] = useState<HealthyPeersSummary | null>(null);
   const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null);
-  const [filter, setFilter] = useState<FilterType>('active'); // Default to 'active' (healthy + syncing)
+  const [filter, setFilter] = useState<FilterType>('all'); // Default to 'all' — show every node including block=0
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -1471,7 +1471,7 @@ function HomeContent() {
   const [osFilter, setOsFilter] = useState('all');
   
   // New state for features
-  const [showZeroBlockNodes, setShowZeroBlockNodes] = useState(false);
+  const [showZeroBlockNodes, setShowZeroBlockNodes] = useState(true);
   const [incidentsCollapsed, setIncidentsCollapsed] = useState(false);
   
   // Sorting
