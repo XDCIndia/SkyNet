@@ -23,8 +23,15 @@ export async function GET(request: NextRequest) {
     const sql = `
       SELECT
         n.id, n.name, n.network, n.role, n.status,
-        n.ipv4, n.client_type, n.coinbase,
+        -- IP: prefer explicit ipv4, fall back to fingerprint parsing
+        COALESCE(n.ipv4, NULLIF(split_part(split_part(n.fingerprint, '@', 2), ':', 1), 'null'), n.host) AS ipv4,
+        n.client_type, n.coinbase,
         n.created_at, n.last_heartbeat,
+        n.last_seen,
+        n.fingerprint,
+        n.state_scheme,
+        n.docker_image,
+        n.startup_params,
         m.block_height   AS latest_block,
         m.peer_count,
         m.is_syncing,

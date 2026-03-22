@@ -96,6 +96,8 @@ export async function POST(
       peerDropDuration,
       diskCritical,
       dockerImage,
+      stateScheme,
+      startupParams,
       // Database metrics (sent every ~10th heartbeat)
       database,
     } = body;
@@ -222,10 +224,12 @@ export async function POST(
            security_issues = COALESCE($23, security_issues),
            ipv4 = COALESCE($24, ipv4),
            docker_image = COALESCE($25, docker_image),
-           db_engine = COALESCE($26, db_engine),
-           db_total_size = COALESCE($27, db_total_size),
-           db_chaindata_size = COALESCE($28, db_chaindata_size),
-           db_ancient_size = COALESCE($29, db_ancient_size)
+           state_scheme = COALESCE($26, state_scheme),
+           startup_params = COALESCE($27, startup_params),
+           db_engine = COALESCE($28, db_engine),
+           db_total_size = COALESCE($29, db_total_size),
+           db_chaindata_size = COALESCE($30, db_chaindata_size),
+           db_ancient_size = COALESCE($31, db_ancient_size)
        WHERE id = $1`,
       [
         resolvedNodeId,
@@ -253,6 +257,8 @@ export async function POST(
         security?.issues ? JSON.stringify(security.issues) : null,
         os?.ipv4 || null,
         dockerImage || null,
+        stateScheme || null,
+        startupParams || null,
         database?.engine || null,
         database?.totalSize ?? null,
         database?.chaindata ?? null,

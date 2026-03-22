@@ -84,7 +84,9 @@ export default function NodesPageContent() {
         ipv6: node.ipv6 || undefined,
         networkHeight: node.networkHeight || undefined,
         peakBlock: node.peakBlock || undefined,
-        dockerImage: node.dockerImage || undefined,
+        dockerImage: node.dockerImage || node.docker_image || undefined,
+        startupParams: node.startupParams || node.startup_params || undefined,
+        stateScheme: node.stateScheme || node.state_scheme || undefined,
         prevBlock: node.prevBlock || undefined,
         blockDiff: node.blockDiff || undefined,
         os: node.os || node.os_type,
@@ -461,13 +463,14 @@ export default function NodesPageContent() {
 
                 {/* IPv4 Address */}
                 {node.ipv4 && (
-                  <div className="mb-2 text-xs font-mono text-[#1E90FF]">
-                    {node.ipv4}
+                  <div className="mb-2 flex items-center gap-1 text-xs font-mono text-[#1E90FF]">
+                    <span title="IP Address">🌐</span>
+                    <span>{node.ipv4}</span>
                   </div>
                 )}
 
-                {/* Client Badge */}
-                <div className="flex items-center gap-2 mb-2">
+                {/* Client Badge + State Scheme */}
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <span
                     className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getClientColor(
                       node.clientType
@@ -476,11 +479,40 @@ export default function NodesPageContent() {
                   >
                     {getClientDisplayName(node.clientType, node.clientVersion)}
                   </span>
+                  {/* State Scheme Badge */}
+                  {node.stateScheme && (
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium ${
+                        node.stateScheme === 'path'
+                          ? 'bg-[rgba(0,200,150,0.15)] text-[#00C896] border border-[rgba(0,200,150,0.3)]'
+                          : 'bg-[rgba(255,165,0,0.15)] text-[#FFA500] border border-[rgba(255,165,0,0.3)]'
+                      }`}
+                      title="State Scheme (PBSS=path, HBSS=hash)"
+                    >
+                      {node.stateScheme === 'path' ? '🟢 PBSS' : `🟠 ${node.stateScheme}`}
+                    </span>
+                  )}
                 </div>
                 {/* Docker Image - show prominently if available */}
                 {node.dockerImage && (
-                  <div className="mb-3 text-[10px] font-mono text-[#6B7280] truncate" title={node.dockerImage}>
+                  <div className="mb-1 text-[10px] font-mono text-[#6B7280] truncate" title={node.dockerImage}>
                     🐳 {node.dockerImage.split('/').pop()}
+                  </div>
+                )}
+                {/* xdc-node-setup link */}
+                {node.ipv4 && (
+                  <div className="mb-2 text-[10px] text-[#4B5563]">
+                    <a
+                      href={`http://${node.ipv4}:3001`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 hover:text-[#1E90FF] transition-colors"
+                      title="Open xdc-node-setup dashboard"
+                    >
+                      <span>🛠</span>
+                      <span>xdc-node-setup</span>
+                      <span className="text-[#6B7280]">↗</span>
+                    </a>
                   </div>
                 )}
 

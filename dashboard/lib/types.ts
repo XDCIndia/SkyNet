@@ -128,6 +128,8 @@ export interface SkyNetNode {
   networkHeight?: number;
   peakBlock?: number;
   dockerImage?: string;
+  startupParams?: string;
+  stateScheme?: string;
   prevBlock?: number;
   blockDiff?: number;
   os?: string;
