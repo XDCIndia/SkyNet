@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as net from 'net';
 import { scrapeEthstats, EthstatsNode } from '@/lib/ethstats-scraper';
-import { AUDIT_NODE_IPS, AUDIT_NODE_ACCOUNTS } from '@/lib/audit-data';
+// import { AUDIT_NODE_IPS, AUDIT_NODE_ACCOUNTS } from '@/lib/audit-data';
+const AUDIT_NODE_IPS: Array<{ip:string;port:number}> = [];
+const AUDIT_NODE_ACCOUNTS: Record<string, {account:string;name:string;port:number;isCandidate:boolean}> = {};
 
 export const maxDuration = 120; // Allow up to 120 seconds for full scan
 export const dynamic = 'force-dynamic';
