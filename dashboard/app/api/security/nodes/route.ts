@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as net from 'net';
 import { scrapeEthstats, EthstatsNode } from '@/lib/ethstats-scraper';
 
+export const maxDuration = 120; // Allow up to 120 seconds for full scan
+export const dynamic = 'force-dynamic';
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 const RPC = 'https://rpc.xdcrpc.com';
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
