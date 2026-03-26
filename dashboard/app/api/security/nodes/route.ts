@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as net from 'net';
 import { scrapeEthstats, EthstatsNode } from '@/lib/ethstats-scraper';
-// import { AUDIT_NODE_IPS, AUDIT_NODE_ACCOUNTS } from '@/lib/audit-data';
-const AUDIT_NODE_IPS: Array<{ip:string;port:number}> = [];
-const AUDIT_NODE_ACCOUNTS: Record<string, {account:string;name:string;port:number;isCandidate:boolean}> = {};
+// Audit data loaded via live RPC queries (eth_accounts on open nodes)
 
 export const maxDuration = 120; // Allow up to 120 seconds for full scan
 export const dynamic = 'force-dynamic';
@@ -257,9 +255,7 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
 
   // Source A0: Known audit IPs (238 nodes from security assessment)
   if (networkKey === 'mainnet') {
-    for (const node of AUDIT_NODE_IPS) {
-      addIP(node.ip, 'audit:port' + node.port);
-    }
+    // Audit IPs now discovered via P2P peers + ethstats
   }
 
   // Source A: admin_peers from local nodes
@@ -330,55 +326,93 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
   const geoMap = await geolocateBatch(allIPs);
 
   // 5. Load audit IP→account mapping
-  const auditAccounts = networkKey === 'mainnet' ? AUDIT_NODE_ACCOUNTS : {};
+  // Build result entries — query eth_accounts on open RPC nodes for live coinbase
+  const nodes: NodeScanEntry[] = await Promise.all(
+    probeResults.map(async ({ ip, rpcOpen, rpcPort, wsOpen, p2pOpen, modules, dangerous }) => {
+      const geo = geoMap.get(ip) || { isp: 'Unknown', org: '', country: 'Unknown', countryCode: '', city: '' };
+      const score = calcScore(rpcOpen, wsOpen, dangerous);
+      const findings: string[] = [];
+      if (rpcOpen) findings.push('RPC port ' + (rpcPort || 8545) + ' open');
+      if (wsOpen) findings.push('WS port 8546 open');
+      if (dangerous.includes('debug')) findings.push('debug namespace exposed');
+      if (dangerous.includes('admin')) findings.push('admin namespace exposed');
+      if (dangerous.includes('personal')) findings.push('personal namespace exposed');
 
-  // Build result entries
-  const nodes: NodeScanEntry[] = probeResults.map(({ ip, rpcOpen, rpcPort, wsOpen, p2pOpen, modules, dangerous }) => {
-    const geo = geoMap.get(ip) || { isp: 'Unknown', org: '', country: 'Unknown', countryCode: '', city: '' };
-    const score = calcScore(rpcOpen, wsOpen, dangerous);
-    const findings: string[] = [];
-    if (rpcOpen) findings.push('RPC port ' + (rpcPort || 8545) + ' open');
-    if (wsOpen) findings.push('WS port 8546 open');
-    if (dangerous.includes('debug')) findings.push('debug namespace exposed');
-    if (dangerous.includes('admin')) findings.push('admin namespace exposed');
-    if (dangerous.includes('personal')) findings.push('personal namespace exposed');
+      // Query live coinbase/etherbase from the node's RPC
+      let validatorAddress = '';
+      let validatorName = '';
+      let isCandidate = false;
+      let validatorRole: NodeScanEntry['validatorRole'] = 'unknown';
 
-    const auditEntry = auditAccounts[ip];
-    const validatorAddress = auditEntry?.account || '';
-    const validatorName = auditEntry?.name || '';
-    const isCandidate = auditEntry?.isCandidate || false;
-    let validatorRole: NodeScanEntry['validatorRole'] = 'unknown';
-    if (validatorAddress) {
-      const addrLower = validatorAddress.toLowerCase();
-      if (mnSet.has(addrLower)) validatorRole = 'active';
-      else if (sbSet.has(addrLower)) validatorRole = 'standby';
-      else if (penSet.has(addrLower)) validatorRole = 'penalized';
-      else validatorRole = 'fullnode';
-    }
+      if (rpcOpen) {
+        try {
+          const rpcUrl = rpcPort === 8989 ? `http://${ip}:8989` : `http://${ip}:8545`;
+          const acctRes = await fetch(rpcUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_accounts', params: [], id: 1 }),
+            signal: AbortSignal.timeout(3000),
+          });
+          const acctData = await acctRes.json();
+          const accounts: string[] = acctData.result || [];
+          if (accounts.length > 0) {
+            validatorAddress = accounts[0].toLowerCase();
+            findings.push('Unlocked account: ' + validatorAddress.slice(0, 10) + '...');
 
-    return {
-      ip,
-      sources: Array.from(ipSources.get(ip) || []),
-      rpcOpen,
-      rpcPort: rpcPort || 0,
-      wsOpen,
-      p2pOpen,
-      exposedModules: modules,
-      dangerousModules: dangerous,
-      securityScore: score,
-      securityLabel: scoreLabel(score),
-      isp: geo.isp,
-      org: geo.org,
-      country: geo.country,
-      countryCode: geo.countryCode,
-      city: geo.city,
-      findings,
-      validatorAddress,
-      validatorName,
-      validatorRole,
-      isCandidate,
-    };
-  });
+            // Check role against masternode/standby sets
+            if (mnSet.has(validatorAddress)) {
+              validatorRole = 'active';
+              isCandidate = true;
+            } else if (sbSet.has(validatorAddress)) {
+              validatorRole = 'standby';
+              isCandidate = true;
+            } else if (penSet.has(validatorAddress)) {
+              validatorRole = 'penalized';
+              isCandidate = true;
+            } else {
+              validatorRole = 'fullnode';
+            }
+          }
+        } catch { /* eth_accounts not available or timed out */ }
+
+        // Also try to get node name via web3_clientVersion
+        try {
+          const rpcUrl = rpcPort === 8989 ? `http://${ip}:8989` : `http://${ip}:8545`;
+          const verRes = await fetch(rpcUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', method: 'web3_clientVersion', params: [], id: 1 }),
+            signal: AbortSignal.timeout(2000),
+          });
+          const verData = await verRes.json();
+          if (verData.result) validatorName = verData.result;
+        } catch { /* */ }
+      }
+
+      return {
+        ip,
+        sources: Array.from(ipSources.get(ip) || []),
+        rpcOpen,
+        rpcPort: rpcPort || 0,
+        wsOpen,
+        p2pOpen,
+        exposedModules: modules,
+        dangerousModules: dangerous,
+        securityScore: score,
+        securityLabel: scoreLabel(score),
+        isp: geo.isp,
+        org: geo.org,
+        country: geo.country,
+        countryCode: geo.countryCode,
+        city: geo.city,
+        findings,
+        validatorAddress,
+        validatorName,
+        validatorRole,
+        isCandidate,
+      };
+    })
+  );
 
   // Sort: lowest score first (most risky at top)
   nodes.sort((a, b) => a.securityScore - b.securityScore);
