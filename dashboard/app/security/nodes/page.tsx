@@ -37,6 +37,13 @@ interface EthstatsNode {
   miner?: string;
 }
 
+interface MasternodeEntry {
+  address: string;
+  owner: string;
+  stakeXDC: number;
+  role: 'active' | 'standby' | 'penalized' | 'candidate';
+}
+
 interface ScanResult {
   scannedAt: string;
   totalIPs: number;
@@ -45,6 +52,7 @@ interface ScanResult {
   debugExposed: number;
   uniqueProviders: number;
   nodes: NodeScanEntry[];
+  masternodeList?: MasternodeEntry[];
   activeCount: number;
   standbyCount: number;
   cached?: boolean;
@@ -233,6 +241,63 @@ export default function NodeScannerPage() {
                 </table>
               </div>
             </div>
+
+            {/* ═══ Masternode Validation ═══ */}
+            {data.masternodeList && data.masternodeList.length > 0 && (
+              <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)] bg-[var(--bg-header)] gap-3">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-[var(--accent-blue)]" />
+                    <span className="font-semibold text-sm">Masternode Validation — On-Chain Data</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-[var(--text-tertiary)]">
+                    <span className="text-[var(--success)]">● {data.masternodeList.filter(m => m.role === 'active').length} active</span>
+                    <span className="text-[var(--warning)]">● {data.masternodeList.filter(m => m.role === 'standby').length} standby</span>
+                    <span className="text-[var(--critical)]">● {data.masternodeList.filter(m => m.role === 'penalized').length} penalized</span>
+                    <span>Total: {data.masternodeList.length} candidates</span>
+                  </div>
+                </div>
+                <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-[var(--bg-header)] z-10">
+                      <tr className="border-b border-[var(--border-subtle)]">
+                        {['#', 'Role', 'Candidate Address', 'Owner Address', 'Stake (XDC)'].map(h => (
+                          <th key={h} className="px-3 py-2 text-left font-semibold text-[var(--text-tertiary)] whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border-subtle)]">
+                      {data.masternodeList.map((mn, idx) => (
+                        <tr key={mn.address} className={`hover:bg-white/3 transition-colors ${mn.role === 'penalized' ? 'bg-[var(--critical)]/5' : ''}`}>
+                          <td className="px-3 py-1.5 text-[var(--text-tertiary)] tabular-nums">{idx + 1}</td>
+                          <td className="px-3 py-1.5">
+                            <span className={`px-2 py-0.5 rounded border text-xs font-medium ${
+                              mn.role === 'active' ? 'bg-[var(--success)]/15 text-[var(--success)] border-[var(--success)]/25' :
+                              mn.role === 'standby' ? 'bg-[var(--warning)]/15 text-[var(--warning)] border-[var(--warning)]/25' :
+                              mn.role === 'penalized' ? 'bg-[var(--critical)]/15 text-[var(--critical)] border-[var(--critical)]/25' :
+                              'bg-white/5 text-[var(--text-tertiary)] border-[var(--border-subtle)]'
+                            }`}>{mn.role}</span>
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <div className="flex items-center gap-1">
+                              <a href={`https://xdcscan.com/address/${mn.address}`} target="_blank" className="font-mono text-[var(--accent-blue)] hover:underline">{mn.address.slice(0,10)}...{mn.address.slice(-8)}</a>
+                              <CopyBtn text={mn.address} />
+                            </div>
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <div className="flex items-center gap-1">
+                              <a href={`https://xdcscan.com/address/${mn.owner}`} target="_blank" className="font-mono text-[var(--text-secondary)] hover:underline">{mn.owner.slice(0,10)}...{mn.owner.slice(-8)}</a>
+                              <CopyBtn text={mn.owner} />
+                            </div>
+                          </td>
+                          <td className="px-3 py-1.5 tabular-nums font-mono text-right">{mn.stakeXDC.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* ═══ Port Security Scan ═══ */}
             <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl overflow-hidden">

@@ -30,6 +30,13 @@ export interface NodeScanEntry {
   findings: string[];
 }
 
+export interface MasternodeEntry {
+  address: string;
+  owner: string;
+  stakeXDC: number;
+  role: 'active' | 'standby' | 'penalized' | 'candidate';
+}
+
 export interface ScanResult {
   scannedAt: string;
   totalIPs: number;
@@ -38,6 +45,7 @@ export interface ScanResult {
   debugExposed: number;
   uniqueProviders: number;
   nodes: NodeScanEntry[];
+  masternodeList: MasternodeEntry[];
   masternodes: string[];
   standbynodes: string[];
   penalized: string[];
@@ -274,7 +282,51 @@ async function runScan(): Promise<ScanResult> {
 
   const uniqueProviders = new Set(nodes.map(n => n.isp || n.org).filter(Boolean)).size;
 
-  // 6. Scrape ethstats for full node names + stats
+  // 6. Enrich masternode list with stake + owner
+  const mnSet = new Set(masternodes.map(a => a.toLowerCase()));
+  const sbSet = new Set(standbynodes.map(a => a.toLowerCase()));
+  const penSet = new Set(penalized.map(a => a.toLowerCase()));
+
+  // Get all active candidates
+  const candidatesHex = await ethCall(rpcUrl, VALIDATOR, '0x06a49fce');
+  const allCandidates = decodeAddressArray(candidatesHex).filter(a => parseInt(a, 16) !== 0);
+
+  // Batch fetch stake + owner for all candidates (in groups of 25 to avoid rate limits)
+  const masternodeList: MasternodeEntry[] = [];
+  for (let i = 0; i < allCandidates.length; i += 25) {
+    const batch = allCandidates.slice(i, i + 25);
+    const results = await Promise.allSettled(
+      batch.map(async (addr) => {
+        const capSel = '0x58e7525f' + '0'.repeat(24) + addr.slice(2);
+        const ownerSel = '0xb642facd' + '0'.repeat(24) + addr.slice(2);
+        const [capHex, ownerHex] = await Promise.all([
+          ethCall(rpcUrl, VALIDATOR, capSel),
+          ethCall(rpcUrl, VALIDATOR, ownerSel),
+        ]);
+        const capWei = BigInt(capHex || '0x0');
+        const stakeXDC = Math.round(Number(capWei) / 1e18);
+        const owner = ownerHex && ownerHex.length >= 42 ? '0x' + ownerHex.slice(-40) : '';
+        const addrLower = addr.toLowerCase();
+        const role: MasternodeEntry['role'] = mnSet.has(addrLower) ? 'active'
+          : sbSet.has(addrLower) ? 'standby'
+          : penSet.has(addrLower) ? 'penalized'
+          : 'candidate';
+        return { address: addr, owner, stakeXDC, role };
+      })
+    );
+    for (const r of results) {
+      if (r.status === 'fulfilled') masternodeList.push(r.value);
+    }
+  }
+  // Sort: active first, then by stake descending
+  masternodeList.sort((a, b) => {
+    const roleOrder = { active: 0, standby: 1, penalized: 2, candidate: 3 };
+    const rd = roleOrder[a.role] - roleOrder[b.role];
+    if (rd !== 0) return rd;
+    return b.stakeXDC - a.stakeXDC;
+  });
+
+  // 7. Scrape ethstats for full node names + stats
   let ethstatsData: ScanResult['ethstats'];
   try {
     const ethResult = await scrapeEthstats();
@@ -311,6 +363,7 @@ async function runScan(): Promise<ScanResult> {
     masternodes,
     standbynodes,
     penalized,
+    masternodeList,
     activeCount: masternodes.length,
     standbyCount: standbynodes.length,
     ethstats: ethstatsData,
