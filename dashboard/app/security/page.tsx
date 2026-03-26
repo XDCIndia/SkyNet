@@ -6,7 +6,8 @@ import {
   Shield, ShieldAlert, ShieldCheck, AlertTriangle, RefreshCw,
   ExternalLink, CheckCircle, XCircle, Info, GitBranch,
   ChevronDown, ChevronRight, Clock, Copy, Check,
-  ArrowRight, Database, Code2, AlertCircle, Users, Hash,
+  Database, Code2, AlertCircle, Users, Hash,
+  Server, Globe,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -545,13 +546,615 @@ function NetworkPanel({ networkKey, label }: { networkKey: string; label: string
   );
 }
 
+// ─── Node Scanner Tab ─────────────────────────────────────────────────────────
+
+type SortKey = 'securityScore' | 'role' | 'address' | 'geoCountry' | 'geoIsp' | 'findings';
+type FilterMode = 'all' | 'risk' | 'active';
+
+function countryFlag(country: string): string {
+  if (!country) return '🌐';
+  const code = country === 'United States' ? 'US'
+    : country === 'Germany' ? 'DE'
+    : country === 'United Kingdom' ? 'GB'
+    : country === 'Singapore' ? 'SG'
+    : country === 'Netherlands' ? 'NL'
+    : country === 'France' ? 'FR'
+    : country === 'Japan' ? 'JP'
+    : country === 'Canada' ? 'CA'
+    : country === 'Australia' ? 'AU'
+    : country === 'South Korea' ? 'KR'
+    : null;
+  if (!code) return '🌐';
+  return String.fromCodePoint(...[...code].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+}
+
+function ScoreBadge({ score, severity }: { score: number; severity: NodeSecurityResult['severity'] }) {
+  const cls = severity === 'secure'
+    ? 'bg-[var(--success)]/20 text-[var(--success)] border-[var(--success)]/30'
+    : severity === 'caution'
+    ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+    : 'bg-[var(--critical)]/20 text-[var(--critical)] border-[var(--critical)]/30';
+  const emoji = severity === 'secure' ? '🟢' : severity === 'caution' ? '🟡' : '🔴';
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded border ${cls}`}>
+      {emoji} {score}
+    </span>
+  );
+}
+
+function ModuleBadge({ name }: { name: string }) {
+  const dangerous = ['debug', 'admin', 'personal'];
+  const isDangerous = dangerous.includes(name);
+  return (
+    <span className={`text-xs px-1.5 py-0.5 rounded font-mono border ${
+      isDangerous
+        ? 'bg-[var(--critical)]/15 text-[var(--critical)] border-[var(--critical)]/30'
+        : 'bg-white/5 text-[var(--text-secondary)] border-[var(--border-subtle)]'
+    }`}>{name}</span>
+  );
+}
+
+function NodeScannerTab() {
+  const [scanData, setScanData] = useState<NodeScanResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>('securityScore');
+  const [sortAsc, setSortAsc] = useState(true);
+  const [filter, setFilter] = useState<FilterMode>('all');
+  const [copiedAddr, setCopiedAddr] = useState<string | null>(null);
+
+  const fetchScan = useCallback(async (forceRefresh = false) => {
+    setLoading(true);
+    try {
+      const url = `/api/security/nodes${forceRefresh ? '?refresh=1' : ''}`;
+      const res = await fetch(url);
+      const data = await res.json() as NodeScanResponse;
+      setScanData(data);
+    } catch (e) {
+      setScanData({ nodes: [], summary: { totalNodes: 0, nodesWithIp: 0, rpcOpenCount: 0, wsOpenCount: 0, debugExposedCount: 0, uniqueProviders: 0, scanDurationMs: 0, cachedAt: '' }, error: (e as Error).message });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const copyAddr = (addr: string) => {
+    navigator.clipboard.writeText(addr);
+    setCopiedAddr(addr);
+    setTimeout(() => setCopiedAddr(null), 1500);
+  };
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortAsc(a => !a);
+    else { setSortKey(key); setSortAsc(true); }
+  };
+
+  const SortIcon = ({ k }: { k: SortKey }) => {
+    if (sortKey !== k) return <ChevronDownIcon className="w-3 h-3 text-[var(--text-tertiary)] opacity-40" />;
+    return sortAsc
+      ? <ChevronUp className="w-3 h-3 text-[var(--accent-blue)]" />
+      : <ChevronDownIcon className="w-3 h-3 text-[var(--accent-blue)]" />;
+  };
+
+  const filteredNodes = scanData?.nodes
+    ? [...scanData.nodes]
+        .filter(n => {
+          if (filter === 'risk') return n.severity === 'risk';
+          if (filter === 'active') return n.role === 'active';
+          return true;
+        })
+        .sort((a, b) => {
+          let av: string | number = 0, bv: string | number = 0;
+          if (sortKey === 'securityScore') { av = a.securityScore; bv = b.securityScore; }
+          else if (sortKey === 'findings') { av = a.findings.length; bv = b.findings.length; }
+          else { av = (a[sortKey] ?? '').toString(); bv = (b[sortKey] ?? '').toString(); }
+          if (av < bv) return sortAsc ? -1 : 1;
+          if (av > bv) return sortAsc ? 1 : -1;
+          return 0;
+        })
+    : [];
+
+  const s = scanData?.summary;
+
+  return (
+    <div className="space-y-5">
+      {/* Header + Scan button */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2.5 mb-1">
+            <Scan className="w-5 h-5 text-[var(--accent-blue)]" />
+            <h2 className="text-xl font-bold">Node Security Scanner</h2>
+          </div>
+          <p className="text-sm text-[var(--text-secondary)]">
+            Probes XDC masternodes for exposed RPC/WS ports and dangerous modules. Results cached 10 min.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {!scanData && !loading && (
+            <button
+              onClick={() => fetchScan(false)}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold bg-[var(--accent-blue)] text-white rounded-xl hover:bg-[var(--accent-blue)]/80 transition-colors"
+            >
+              <Scan className="w-4 h-4" /> Start Scan
+            </button>
+          )}
+          {scanData && (
+            <button
+              onClick={() => fetchScan(true)}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border border-[var(--accent-blue)]/20 rounded-lg hover:bg-[var(--accent-blue)]/20 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? 'Scanning…' : 'Rescan'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Empty / prompt */}
+      {!scanData && !loading && (
+        <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl flex flex-col items-center justify-center py-20 gap-4 text-[var(--text-tertiary)]">
+          <ShieldOff className="w-12 h-12 opacity-30" />
+          <div className="text-center">
+            <div className="text-base font-semibold mb-1">No scan data</div>
+            <div className="text-sm">Click "Start Scan" to probe all masternodes for security issues.</div>
+            <div className="text-xs mt-1 opacity-70">Scan takes 30–60 seconds. Results cached for 10 minutes.</div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl flex flex-col items-center justify-center py-20 gap-4 text-[var(--text-tertiary)]">
+          <RefreshCw className="w-10 h-10 animate-spin opacity-60" />
+          <div className="text-center">
+            <div className="text-base font-semibold">Scanning nodes…</div>
+            <div className="text-sm mt-1">Probing RPC/WS ports + geolocating IPs. This takes 30–60 seconds.</div>
+          </div>
+        </div>
+      )}
+
+      {/* Error */}
+      {scanData?.error && (
+        <div className="bg-[var(--critical)]/10 border border-[var(--critical)]/25 rounded-xl p-4 flex gap-3">
+          <XCircle className="w-5 h-5 text-[var(--critical)] flex-shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold text-[var(--critical)] text-sm">Scan error</div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1">{scanData.error}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Summary bar */}
+      {s && s.totalNodes > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { label: 'Total Nodes', value: s.totalNodes.toString(), color: 'text-[var(--accent-blue)]', icon: <Server className="w-4 h-4" /> },
+            { label: 'With IP', value: s.nodesWithIp.toString(), color: 'text-[var(--text-secondary)]', icon: <Globe className="w-4 h-4" /> },
+            { label: 'RPC Open', value: `${s.rpcOpenCount} (${s.totalNodes ? Math.round(s.rpcOpenCount/s.nodesWithIp*100) : 0}%)`, color: s.rpcOpenCount > 0 ? 'text-[var(--warning)]' : 'text-[var(--success)]', icon: <Wifi className="w-4 h-4" /> },
+            { label: 'WS Open', value: `${s.wsOpenCount}`, color: s.wsOpenCount > 0 ? 'text-[var(--warning)]' : 'text-[var(--success)]', icon: <WifiOff className="w-4 h-4" /> },
+            { label: 'Debug Exposed', value: `${s.debugExposedCount}`, color: s.debugExposedCount > 0 ? 'text-[var(--critical)]' : 'text-[var(--success)]', icon: <AlertOctagon className="w-4 h-4" /> },
+            { label: 'Unique Providers', value: s.uniqueProviders.toString(), color: 'text-[var(--text-secondary)]', icon: <Database className="w-4 h-4" /> },
+          ].map(m => (
+            <div key={m.label} className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-3 text-center">
+              <div className={`flex items-center justify-center gap-1 mb-1 ${m.color} opacity-70`}>{m.icon}</div>
+              <div className={`text-xl font-bold tabular-nums ${m.color}`}>{m.value}</div>
+              <div className="text-xs text-[var(--text-tertiary)] mt-0.5">{m.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Filter + table */}
+      {scanData && !loading && s && s.totalNodes > 0 && (
+        <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl overflow-hidden">
+          {/* Filter bar */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border-subtle)] bg-[var(--bg-header)] flex-wrap">
+            <Filter className="w-4 h-4 text-[var(--text-tertiary)]" />
+            {(['all', 'risk', 'active'] as FilterMode[]).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                  filter === f
+                    ? 'bg-[var(--accent-blue)] text-white'
+                    : 'text-[var(--text-secondary)] hover:bg-white/5'
+                }`}
+              >
+                {f === 'all' ? `All (${scanData.nodes.length})` : f === 'risk' ? `🔴 At Risk (${scanData.nodes.filter(n => n.severity === 'risk').length})` : `Active Only (${scanData.nodes.filter(n => n.role === 'active').length})`}
+              </button>
+            ))}
+            <span className="ml-auto text-xs text-[var(--text-tertiary)]">
+              {filteredNodes.length} nodes · scanned {s.cachedAt ? new Date(s.cachedAt).toLocaleTimeString() : ''} · {(s.scanDurationMs/1000).toFixed(1)}s
+            </span>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border-subtle)] text-xs text-[var(--text-tertiary)] uppercase tracking-wide">
+                  {([
+                    ['securityScore', 'Score'],
+                    ['address', 'Address'],
+                    ['role', 'Role'],
+                    [null, 'IP'],
+                    ['geoIsp', 'Provider'],
+                    ['geoCountry', 'Country'],
+                    [null, 'RPC'],
+                    [null, 'WS'],
+                    [null, 'Modules'],
+                    ['findings', 'Findings'],
+                  ] as [SortKey | null, string][]).map(([key, label]) => (
+                    <th
+                      key={label}
+                      className={`px-3 py-2.5 text-left font-semibold ${key ? 'cursor-pointer hover:text-[var(--text-primary)] select-none' : ''}`}
+                      onClick={key ? () => toggleSort(key) : undefined}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {label}
+                        {key && <SortIcon k={key} />}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-subtle)]">
+                {filteredNodes.map(node => (
+                  <tr key={node.address} className="hover:bg-white/2 transition-colors">
+                    <td className="px-3 py-2.5">
+                      <ScoreBadge score={node.securityScore} severity={node.severity} />
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-1.5">
+                        <code className="font-mono text-xs text-[var(--text-secondary)]">
+                          {node.address.slice(0, 8)}…{node.address.slice(-6)}
+                        </code>
+                        <button
+                          onClick={() => copyAddr(node.address)}
+                          className="p-0.5 hover:bg-white/10 rounded transition-colors"
+                        >
+                          {copiedAddr === node.address
+                            ? <Check className="w-3 h-3 text-[var(--success)]" />
+                            : <Copy className="w-3 h-3 text-[var(--text-tertiary)]" />}
+                        </button>
+                        <a
+                          href={`https://xdcscan.com/address/${node.address}`}
+                          target="_blank"
+                          className="p-0.5 hover:bg-white/10 rounded transition-colors"
+                        >
+                          <ExternalLink className="w-3 h-3 text-[var(--text-tertiary)]" />
+                        </a>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded border ${
+                        node.role === 'active' ? 'bg-[var(--success)]/15 text-[var(--success)] border-[var(--success)]/30'
+                        : node.role === 'standby' ? 'bg-[var(--accent-blue)]/15 text-[var(--accent-blue)] border-[var(--accent-blue)]/30'
+                        : node.role === 'penalized' ? 'bg-[var(--critical)]/15 text-[var(--critical)] border-[var(--critical)]/30'
+                        : 'bg-white/5 text-[var(--text-tertiary)] border-[var(--border-subtle)]'
+                      }`}>
+                        {node.role}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <code className="font-mono text-xs text-[var(--text-tertiary)]">
+                        {node.ip ?? <span className="italic opacity-50">unknown</span>}
+                      </code>
+                    </td>
+                    <td className="px-3 py-2.5 max-w-[180px]">
+                      <div className="text-xs text-[var(--text-secondary)] truncate" title={node.geoIsp || node.geoOrg}>
+                        {node.geoIsp || node.geoOrg || (node.ip ? '—' : '')}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className="text-xs text-[var(--text-secondary)]">
+                        {node.geoCountry ? `${countryFlag(node.geoCountry)} ${node.geoCountry}` : node.ip ? '—' : ''}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      {node.ip
+                        ? node.rpcOpen
+                          ? <CheckCircle className="w-4 h-4 text-[var(--warning)] inline" />
+                          : <XCircle className="w-4 h-4 text-[var(--success)] inline" />
+                        : <span className="text-xs text-[var(--text-tertiary)] opacity-40">—</span>
+                      }
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      {node.ip
+                        ? node.wsOpen
+                          ? <CheckCircle className="w-4 h-4 text-[var(--warning)] inline" />
+                          : <XCircle className="w-4 h-4 text-[var(--success)] inline" />
+                        : <span className="text-xs text-[var(--text-tertiary)] opacity-40">—</span>
+                      }
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex flex-wrap gap-1">
+                        {node.exposedModules.map(m => <ModuleBadge key={m} name={m} />)}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {node.findings.length > 0
+                        ? <span className="text-xs font-bold text-[var(--critical)] bg-[var(--critical)]/10 border border-[var(--critical)]/25 px-2 py-0.5 rounded">{node.findings.length}</span>
+                        : <span className="text-xs text-[var(--success)] opacity-70">0</span>
+                      }
+                    </td>
+                  </tr>
+                ))}
+                {filteredNodes.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="px-4 py-8 text-center text-sm text-[var(--text-tertiary)]">
+                      No nodes match current filter
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Node Scanner types ───────────────────────────────────────────────────────
+interface NodeScanEntry {
+  ip: string;
+  sources: string[];
+  rpcOpen: boolean;
+  wsOpen: boolean;
+  p2pOpen: boolean;
+  exposedModules: string[];
+  dangerousModules: string[];
+  securityScore: number;
+  securityLabel: 'secure' | 'caution' | 'risk';
+  isp: string;
+  org: string;
+  country: string;
+  countryCode: string;
+  city: string;
+  findings: string[];
+}
+
+interface ScanResult {
+  scannedAt: string;
+  totalIPs: number;
+  openRpc: number;
+  openWs: number;
+  debugExposed: number;
+  uniqueProviders: number;
+  nodes: NodeScanEntry[];
+  activeCount: number;
+  standbyCount: number;
+  cached?: boolean;
+  error?: string;
+}
+
+// ─── Node Scanner component ───────────────────────────────────────────────────
+function NodeScanner() {
+  const [data, setData] = useState<ScanResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'risk' | 'open'>('all');
+  const [sortBy, setSortBy] = useState<'score' | 'ip' | 'provider'>('score');
+
+  const runScan = useCallback(async (force = false) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/security/nodes${force ? '?refresh=1' : ''}`);
+      const json = await res.json();
+      setData(json);
+    } catch (e) {
+      setData({ error: (e as Error).message } as ScanResult);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { runScan(); }, [runScan]);
+
+  const scoreColor = (score: number) =>
+    score >= 80 ? 'text-[var(--success)]' : score >= 50 ? 'text-[var(--warning)]' : 'text-[var(--critical)]';
+
+  const scoreBg = (label: string) => ({
+    secure:  'bg-[var(--success)]/15 text-[var(--success)] border-[var(--success)]/25',
+    caution: 'bg-[var(--warning)]/15 text-[var(--warning)] border-[var(--warning)]/25',
+    risk:    'bg-[var(--critical)]/15 text-[var(--critical)] border-[var(--critical)]/25',
+  }[label] || '');
+
+  const flagEmoji = (cc: string) => {
+    if (!cc || cc.length !== 2) return '🌐';
+    return String.fromCodePoint(...[...cc.toUpperCase()].map(c => 0x1F1E0 + c.charCodeAt(0) - 65));
+  };
+
+  const filteredNodes = (data?.nodes || [])
+    .filter(n => {
+      if (filter === 'risk') return n.securityLabel === 'risk' || n.securityLabel === 'caution';
+      if (filter === 'open') return n.rpcOpen || n.wsOpen;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'score') return a.securityScore - b.securityScore;
+      if (sortBy === 'ip') return a.ip.localeCompare(b.ip);
+      if (sortBy === 'provider') return (a.isp || '').localeCompare(b.isp || '');
+      return 0;
+    });
+
+  return (
+    <div className="space-y-4">
+      {/* Scan controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm text-[var(--text-secondary)]">
+          Discovers nodes via P2P peer list from local nodes · probes RPC/WS ports · geolocation via ip-api.com
+        </div>
+        <div className="flex items-center gap-2">
+          {data?.scannedAt && (
+            <span className="text-xs text-[var(--text-tertiary)] flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {new Date(data.scannedAt).toLocaleTimeString()}
+              {data.cached && ' (cached)'}
+            </span>
+          )}
+          <button
+            onClick={() => runScan(true)}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border border-[var(--accent-blue)]/20 rounded-lg hover:bg-[var(--accent-blue)]/20 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Scanning…' : 'Rescan'}
+          </button>
+        </div>
+      </div>
+
+      {data?.error && (
+        <div className="p-4 bg-[var(--critical)]/10 border border-[var(--critical)]/25 rounded-xl text-[var(--critical)] text-sm flex items-center gap-2">
+          <XCircle className="w-4 h-4 flex-shrink-0" /> {data.error}
+        </div>
+      )}
+
+      {loading && !data && (
+        <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl flex flex-col items-center justify-center py-20 gap-3 text-[var(--text-tertiary)]">
+          <RefreshCw className="w-8 h-8 animate-spin" />
+          <div className="text-sm">Discovering nodes via P2P peers and probing ports…</div>
+          <div className="text-xs">This takes 30–60 seconds on first run</div>
+        </div>
+      )}
+
+      {data && !data.error && (
+        <>
+          {/* Summary stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { label: 'Nodes Scanned', value: data.totalIPs, color: 'text-[var(--accent-blue)]' },
+              { label: 'RPC Open', value: data.openRpc, color: data.openRpc > 0 ? 'text-[var(--critical)]' : 'text-[var(--success)]', sub: data.totalIPs > 0 ? `${Math.round(data.openRpc/data.totalIPs*100)}%` : '' },
+              { label: 'WS Open', value: data.openWs, color: data.openWs > 0 ? 'text-[var(--warning)]' : 'text-[var(--success)]' },
+              { label: 'Debug Exposed', value: data.debugExposed, color: data.debugExposed > 0 ? 'text-[var(--critical)]' : 'text-[var(--success)]' },
+              { label: 'Providers', value: data.uniqueProviders, color: 'text-[var(--text-primary)]' },
+              { label: 'Active MN', value: data.activeCount, color: 'text-[var(--success)]' },
+            ].map(({ label, value, color, sub }) => (
+              <div key={label} className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-3 text-center">
+                <div className="text-xs text-[var(--text-tertiary)] mb-1">{label}</div>
+                <div className={`text-2xl font-bold tabular-nums ${color}`}>{value}</div>
+                {sub && <div className="text-xs text-[var(--text-tertiary)] mt-0.5">{sub}</div>}
+              </div>
+            ))}
+          </div>
+
+          {/* Filters + sort */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex bg-[var(--bg-card)] border border-[var(--border-card)] rounded-lg p-0.5 gap-0.5">
+              {(['all', 'risk', 'open'] as const).map(f => (
+                <button key={f} onClick={() => setFilter(f)}
+                  className={`px-3 py-1 text-xs font-medium rounded transition-colors ${filter === f ? 'bg-[var(--accent-blue)] text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
+                  {f === 'all' ? 'All' : f === 'risk' ? '⚠️ At Risk' : '🔓 Open RPC/WS'}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1 text-xs text-[var(--text-tertiary)]">
+              Sort:
+              {(['score', 'ip', 'provider'] as const).map(s => (
+                <button key={s} onClick={() => setSortBy(s)}
+                  className={`px-2 py-1 rounded transition-colors ${sortBy === s ? 'text-[var(--accent-blue)] font-semibold' : 'hover:bg-white/5'}`}>
+                  {s === 'score' ? 'Security Score' : s === 'ip' ? 'IP' : 'Provider'}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs text-[var(--text-tertiary)] ml-auto">{filteredNodes.length} nodes shown</span>
+          </div>
+
+          {/* Node table */}
+          <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-[var(--border-subtle)] bg-[var(--bg-header)]">
+                    {['Score', 'IP Address', 'Provider / ISP', 'Location', 'RPC', 'WS', 'P2P', 'Exposed Modules', 'Findings'].map(h => (
+                      <th key={h} className="px-3 py-2.5 text-left font-semibold text-[var(--text-tertiary)] whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border-subtle)]">
+                  {filteredNodes.length === 0 && (
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-[var(--text-tertiary)]">No nodes match filter</td></tr>
+                  )}
+                  {filteredNodes.map(node => (
+                    <tr key={node.ip} className={`hover:bg-white/3 transition-colors ${node.securityLabel === 'risk' ? 'bg-[var(--critical)]/3' : ''}`}>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        <span className={`font-bold text-sm tabular-nums ${scoreColor(node.securityScore)}`}>{node.securityScore}</span>
+                        <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded border ${scoreBg(node.securityLabel)}`}>
+                          {node.securityLabel === 'secure' ? '✓' : node.securityLabel === 'caution' ? '⚠' : '✗'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="font-mono text-[var(--text-primary)]">{node.ip}</span>
+                      </td>
+                      <td className="px-3 py-2.5 max-w-[160px]">
+                        <div className="truncate text-[var(--text-secondary)]" title={node.org || node.isp}>
+                          {node.org || node.isp || '—'}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        <span title={`${node.city}, ${node.country}`}>
+                          {flagEmoji(node.countryCode)} {node.city || node.country || '—'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        {node.rpcOpen
+                          ? <span className="text-[var(--critical)] font-bold">OPEN</span>
+                          : <span className="text-[var(--success)]">✓</span>}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        {node.wsOpen
+                          ? <span className="text-[var(--warning)] font-bold">OPEN</span>
+                          : <span className="text-[var(--success)]">✓</span>}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        {node.p2pOpen
+                          ? <span className="text-[var(--success)]">✓</span>
+                          : <span className="text-[var(--text-tertiary)]">—</span>}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex flex-wrap gap-1">
+                          {node.exposedModules.length === 0 && <span className="text-[var(--text-tertiary)]">none</span>}
+                          {node.exposedModules.map(m => (
+                            <span key={m} className={`px-1.5 py-0.5 rounded font-mono border ${
+                              node.dangerousModules.includes(m)
+                                ? 'bg-[var(--critical)]/15 text-[var(--critical)] border-[var(--critical)]/30'
+                                : 'bg-white/5 text-[var(--text-tertiary)] border-[var(--border-subtle)]'
+                            }`}>{m}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        {node.findings.length === 0
+                          ? <span className="text-[var(--success)] text-xs">✓ Clean</span>
+                          : <span className="text-[var(--critical)] text-xs">{node.findings.length} issue{node.findings.length > 1 ? 's' : ''}</span>
+                        }
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Note */}
+          <div className="text-xs text-[var(--text-tertiary)] bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl p-3">
+            <span className="font-semibold">Note:</span> Node discovery uses P2P peer lists from local XDC clients and SkyNet registry.
+            stats.xinfin.network WebSocket is not accessible server-side (origin-restricted).
+            Port probes are TCP SYN checks — open does not necessarily mean exploitable without authentication.
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 export default function SecurityPage() {
+  const [activeTab, setActiveTab] = useState<'audit' | 'nodes'>('audit');
   const [mainnetData, setMainnetData] = useState<AuditData | null>(null);
   const [apothemData, setApothemData] = useState<AuditData | null>(null);
   const [selectedNetwork, setSelectedNetwork] = useState<'mainnet' | 'apothem'>('mainnet');
 
-  // Fetch both networks for the governance flow section
   useEffect(() => {
     fetch('/api/security/audit?network=mainnet').then(r => r.json()).then(setMainnetData).catch(() => {});
     fetch('/api/security/audit?network=apothem').then(r => r.json()).then(setApothemData).catch(() => {});
@@ -578,56 +1181,67 @@ export default function SecurityPage() {
             <a href="https://github.com/AnilChinchawale/AllForOne/blob/main/XINFIN-SECURITY-AUDIT.md" target="_blank" className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[var(--bg-card)] border border-[var(--border-card)] rounded-lg hover:bg-white/5 transition-colors">
               <ExternalLink className="w-3.5 h-3.5" /> Audit Report
             </a>
-
           </div>
         </div>
 
-        {/* Key insight */}
-        <div className="bg-[var(--warning)]/8 border border-[var(--warning)]/25 rounded-xl p-4 flex gap-3">
-          <AlertTriangle className="w-5 h-5 text-[var(--warning)] flex-shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <span className="font-semibold text-[var(--warning)]">Root Cause: </span>
-            <span className="text-[var(--text-secondary)]">
-              <code className="font-mono text-xs bg-black/30 px-1 rounded">resign()</code> never decrements{' '}
-              <code className="font-mono text-xs bg-black/30 px-1 rounded">ownerCount</code>. On mainnet this has
-              confirmed at 219 owners. The delete bug (276 ghost entries) means invalidated validators\' state was never cleaned up — they can still resign() and withdraw stake.
-            </span>
-          </div>
+        {/* Tab switcher */}
+        <div className="flex bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-1 gap-1 w-fit">
+          <button onClick={() => setActiveTab('audit')}
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'audit' ? 'bg-[var(--accent-blue)] text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
+            <Shield className="w-4 h-4" /> Contract Audit
+          </button>
+          <button onClick={() => setActiveTab('nodes')}
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'nodes' ? 'bg-[var(--accent-blue)] text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
+            <Server className="w-4 h-4" /> Node Scanner
+          </button>
         </div>
 
-        {/* Network panels */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-          <NetworkPanel networkKey="mainnet" label="XDC Mainnet" />
-          <NetworkPanel networkKey="apothem" label="Apothem Testnet" />
-        </div>
-
-        {/* KYC Governance Flow — network selector */}
-        <div>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-1 gap-1">
-              {(['mainnet', 'apothem'] as const).map(n => (
-                <button
-                  key={n}
-                  onClick={() => setSelectedNetwork(n)}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-colors ${selectedNetwork === n ? 'bg-[var(--accent-blue)] text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}
-                >
-                  {n === 'mainnet' ? 'XDC Mainnet' : 'Apothem'}
-                </button>
-              ))}
+        {activeTab === 'audit' && (
+          <>
+            {/* Key insight */}
+            <div className="bg-[var(--warning)]/8 border border-[var(--warning)]/25 rounded-xl p-4 flex gap-3">
+              <AlertTriangle className="w-5 h-5 text-[var(--warning)] flex-shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <span className="font-semibold text-[var(--warning)]">Root Cause: </span>
+                <span className="text-[var(--text-secondary)]">
+                  <code className="font-mono text-xs bg-black/30 px-1 rounded">resign()</code> never decrements{' '}
+                  <code className="font-mono text-xs bg-black/30 px-1 rounded">ownerCount</code>. On mainnet
+                  confirmed at 219 owners. The delete bug (276 ghost entries) means invalidated validators&apos; state was never cleaned up — they can still resign() and withdraw stake.
+                </span>
+              </div>
             </div>
-            <span className="text-xs text-[var(--text-tertiary)]">Select network for KYC flow analysis</span>
-          </div>
 
-          {kycData && !kycData.error ? (
-            <KycGovernanceSection data={kycData} />
-          ) : (
-            <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl flex items-center justify-center py-16 text-[var(--text-tertiary)]">
-              <RefreshCw className="w-5 h-5 animate-spin mr-2" /> Loading KYC governance data…
+            {/* Network panels */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+              <NetworkPanel networkKey="mainnet" label="XDC Mainnet" />
+              <NetworkPanel networkKey="apothem" label="Apothem Testnet" />
             </div>
-          )}
-        </div>
 
+            {/* KYC Governance Flow */}
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-1 gap-1">
+                  {(['mainnet', 'apothem'] as const).map(n => (
+                    <button key={n} onClick={() => setSelectedNetwork(n)}
+                      className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-colors ${selectedNetwork === n ? 'bg-[var(--accent-blue)] text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
+                      {n === 'mainnet' ? 'XDC Mainnet' : 'Apothem'}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-xs text-[var(--text-tertiary)]">Select network for KYC flow analysis</span>
+              </div>
+              {kycData && !kycData.error ? (
+                <KycGovernanceSection data={kycData} />
+              ) : (
+                <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl flex items-center justify-center py-16 text-[var(--text-tertiary)]">
+                  <RefreshCw className="w-5 h-5 animate-spin mr-2" /> Loading KYC governance data…
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
+        {activeTab === 'nodes' && <NodeScanner />}
 
       </div>
     </DashboardLayout>
