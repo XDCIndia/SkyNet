@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as net from 'net';
-import * as fs from 'fs';
-import * as path from 'path';
 import { scrapeEthstats, EthstatsNode } from '@/lib/ethstats-scraper';
+import { AUDIT_NODE_IPS, AUDIT_NODE_ACCOUNTS } from '@/lib/audit-data';
 
 export const maxDuration = 120; // Allow up to 120 seconds for full scan
 export const dynamic = 'force-dynamic';
@@ -256,14 +255,9 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
 
   // Source A0: Known audit IPs (238 nodes from security assessment)
   if (networkKey === 'mainnet') {
-    try {
-      const auditPath = path.join(process.cwd(), 'lib', 'audit-known-nodes.json');
-      const auditRaw = fs.readFileSync(auditPath, 'utf-8');
-      const auditNodesList: Array<{ ip: string; port: number }> = JSON.parse(auditRaw);
-      for (const node of auditNodesList) {
-        addIP(node.ip, 'audit:port' + node.port);
-      }
-    } catch { /* audit nodes file not found */ }
+    for (const node of AUDIT_NODE_IPS) {
+      addIP(node.ip, 'audit:port' + node.port);
+    }
   }
 
   // Source A: admin_peers from local nodes
@@ -334,13 +328,7 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
   const geoMap = await geolocateBatch(allIPs);
 
   // 5. Load audit IP→account mapping
-  let auditAccounts: Record<string, { account: string; name: string; port: number; isCandidate: boolean }> = {};
-  if (networkKey === 'mainnet') {
-    try {
-      const acctPath = path.join(process.cwd(), 'lib', 'audit-node-accounts.json');
-      auditAccounts = JSON.parse(fs.readFileSync(acctPath, 'utf-8'));
-    } catch { /* */ }
-  }
+  const auditAccounts = networkKey === 'mainnet' ? AUDIT_NODE_ACCOUNTS : {};
 
   // Build result entries
   const nodes: NodeScanEntry[] = probeResults.map(({ ip, rpcOpen, rpcPort, wsOpen, p2pOpen, modules, dangerous }) => {
