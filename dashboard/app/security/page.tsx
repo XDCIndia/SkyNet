@@ -632,39 +632,7 @@ export default function SecurityPage() {
           )}
         </div>
 
-        {/* Remediation quick ref */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <GitBranch className="w-4 h-4 text-[var(--accent-blue)]" />
-            <span className="font-semibold text-sm">Remediation Reference</span>
-            <span className="text-xs text-[var(--text-tertiary)] ml-auto">Sorted by impact / effort</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-            {[
-              { rank: '1', effort: '1 line', title: 'Activate V2 Contract', code: 'ValidtorV2SMCBlock = big.NewInt(102030000)', file: 'common/constants.go', color: 'border-[var(--critical)]/30 bg-[var(--critical)]/5' },
-              { rank: '2', effort: '1 line', title: 'Fix RPC Bind Address', code: 'HTTPListenAddrFlag.Value = "localhost"', file: 'cmd/utils/flags.go', color: 'border-[var(--critical)]/30 bg-[var(--critical)]/5' },
-              { rank: '3', effort: '5 min', title: 'Fix BFT Broadcast Order', code: 'Move broadcastCh after voteHandler()', file: 'eth/bft/bft_handler.go', color: 'border-[var(--warning)]/30 bg-[var(--warning)]/5' },
-              { rank: '4', effort: '2 hours', title: 'Replace math/rand', code: 'cryptoRand.Int(cryptoRand.Reader, max)', file: 'contracts/utils.go', color: 'border-[var(--warning)]/30 bg-[var(--warning)]/5' },
-            ].map(item => (
-              <div key={item.rank} className={`rounded-xl p-3 border ${item.color}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-[var(--text-tertiary)]">#{item.rank}</span>
-                  <span className="text-xs text-[var(--text-tertiary)] bg-black/20 px-1.5 py-0.5 rounded">{item.effort}</span>
-                </div>
-                <div className="font-semibold text-xs mb-1.5">{item.title}</div>
-                <code className="text-xs font-mono text-[var(--success)] block mb-1.5 break-all">{item.code}</code>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-[var(--text-tertiary)] font-mono truncate">{item.file}</span>
-                  {'link' in item && (
-                    <a href={(item as { link: string }).link} target="_blank" className="flex items-center gap-0.5 text-xs text-[var(--accent-blue)] hover:underline ml-2 flex-shrink-0">
-                      
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+
 
       </div>
     </DashboardLayout>
