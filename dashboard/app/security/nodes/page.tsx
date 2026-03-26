@@ -85,6 +85,7 @@ function flagEmoji(cc: string) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function NodeScannerPage() {
+  const [network, setNetwork] = useState<'mainnet' | 'apothem'>('mainnet');
   const [data, setData] = useState<ScanResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'risk' | 'open'>('all');
@@ -94,14 +95,16 @@ export default function NodeScannerPage() {
   const runScan = useCallback(async (force = false) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/security/nodes${force ? '?refresh=1' : ''}`);
+      const params = new URLSearchParams({ network });
+      if (force) params.set('refresh', '1');
+      const res = await fetch(`/api/security/nodes?${params}`);
       setData(await res.json());
     } catch (e) {
       setData({ error: (e as Error).message } as ScanResult);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [network]);
 
   useEffect(() => { runScan(); }, [runScan]);
 
@@ -136,6 +139,14 @@ export default function NodeScannerPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex bg-[var(--bg-card)] border border-[var(--border-card)] rounded-lg p-0.5 gap-0.5">
+              {(['mainnet', 'apothem'] as const).map(n => (
+                <button key={n} onClick={() => { setNetwork(n); setData(null); }}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${network === n ? 'bg-[var(--accent-blue)] text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
+                  {n === 'mainnet' ? 'Mainnet' : 'Apothem'}
+                </button>
+              ))}
+            </div>
             {data?.scannedAt && (
               <span className="text-xs text-[var(--text-tertiary)] flex items-center gap-1">
                 <Clock className="w-3 h-3" />

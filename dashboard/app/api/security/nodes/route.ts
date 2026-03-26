@@ -6,14 +6,37 @@ export const maxDuration = 120; // Allow up to 120 seconds for full scan
 export const dynamic = 'force-dynamic';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-const RPC = 'https://rpc.xdcrpc.com';
 const VALIDATOR = '0x0000000000000000000000000000000000000088';
+
+const NETWORKS: Record<string, { name: string; rpc: string; fallbacks: string[]; ethstatsIp?: string; ethstatsPort?: number; localNodes: Array<{url: string; name: string}> }> = {
+  mainnet: {
+    name: 'XDC Mainnet',
+    rpc: 'https://rpc.xdcrpc.com',
+    fallbacks: ['https://rpc.xdc.network', 'https://rpc.xinfin.network'],
+    ethstatsIp: '45.82.64.150',
+    ethstatsPort: 3000,
+    localNodes: [
+      { url: 'http://localhost:8545', name: 'GP5 Mainnet' },
+      { url: 'http://localhost:8547', name: 'NM Mainnet' },
+      { url: 'http://localhost:8546', name: 'Erigon Mainnet' },
+      { url: 'http://localhost:8548', name: 'Reth Mainnet' },
+    ],
+  },
+  apothem: {
+    name: 'Apothem Testnet',
+    rpc: 'https://apothem.xdcrpc.com',
+    fallbacks: ['https://rpc.apothem.network'],
+    localNodes: [
+      { url: 'http://localhost:8562', name: 'GP5 Apothem' },
+    ],
+  },
+};
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 const PROBE_TIMEOUT_MS = 2500;
 const PROBE_CONCURRENCY = 25;
 
-// ─── Cache ────────────────────────────────────────────────────────────────────
-let cache: { data: ScanResult; ts: number } | null = null;
+// ─── Cache (per network) ──────────────────────────────────────────────────────
+const cache = new Map<string, { data: ScanResult; ts: number }>();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface NodeScanEntry {
@@ -200,7 +223,10 @@ async function scanWithConcurrency<T, R>(
 }
 
 // ─── Main scan ────────────────────────────────────────────────────────────────
-async function runScan(): Promise<ScanResult> {
+async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
+  const network = NETWORKS[networkKey] || NETWORKS.mainnet;
+  const RPC = network.rpc;
+
   // 1. Get masternode list
   const mnData = await rpcPost(RPC, 'XDPoS_getMasternodesByNumber', ['latest']) as {
     Masternodes: string[];
@@ -221,13 +247,7 @@ async function runScan(): Promise<ScanResult> {
   };
 
   // Source A: admin_peers from local nodes
-  const localNodes = [
-    { url: 'http://localhost:8545', name: 'GP5 Mainnet' },
-    { url: 'http://localhost:8547', name: 'NM Mainnet' },
-    { url: 'http://localhost:8546', name: 'Erigon Mainnet' },
-    { url: 'http://localhost:8562', name: 'GP5 Apothem' },
-    { url: 'http://localhost:8548', name: 'Reth Mainnet' },
-  ];
+  const localNodes = network.localNodes;
 
   for (const node of localNodes) {
     try {
@@ -353,10 +373,12 @@ async function runScan(): Promise<ScanResult> {
     return b.stakeXDC - a.stakeXDC;
   });
 
-  // 7. Scrape ethstats for full node names + stats
+  // 7. Scrape ethstats for full node names + stats (only mainnet has ethstats)
   let ethstatsData: ScanResult['ethstats'];
   try {
-    const ethResult = await scrapeEthstats();
+    const ethResult = network.ethstatsIp
+      ? await scrapeEthstats(network.ethstatsIp, network.ethstatsPort)
+      : { nodes: [], totalCollected: 0, messagesProcessed: 0, scrapedAt: new Date().toISOString(), error: 'No ethstats configured for this network' };
     const activeNodes = ethResult.nodes.filter(n => n.active && !n.syncing);
     const syncingNodes = ethResult.nodes.filter(n => n.syncing);
     const maxBlock = Math.max(0, ...ethResult.nodes.map(n => n.blockNumber));
@@ -400,15 +422,21 @@ async function runScan(): Promise<ScanResult> {
 // ─── Route handler ────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   const force = req.nextUrl.searchParams.get('refresh') === '1';
+  const networkKey = req.nextUrl.searchParams.get('network') || 'mainnet';
+
+  if (!NETWORKS[networkKey]) {
+    return NextResponse.json({ error: `Unknown network: ${networkKey}. Use: mainnet | apothem` }, { status: 400 });
+  }
 
   // Return cache if valid
-  if (!force && cache && Date.now() - cache.ts < CACHE_TTL) {
-    return NextResponse.json({ ...cache.data, cached: true });
+  const cached = cache.get(networkKey);
+  if (!force && cached && Date.now() - cached.ts < CACHE_TTL) {
+    return NextResponse.json({ ...cached.data, cached: true });
   }
 
   try {
-    const data = await runScan();
-    cache = { data, ts: Date.now() };
+    const data = await runScan(networkKey);
+    cache.set(networkKey, { data, ts: Date.now() });
     return NextResponse.json(data, { headers: { 'Cache-Control': 'no-store' } });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });

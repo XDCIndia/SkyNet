@@ -8,8 +8,9 @@
 
 import WebSocket from 'ws';
 
-const ETHSTATS_WS = 'ws://45.82.64.150:3000/primus/';
-const COLLECT_DURATION_MS = 10_000; // 10 seconds to collect all node updates
+const DEFAULT_ETHSTATS_IP = '45.82.64.150';
+const DEFAULT_ETHSTATS_PORT = 3000;
+const COLLECT_DURATION_MS = 10_000;
 const WS_TIMEOUT_MS = 15_000;
 
 export interface EthstatsNode {
@@ -34,13 +35,17 @@ export interface EthstatsResult {
   error?: string;
 }
 
-export async function scrapeEthstats(): Promise<EthstatsResult> {
+export async function scrapeEthstats(ip?: string, port?: number): Promise<EthstatsResult> {
+  const wsHost = ip || DEFAULT_ETHSTATS_IP;
+  const wsPort = port || DEFAULT_ETHSTATS_PORT;
+  const wsUrl = `ws://${wsHost}:${wsPort}/primus/`;
+
   return new Promise((resolve) => {
     const nodes = new Map<string, Partial<EthstatsNode>>();
     let msgCount = 0;
     let startTime = 0;
 
-    const ws = new WebSocket(ETHSTATS_WS + '?_primuscb=' + Date.now() + '-0', {
+    const ws = new WebSocket(wsUrl + '?_primuscb=' + Date.now() + '-0', {
       headers: {
         'Origin': 'https://stats.xinfin.network',
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
