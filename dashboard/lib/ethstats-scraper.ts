@@ -10,8 +10,8 @@ import WebSocket from 'ws';
 
 const DEFAULT_ETHSTATS_IP = '45.82.64.150';
 const DEFAULT_ETHSTATS_PORT = 3000;
-const COLLECT_DURATION_MS = 10_000;
-const WS_TIMEOUT_MS = 15_000;
+const COLLECT_DURATION_MS = 5_000;  // 5 seconds is enough — most nodes update within 3s
+const WS_TIMEOUT_MS = 8_000;
 
 export interface EthstatsNode {
   name: string;

@@ -329,77 +329,74 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
 
   const uniqueProviders = new Set(nodes.map(n => n.isp || n.org).filter(Boolean)).size;
 
-  // 6. Enrich masternode list with stake + owner
+  // 6. Run ethstats + masternode enrichment IN PARALLEL (both are slow)
   const mnSet = new Set(masternodes.map(a => a.toLowerCase()));
   const sbSet = new Set(standbynodes.map(a => a.toLowerCase()));
   const penSet = new Set(penalized.map(a => a.toLowerCase()));
 
-  // Get all active candidates
-  const candidatesHex = await ethCall(RPC, VALIDATOR, '0x06a49fce');
-  const allCandidates = decodeAddressArray(candidatesHex).filter(a => parseInt(a, 16) !== 0);
-
-  // Batch fetch stake + owner for all candidates (in groups of 25 to avoid rate limits)
-  const masternodeList: MasternodeEntry[] = [];
-  for (let i = 0; i < allCandidates.length; i += 25) {
-    const batch = allCandidates.slice(i, i + 25);
-    const results = await Promise.allSettled(
-      batch.map(async (addr) => {
-        const capSel = '0x58e7525f' + '0'.repeat(24) + addr.slice(2);
-        const ownerSel = '0xb642facd' + '0'.repeat(24) + addr.slice(2);
-        const [capHex, ownerHex] = await Promise.all([
-          ethCall(RPC, VALIDATOR, capSel),
-          ethCall(RPC, VALIDATOR, ownerSel),
-        ]);
-        const capWei = BigInt(capHex || '0x0');
-        const stakeXDC = Math.round(Number(capWei) / 1e18);
-        const owner = ownerHex && ownerHex.length >= 42 ? '0x' + ownerHex.slice(-40) : '';
-        const addrLower = addr.toLowerCase();
-        const role: MasternodeEntry['role'] = mnSet.has(addrLower) ? 'active'
-          : sbSet.has(addrLower) ? 'standby'
-          : penSet.has(addrLower) ? 'penalized'
-          : 'candidate';
-        return { address: addr, owner, stakeXDC, role };
-      })
-    );
-    for (const r of results) {
-      if (r.status === 'fulfilled') masternodeList.push(r.value);
+  // Start ethstats scrape immediately (5s WS collection)
+  const ethstatsPromise = (async () => {
+    try {
+      return network.ethstatsIp
+        ? await scrapeEthstats(network.ethstatsIp, network.ethstatsPort)
+        : { nodes: [], totalCollected: 0, messagesProcessed: 0, scrapedAt: new Date().toISOString(), error: 'No ethstats for this network' };
+    } catch (e) {
+      return { nodes: [], totalCollected: 0, messagesProcessed: 0, scrapedAt: new Date().toISOString(), error: (e as Error).message };
     }
-  }
-  // Sort: active first, then by stake descending
-  masternodeList.sort((a, b) => {
-    const roleOrder = { active: 0, standby: 1, penalized: 2, candidate: 3 };
-    const rd = roleOrder[a.role] - roleOrder[b.role];
-    if (rd !== 0) return rd;
-    return b.stakeXDC - a.stakeXDC;
-  });
+  })();
 
-  // 7. Scrape ethstats for full node names + stats (only mainnet has ethstats)
-  let ethstatsData: ScanResult['ethstats'];
-  try {
-    const ethResult = network.ethstatsIp
-      ? await scrapeEthstats(network.ethstatsIp, network.ethstatsPort)
-      : { nodes: [], totalCollected: 0, messagesProcessed: 0, scrapedAt: new Date().toISOString(), error: 'No ethstats configured for this network' };
-    const activeNodes = ethResult.nodes.filter(n => n.active && !n.syncing);
-    const syncingNodes = ethResult.nodes.filter(n => n.syncing);
-    const maxBlock = Math.max(0, ...ethResult.nodes.map(n => n.blockNumber));
-    ethstatsData = {
-      totalNodes: ethResult.totalCollected,
-      activeNodes: activeNodes.length,
-      syncingNodes: syncingNodes.length,
-      maxBlock,
-      nodes: ethResult.nodes,
-      error: ethResult.error,
-    };
-  } catch (err) {
-    ethstatsData = {
-      totalNodes: 0,
-      activeNodes: 0,
-      syncingNodes: 0,
-      maxBlock: 0,
-      nodes: [],
-      error: (err as Error).message,
-    };
-  }
+  // Start masternode enrichment in parallel
+  const masternodePromise = (async () => {
+    const candidatesHex = await ethCall(RPC, VALIDATOR, '0x06a49fce');
+    const allCandidates = decodeAddressArray(candidatesHex).filter(a => parseInt(a, 16) !== 0);
+    const list: MasternodeEntry[] = [];
+    for (let i = 0; i < allCandidates.length; i += 50) {
+      const batch = allCandidates.slice(i, i + 50);
+      const results = await Promise.allSettled(
+        batch.map(async (addr) => {
+          const capSel = '0x58e7525f' + '0'.repeat(24) + addr.slice(2);
+          const ownerSel = '0xb642facd' + '0'.repeat(24) + addr.slice(2);
+          const [capHex, ownerHex] = await Promise.all([
+            ethCall(RPC, VALIDATOR, capSel),
+            ethCall(RPC, VALIDATOR, ownerSel),
+          ]);
+          const capWei = BigInt(capHex || '0x0');
+          const stakeXDC = Math.round(Number(capWei) / 1e18);
+          const owner = ownerHex && ownerHex.length >= 42 ? '0x' + ownerHex.slice(-40) : '';
+          const addrLower = addr.toLowerCase();
+          const role: MasternodeEntry['role'] = mnSet.has(addrLower) ? 'active'
+            : sbSet.has(addrLower) ? 'standby'
+            : penSet.has(addrLower) ? 'penalized'
+            : 'candidate';
+          return { address: addr, owner, stakeXDC, role };
+        })
+      );
+      for (const r of results) {
+        if (r.status === 'fulfilled') list.push(r.value);
+      }
+    }
+    list.sort((a, b) => {
+      const roleOrder = { active: 0, standby: 1, penalized: 2, candidate: 3 };
+      const rd = roleOrder[a.role] - roleOrder[b.role];
+      return rd !== 0 ? rd : b.stakeXDC - a.stakeXDC;
+    });
+    return list;
+  })();
+
+  // Wait for both to complete
+  const [ethResult, masternodeList] = await Promise.all([ethstatsPromise, masternodePromise]);
+
+  const activeEthNodes = ethResult.nodes.filter((n: { active: boolean; syncing: boolean }) => n.active && !n.syncing);
+  const syncingEthNodes = ethResult.nodes.filter((n: { syncing: boolean }) => n.syncing);
+  const maxEthBlock = Math.max(0, ...ethResult.nodes.map((n: { blockNumber: number }) => n.blockNumber));
+  const ethstatsData: ScanResult['ethstats'] = {
+    totalNodes: ethResult.totalCollected,
+    activeNodes: activeEthNodes.length,
+    syncingNodes: syncingEthNodes.length,
+    maxBlock: maxEthBlock,
+    nodes: ethResult.nodes,
+    error: ethResult.error,
+  };
 
   return {
     scannedAt: new Date().toISOString(),
