@@ -50,6 +50,7 @@ const navItems: NavItem[] = [
   { id: 'masternodes', label: 'Masternodes', icon: <Pickaxe className="w-5 h-5" />, path: '/masternodes', section: 'Network' },
   { id: 'consensus', label: 'Consensus', icon: <ShieldCheck className="w-5 h-5" />, path: '/dashboard/consensus', section: 'Network' },
   { id: 'security', label: 'Security Audit', icon: <ShieldAlert className="w-5 h-5" />, path: '/security', section: 'Network' },
+  { id: 'node-scanner', label: 'Node Scanner', icon: <Server className="w-5 h-5" />, path: '/security/nodes', section: 'Network' },
   { id: 'skyone', label: 'SkyOne Dashboard', icon: <Monitor className="w-5 h-5" />, path: '/skyone', section: 'Tools' },
   { id: 'multi-client', label: 'Multi-Client', icon: <Layers className="w-5 h-5" />, path: '/dashboard/multi-client', section: 'Tools' },
   { id: 'explorer', label: 'Explorer', icon: <Globe className="w-5 h-5" />, path: '/explorer', section: 'Public', isPublic: true },
