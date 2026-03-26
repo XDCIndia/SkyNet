@@ -927,6 +927,14 @@ interface ScanResult {
   standbyCount: number;
   cached?: boolean;
   error?: string;
+  ethstats?: {
+    totalNodes: number;
+    activeNodes: number;
+    syncingNodes: number;
+    maxBlock: number;
+    nodes: Array<{ name: string; blockNumber: number; peers: number; active: boolean; syncing: boolean; latency: number; uptime: number; miner?: string }>;
+    error?: string;
+  };
 }
 
 // ─── Node Scanner component ───────────────────────────────────────────────────
@@ -1136,11 +1144,72 @@ function NodeScanner() {
             </div>
           </div>
 
+          {/* Ethstats Network Nodes */}
+          {data.ethstats && data.ethstats.totalNodes > 0 && (
+            <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)] bg-[var(--bg-header)]">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-[var(--accent-blue)]" />
+                  <span className="font-semibold text-sm">XDC Network Nodes (from stats.xinfin.network)</span>
+                  <span className="text-xs text-[var(--text-tertiary)] bg-black/20 px-2 py-0.5 rounded-full">{data.ethstats.totalNodes} nodes</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-[var(--text-tertiary)]">
+                  <span className="text-[var(--success)]">● {data.ethstats.activeNodes} active</span>
+                  <span className="text-[var(--warning)]">● {data.ethstats.syncingNodes} syncing</span>
+                  <span>Block #{data.ethstats.maxBlock?.toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-[var(--bg-header)]">
+                    <tr className="border-b border-[var(--border-subtle)]">
+                      {['#', 'Node Name', 'Block', 'Peers', 'Status', 'Latency', 'Uptime'].map(h => (
+                        <th key={h} className="px-3 py-2 text-left font-semibold text-[var(--text-tertiary)] whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border-subtle)]">
+                    {data.ethstats.nodes.slice(0, 100).map((node: { name: string; blockNumber: number; peers: number; active: boolean; syncing: boolean; latency: number; uptime: number }, idx: number) => {
+                      const maxBlock = data.ethstats?.maxBlock || 0;
+                      const behind = maxBlock - node.blockNumber;
+                      const isStale = behind > 100;
+                      return (
+                        <tr key={node.name} className={`hover:bg-white/3 transition-colors ${isStale ? 'bg-[var(--warning)]/5' : ''}`}>
+                          <td className="px-3 py-1.5 text-[var(--text-tertiary)]">{idx + 1}</td>
+                          <td className="px-3 py-1.5 font-mono text-[var(--text-primary)] max-w-[200px] truncate" title={node.name}>{node.name}</td>
+                          <td className="px-3 py-1.5 tabular-nums">
+                            <span className={isStale ? 'text-[var(--warning)]' : ''}>{node.blockNumber.toLocaleString()}</span>
+                            {behind > 0 && <span className="text-[var(--text-tertiary)] ml-1">(-{behind.toLocaleString()})</span>}
+                          </td>
+                          <td className="px-3 py-1.5 tabular-nums">{node.peers}</td>
+                          <td className="px-3 py-1.5">
+                            {node.active && !node.syncing
+                              ? <span className="text-[var(--success)]">● Active</span>
+                              : node.syncing
+                              ? <span className="text-[var(--warning)]">◐ Syncing</span>
+                              : <span className="text-[var(--critical)]">○ Offline</span>
+                            }
+                          </td>
+                          <td className="px-3 py-1.5 tabular-nums text-[var(--text-tertiary)]">{node.latency}ms</td>
+                          <td className="px-3 py-1.5 tabular-nums text-[var(--text-tertiary)]">{node.uptime}%</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {data.ethstats.totalNodes > 100 && (
+                <div className="px-4 py-2 text-xs text-[var(--text-tertiary)] border-t border-[var(--border-subtle)]">
+                  Showing top 100 of {data.ethstats.totalNodes} nodes by block height
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Note */}
           <div className="text-xs text-[var(--text-tertiary)] bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl p-3">
-            <span className="font-semibold">Note:</span> Node discovery uses P2P peer lists from local XDC clients and SkyNet registry.
-            stats.xinfin.network WebSocket is not accessible server-side (origin-restricted).
-            Port probes are TCP SYN checks — open does not necessarily mean exploitable without authentication.
+            <span className="font-semibold">Sources:</span> Node list from stats.xinfin.network (WebSocket scrape, {data.ethstats?.totalNodes || 0} nodes).
+            Port security probes via P2P peer discovery ({data.totalIPs} IPs). TCP probe ≠ exploitable (authentication may exist behind open port).
           </div>
         </>
       )}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as net from 'net';
+import { scrapeEthstats, EthstatsNode } from '@/lib/ethstats-scraper';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const RPC = 'https://rpc.xdcrpc.com';
@@ -42,6 +43,14 @@ export interface ScanResult {
   penalized: string[];
   activeCount: number;
   standbyCount: number;
+  ethstats: {
+    totalNodes: number;
+    activeNodes: number;
+    syncingNodes: number;
+    maxBlock: number;
+    nodes: EthstatsNode[];
+    error?: string;
+  };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -265,6 +274,32 @@ async function runScan(): Promise<ScanResult> {
 
   const uniqueProviders = new Set(nodes.map(n => n.isp || n.org).filter(Boolean)).size;
 
+  // 6. Scrape ethstats for full node names + stats
+  let ethstatsData: ScanResult['ethstats'];
+  try {
+    const ethResult = await scrapeEthstats();
+    const activeNodes = ethResult.nodes.filter(n => n.active && !n.syncing);
+    const syncingNodes = ethResult.nodes.filter(n => n.syncing);
+    const maxBlock = Math.max(0, ...ethResult.nodes.map(n => n.blockNumber));
+    ethstatsData = {
+      totalNodes: ethResult.totalCollected,
+      activeNodes: activeNodes.length,
+      syncingNodes: syncingNodes.length,
+      maxBlock,
+      nodes: ethResult.nodes,
+      error: ethResult.error,
+    };
+  } catch (err) {
+    ethstatsData = {
+      totalNodes: 0,
+      activeNodes: 0,
+      syncingNodes: 0,
+      maxBlock: 0,
+      nodes: [],
+      error: (err as Error).message,
+    };
+  }
+
   return {
     scannedAt: new Date().toISOString(),
     totalIPs: nodes.length,
@@ -278,6 +313,7 @@ async function runScan(): Promise<ScanResult> {
     penalized,
     activeCount: masternodes.length,
     standbyCount: standbynodes.length,
+    ethstats: ethstatsData,
   };
 }
 
