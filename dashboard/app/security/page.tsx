@@ -193,7 +193,7 @@ function KycGovernanceSection({ data }: { data: AuditData }) {
         <Shield className="w-5 h-5 text-[var(--accent-blue)]" />
         <div>
           <div className="font-semibold">KYC Governance Flow</div>
-          <div className="text-xs text-[var(--text-tertiary)]">{data.network} — Live on-chain data via {data.rpc.includes('ankr') ? 'Ankr Public RPC' : data.rpc}</div>
+          <div className="text-xs text-[var(--text-tertiary)]">{data.network}</div>
         </div>
         <div className="ml-auto">
           {kyc.governanceBroken
@@ -327,7 +327,7 @@ function KycGovernanceSection({ data }: { data: AuditData }) {
           >
             <div className="flex items-center gap-2">
               <Database className="w-4 h-4 text-[var(--accent-blue)]" />
-              <span className="font-semibold text-sm">Validate Yourself — Ankr Public RPC Queries</span>
+              <span className="font-semibold text-sm">Validate Yourself — Live RPC Queries</span>
             </div>
             {showValidation ? <ChevronDown className="w-4 h-4 text-[var(--text-tertiary)]" /> : <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />}
           </button>
@@ -335,9 +335,7 @@ function KycGovernanceSection({ data }: { data: AuditData }) {
           {showValidation && (
             <div className="border-t border-[var(--border-subtle)] p-4 space-y-4">
               <p className="text-sm text-[var(--text-secondary)]">
-                Run these queries yourself using{' '}
-                <a href="https://www.ankr.com/rpc/xdc/" target="_blank" className="text-[var(--accent-blue)] hover:underline">Ankr public RPC</a>{' '}
-                — no API key required for basic calls.
+                Run these queries yourself using any public XDC RPC — no API key required for basic calls.
               </p>
 
               {[
@@ -366,7 +364,7 @@ function KycGovernanceSection({ data }: { data: AuditData }) {
                 <div key={i} className="rounded-xl border border-[var(--border-subtle)] overflow-hidden">
                   <div className="px-3 py-2 bg-[var(--bg-header)] border-b border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-secondary)] flex items-center justify-between">
                     <span>{q.label}</span>
-                    {q.rpc && <span className="font-mono text-[var(--text-tertiary)] text-xs">{q.rpc.includes('ankr') ? '⚡ Ankr Public RPC' : q.rpc}</span>}
+                    {q.rpc && <span className="font-mono text-[var(--text-tertiary)] text-xs">{q.rpc}</span>}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[var(--border-subtle)]">
                     <div className="p-3">
@@ -397,9 +395,9 @@ function KycGovernanceSection({ data }: { data: AuditData }) {
               <div className="rounded-xl border border-[var(--border-subtle)] overflow-hidden">
                 <div className="px-3 py-2 bg-[var(--bg-header)] border-b border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-secondary)] flex items-center justify-between">
                   <span>Run in terminal — curl one-liner</span>
-                  <CopyButton text={`curl -s -X POST https://rpc.ankr.com/xdc -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_call","params":[{"to":"0x0000000000000000000000000000000000000088","data":"0xa9ff959e"},"latest"],"id":1}' | python3 -c "import json,sys; r=json.load(sys.stdin); print('ownerCount:', int(r['result'],16))"`} />
+                  <CopyButton text={`curl -s -X POST https://rpc.xinfin.network -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_call","params":[{"to":"0x0000000000000000000000000000000000000088","data":"0xef18374a"},"latest"],"id":1}' | python3 -c "import json,sys; r=json.load(sys.stdin); print('ownerCount:', int(r['result'],16))"`} />
                 </div>
-                <pre className="text-xs font-mono text-[var(--accent-blue)] p-3 overflow-x-auto bg-black/20">{`curl -s -X POST https://rpc.ankr.com/xdc \\
+                <pre className="text-xs font-mono text-[var(--accent-blue)] p-3 overflow-x-auto bg-black/20">{`curl -s -X POST https://rpc.xinfin.network \\
   -H "Content-Type: application/json" \\
   -d '{"jsonrpc":"2.0","method":"eth_call","params":[{"to":"0x0000000000000000000000000000000000000088","data":"0xa9ff959e"},"latest"],"id":1}' \\
   | python3 -c "import json,sys; r=json.load(sys.stdin); print('ownerCount:', int(r['result'],16))"
@@ -497,7 +495,7 @@ function NetworkPanel({ networkKey, label }: { networkKey: string; label: string
             <div className="font-semibold text-sm">{label}</div>
             {data && !data.error && (
               <div className="text-xs text-[var(--text-tertiary)]">
-                Block #{data.blockNumber.toLocaleString()} · {data.rpc.includes('ankr') ? '⚡ Ankr' : data.rpc.split('/')[2]}
+                Block #{data.blockNumber.toLocaleString()} · {data.rpc.split('/')[2]}
               </div>
             )}
           </div>
@@ -573,8 +571,7 @@ export default function SecurityPage() {
               <h1 className="text-xl font-bold">Security Audit</h1>
             </div>
             <p className="text-sm text-[var(--text-secondary)]">
-              Live on-chain validation of XDC Network security findings — XDCValidator contract 0x88 · Powered by{' '}
-              <a href="https://www.ankr.com/rpc/xdc/" target="_blank" className="text-[var(--accent-blue)] hover:underline">⚡ Ankr Public RPC</a>
+              Live on-chain validation of XDC Network security findings — XDCValidator contract 0x88
             </p>
           </div>
           <div className="flex items-center gap-2">
