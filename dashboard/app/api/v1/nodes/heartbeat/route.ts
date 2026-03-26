@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     const consensusRound  = consensus.round   ?? null;
     const consensusV2     = consensus.v2Active ?? false;
     const epochProgress   = consensus.epochProgress ?? null;
-    const chainId         = consensus.chainId ?? null;
+    const chainId         = body.chainId ?? consensus.chainId ?? null;
 
     // Database metrics (from SkyOne DB collection, ~every 5 min)
     const dbMetrics  = body.database ?? null;
@@ -62,16 +62,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'nodeId required' }, { status: 400 });
     }
 
-    // Upsert node record — never downgrade network from apothem→mainnet
+    // Upsert node record — update network based on chain_id from heartbeat
     await client.query(
       `INSERT INTO skynet.nodes
-         (id, name, network, status, last_heartbeat, client_type, ipv4, coinbase, is_active, docker_image, health_score)
-       VALUES ($1, $2, $3, 'active', NOW(), $4, $5, $6, true, $10, $11)
+         (id, name, network, status, last_heartbeat, client_type, ipv4, coinbase, is_active, docker_image, health_score, chain_id)
+       VALUES ($1, $2, $3, 'active', NOW(), $4, $5, $6, true, $10, $11, $12)
        ON CONFLICT (id) DO UPDATE SET
-         network        = CASE
-                            WHEN skynet.nodes.network = 'apothem' THEN 'apothem'
-                            ELSE EXCLUDED.network
-                          END,
+         network        = $3,
          status         = 'active',
          last_heartbeat = NOW(),
          last_seen      = NOW(),
@@ -82,8 +79,9 @@ export async function POST(request: NextRequest) {
          ipv4           = COALESCE(EXCLUDED.ipv4, skynet.nodes.ipv4),
          coinbase       = COALESCE(EXCLUDED.coinbase, skynet.nodes.coinbase),
          docker_image   = COALESCE(EXCLUDED.docker_image, skynet.nodes.docker_image),
-         health_score   = COALESCE(EXCLUDED.health_score, skynet.nodes.health_score)`,
-      [nodeId, nodeId, network, clientType, ipv4, coinbase, blockHeight, peerCount, isSyncing, dockerImg, healthScore]
+         health_score   = COALESCE(EXCLUDED.health_score, skynet.nodes.health_score),
+         chain_id       = EXCLUDED.chain_id`,
+      [nodeId, nodeId, network, clientType, ipv4, coinbase, blockHeight, peerCount, isSyncing, dockerImg, healthScore, chainId]
     );
 
     // Insert full metrics row (including DB size columns)

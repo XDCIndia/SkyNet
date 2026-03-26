@@ -89,6 +89,7 @@ export async function POST(
       system,
       security,
       storageType,
+      dbEngine,
       stalled,
       lastRestart,
       // New fields for enhanced alerting
@@ -184,7 +185,8 @@ export async function POST(
     // Update node's last_seen and network info
     await queryWithResilience(
       `UPDATE skynet.nodes 
-       SET last_seen = NOW(), 
+       SET last_seen = NOW(),
+           last_heartbeat = NOW(),
            is_active = true,
            block_height = COALESCE($2, block_height),
            peer_count = COALESCE($3, peer_count),
@@ -259,7 +261,7 @@ export async function POST(
         dockerImage || null,
         stateScheme || null,
         startupParams || null,
-        database?.engine || null,
+        dbEngine || database?.engine || null,
         database?.totalSize ?? null,
         database?.chaindata ?? null,
         database?.ancient ?? null,

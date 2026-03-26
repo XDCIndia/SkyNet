@@ -83,6 +83,7 @@ async function postHandler(request: NextRequest) {
   try {
     const result = await withTransaction(async (client) => {
       // First, try to find existing node by fingerprint
+      // Fingerprint format: coinbase@IP:client_type:network (includes network to prevent mainnet/apothem collision)
       const existingByFingerprint = await client.query(
         'SELECT id, name, api_key, fingerprint FROM skynet.nodes WHERE fingerprint = $1',
         [data.fingerprint]
@@ -110,11 +111,11 @@ async function postHandler(request: NextRequest) {
           );
         }
 
-        // Update coinbase if provided and different
-        if (data.coinbase) {
+        // Update network if provided and different (fixes mainnet/apothem mismatches)
+        if (data.network) {
           await client.query(
-            'UPDATE skynet.nodes SET coinbase = $1, updated_at = NOW() WHERE id = $2 AND (coinbase IS NULL OR coinbase != $1)',
-            [data.coinbase, node.id]
+            'UPDATE skynet.nodes SET network = $1, updated_at = NOW() WHERE id = $2 AND network != $1',
+            [data.network, node.id]
           );
         }
         
