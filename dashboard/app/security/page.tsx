@@ -407,7 +407,7 @@ export default function SecurityPage() {
               <h1 className="text-xl font-bold text-[var(--text-primary)]">Security Audit</h1>
             </div>
             <p className="text-sm text-[var(--text-secondary)]">
-              Live on-chain validation of Prime Numbers Labs audit findings (March 2026) — XDCValidator contract 0x88
+              Live on-chain validation of XDC Network security audit findings (March 2026) — XDCValidator contract 0x88
             </p>
           </div>
           <div className="flex items-center gap-2">
