@@ -50,7 +50,7 @@ const navItems: NavItem[] = [
   { id: 'masternodes', label: 'Masternodes', icon: <Pickaxe className="w-5 h-5" />, path: '/masternodes', section: 'Network' },
   { id: 'consensus', label: 'Consensus', icon: <ShieldCheck className="w-5 h-5" />, path: '/dashboard/consensus', section: 'Network' },
   { id: 'security', label: 'Security Audit', icon: <ShieldAlert className="w-5 h-5" />, path: '/security', section: 'Network' },
-  { id: 'node-scanner', label: 'Node Scanner', icon: <Server className="w-5 h-5" />, path: '/security/nodes', section: 'Network' },
+  { id: 'node-scanner', label: 'Node Scanner', icon: <Server className="w-5 h-5" />, path: '/node-scanner', section: 'Network' },
   { id: 'skyone', label: 'SkyOne Dashboard', icon: <Monitor className="w-5 h-5" />, path: '/skyone', section: 'Tools' },
   { id: 'multi-client', label: 'Multi-Client', icon: <Layers className="w-5 h-5" />, path: '/dashboard/multi-client', section: 'Tools' },
   { id: 'explorer', label: 'Explorer', icon: <Globe className="w-5 h-5" />, path: '/explorer', section: 'Public', isPublic: true },
@@ -396,13 +396,10 @@ export default function Sidebar() {
               <Menu className="w-6 h-6 text-[var(--text-secondary)]" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[var(--accent-blue)]/20 to-[var(--success)]/20 flex items-center justify-center border border-[var(--accent-blue)]/30">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="var(--accent-blue)" strokeWidth="2"/>
-                  <path d="M8 8L16 16M16 8L8 16" stroke="var(--accent-blue)" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img src="/xdc-logo.png" alt="XDC" width={32} height={32} className="rounded-lg" />
               </div>
-              <span className="text-sm font-bold text-[var(--text-primary)]">SkyNet</span>
+              <span className="text-sm font-bold text-[var(--text-primary)]">XDC SkyNet</span>
             </div>
           </div>
           
