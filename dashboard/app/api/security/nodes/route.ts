@@ -255,8 +255,9 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
   // Source A0: Known audit IPs (238 nodes from security assessment)
   if (networkKey === 'mainnet') {
     try {
-      const auditNodes = await import('@/lib/audit-known-nodes.json') as { default: Array<{ ip: string; port: number }> };
-      for (const node of auditNodes.default) {
+      const auditNodes = await import('@/lib/audit-known-nodes.json');
+      const nodeList = (auditNodes as { default: Array<{ ip: string; port: number }> }).default || auditNodes;
+      for (const node of (nodeList as Array<{ ip: string; port: number }>)) {
         addIP(node.ip, `audit:port${node.port}`);
       }
     } catch { /* audit nodes file not found */ }
@@ -333,8 +334,8 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
   let auditAccounts: Record<string, { account: string; name: string; port: number; isCandidate: boolean }> = {};
   if (networkKey === 'mainnet') {
     try {
-      const mod = await import('@/lib/audit-node-accounts.json') as { default: typeof auditAccounts };
-      auditAccounts = mod.default;
+      const mod = await import('@/lib/audit-node-accounts.json');
+      auditAccounts = (mod as { default: Record<string, { account: string; name: string; port: number; isCandidate: boolean }> }).default || mod;
     } catch { /* */ }
   }
 
