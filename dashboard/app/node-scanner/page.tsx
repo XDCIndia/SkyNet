@@ -12,6 +12,7 @@ interface NodeScanEntry {
   ip: string;
   sources: string[];
   rpcOpen: boolean;
+  rpcPort: number;
   wsOpen: boolean;
   p2pOpen: boolean;
   exposedModules: string[];
@@ -24,6 +25,10 @@ interface NodeScanEntry {
   countryCode: string;
   city: string;
   findings: string[];
+  validatorAddress: string;
+  validatorName: string;
+  validatorRole: 'active' | 'standby' | 'penalized' | 'fullnode' | 'unknown';
+  isCandidate: boolean;
 }
 
 interface EthstatsNode {
@@ -55,6 +60,10 @@ interface ScanResult {
   masternodeList?: MasternodeEntry[];
   activeCount: number;
   standbyCount: number;
+  penalizedCount?: number;
+  activeMNOpen?: number;
+  standbyOpen?: number;
+  fullnodeOpen?: number;
   cached?: boolean;
   error?: string;
   ethstats?: {
@@ -88,7 +97,7 @@ export default function NodeScannerPage() {
   const [network, setNetwork] = useState<'mainnet' | 'apothem'>('mainnet');
   const [data, setData] = useState<ScanResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'risk' | 'open'>('all');
+  const [filter, setFilter] = useState<'all' | 'risk' | 'open' | 'masternode' | 'fullnode'>('all');
   const [sortBy, setSortBy] = useState<'score' | 'ip' | 'provider'>('score');
   const [ethFilter, setEthFilter] = useState<'all' | 'active' | 'syncing' | 'stale'>('all');
 
@@ -143,7 +152,13 @@ export default function NodeScannerPage() {
   const scoreBg = (l: string) => ({ secure: 'bg-[var(--success)]/15 text-[var(--success)] border-[var(--success)]/25', caution: 'bg-[var(--warning)]/15 text-[var(--warning)] border-[var(--warning)]/25', risk: 'bg-[var(--critical)]/15 text-[var(--critical)] border-[var(--critical)]/25' }[l] || '');
 
   const filteredNodes = (data?.nodes || [])
-    .filter(n => filter === 'risk' ? n.securityLabel !== 'secure' : filter === 'open' ? n.rpcOpen || n.wsOpen : true)
+    .filter(n => {
+      if (filter === 'risk') return n.securityLabel !== 'secure';
+      if (filter === 'open') return n.rpcOpen || n.wsOpen;
+      if (filter === 'masternode') return n.validatorRole === 'active' || n.validatorRole === 'standby' || n.validatorRole === 'penalized';
+      if (filter === 'fullnode') return n.validatorRole === 'fullnode' || n.validatorRole === 'unknown';
+      return true;
+    })
     .sort((a, b) => sortBy === 'score' ? a.securityScore - b.securityScore : sortBy === 'ip' ? a.ip.localeCompare(b.ip) : (a.isp || '').localeCompare(b.isp || ''));
 
   const maxBlock = data?.ethstats?.maxBlock || 0;
@@ -212,15 +227,15 @@ export default function NodeScannerPage() {
             {/* Summary */}
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
               {[
-                { label: 'Ethstats Nodes', value: data.ethstats?.totalNodes || 0, color: 'text-[var(--accent-blue)]' },
-                { label: 'Active', value: data.ethstats?.activeNodes || 0, color: 'text-[var(--success)]' },
-                { label: 'Syncing', value: data.ethstats?.syncingNodes || 0, color: 'text-[var(--warning)]' },
-                { label: 'Max Block', value: (data.ethstats?.maxBlock || 0).toLocaleString(), color: 'text-[var(--text-primary)]' },
+                { label: 'Active MN', value: data.activeCount, color: 'text-[var(--success)]' },
+                { label: 'Standby', value: data.standbyCount, color: 'text-[var(--warning)]' },
+                { label: 'Penalized', value: data.penalizedCount || 0, color: data.penalizedCount ? 'text-[var(--critical)]' : 'text-[var(--text-tertiary)]' },
                 { label: 'IPs Probed', value: data.totalIPs, color: 'text-[var(--accent-blue)]' },
-                { label: 'RPC Open', value: data.openRpc, color: data.openRpc > 0 ? 'text-[var(--critical)]' : 'text-[var(--success)]' },
+                { label: 'RPC Open', value: data.openRpc, color: data.openRpc > 0 ? 'text-[var(--critical)]' : 'text-[var(--success)]', sub: data.totalIPs > 0 ? Math.round(data.openRpc/data.totalIPs*100) + '%' : '' },
+                { label: 'MN Open RPC', value: (data.activeMNOpen || 0) + (data.standbyOpen || 0), color: 'text-[var(--critical)]' },
                 { label: 'Debug Exposed', value: data.debugExposed, color: data.debugExposed > 0 ? 'text-[var(--critical)]' : 'text-[var(--success)]' },
-                { label: 'Providers', value: data.uniqueProviders, color: 'text-[var(--text-primary)]' },
-              ].map(({ label, value, color }) => (
+                { label: 'Ethstats Nodes', value: data.ethstats?.totalNodes || 0, color: 'text-[var(--accent-blue)]' },
+              ].map(({ label, value, color, sub }) => (
                 <div key={label} className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-3 text-center">
                   <div className="text-xs text-[var(--text-tertiary)] mb-1">{label}</div>
                   <div className={`text-lg font-bold tabular-nums ${color}`}>{value}</div>
@@ -356,10 +371,10 @@ export default function NodeScannerPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  {(['all', 'risk', 'open'] as const).map(f => (
+                  {(['all', 'risk', 'open', 'masternode', 'fullnode'] as const).map(f => (
                     <button key={f} onClick={() => setFilter(f)}
                       className={`px-2.5 py-1 text-xs rounded transition-colors ${filter === f ? 'bg-[var(--accent-blue)] text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
-                      {f === 'all' ? 'All' : f === 'risk' ? '⚠️ At Risk' : '🔓 Open'}
+                      {f === 'all' ? 'All' : f === 'risk' ? '⚠️ At Risk' : f === 'open' ? '🔓 Open' : f === 'masternode' ? '🏛️ MasterNode' : '🖥️ FullNode'}
                     </button>
                   ))}
                   <span className="text-xs text-[var(--text-tertiary)] ml-2">Sort:</span>
@@ -375,17 +390,17 @@ export default function NodeScannerPage() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-[var(--border-subtle)] bg-[var(--bg-header)]">
-                      {['Score', 'IP Address', 'Provider', 'Location', 'RPC', 'WS', 'P2P', 'Modules', 'Findings'].map(h => (
+                      {['Score', 'IP Address', 'Validator', 'Role', 'Provider', 'Location', 'RPC', 'WS', 'Modules', 'Findings'].map(h => (
                         <th key={h} className="px-3 py-2.5 text-left font-semibold text-[var(--text-tertiary)] whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border-subtle)]">
                     {filteredNodes.length === 0 && (
-                      <tr><td colSpan={9} className="px-4 py-8 text-center text-[var(--text-tertiary)]">No nodes match filter</td></tr>
+                      <tr><td colSpan={10} className="px-4 py-8 text-center text-[var(--text-tertiary)]">No nodes match filter</td></tr>
                     )}
                     {filteredNodes.map(node => (
-                      <tr key={node.ip} className={`hover:bg-white/3 transition-colors ${node.securityLabel === 'risk' ? 'bg-[var(--critical)]/3' : ''}`}>
+                      <tr key={node.ip} className={`hover:bg-white/3 transition-colors ${node.securityLabel === 'risk' ? 'bg-[var(--critical)]/3' : ''}`} title={node.validatorName || ''}>
                         <td className="px-3 py-2.5 whitespace-nowrap">
                           <span className={`font-bold text-sm tabular-nums ${scoreColor(node.securityScore)}`}>{node.securityScore}</span>
                           <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded border ${scoreBg(node.securityLabel)}`}>
@@ -393,11 +408,24 @@ export default function NodeScannerPage() {
                           </span>
                         </td>
                         <td className="px-3 py-2.5 font-mono text-[var(--text-primary)]">{node.ip}</td>
+                        <td className="px-3 py-2.5">
+                          {node.validatorAddress ? (
+                            <a href={`https://xdcscan.com/address/${node.validatorAddress}`} target="_blank" className="font-mono text-xs text-[var(--accent-blue)] hover:underline">{node.validatorAddress.slice(0,8)}…{node.validatorAddress.slice(-6)}</a>
+                          ) : <span className="text-[var(--text-tertiary)]">—</span>}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span className={`px-1.5 py-0.5 rounded border text-xs font-medium ${
+                            node.validatorRole === 'active' ? 'bg-[var(--success)]/15 text-[var(--success)] border-[var(--success)]/25' :
+                            node.validatorRole === 'standby' ? 'bg-[var(--warning)]/15 text-[var(--warning)] border-[var(--warning)]/25' :
+                            node.validatorRole === 'penalized' ? 'bg-[var(--critical)]/15 text-[var(--critical)] border-[var(--critical)]/25' :
+                            node.validatorRole === 'fullnode' ? 'bg-blue-500/15 text-blue-400 border-blue-500/25' :
+                            'bg-white/5 text-[var(--text-tertiary)] border-[var(--border-subtle)]'
+                          }`}>{node.validatorRole === 'active' ? 'MN' : node.validatorRole === 'standby' ? 'Standby' : node.validatorRole === 'penalized' ? 'Pen' : node.validatorRole === 'fullnode' ? 'Full' : '?'}</span>
+                        </td>
                         <td className="px-3 py-2.5 max-w-[160px] truncate text-[var(--text-secondary)]" title={node.org || node.isp}>{node.org || node.isp || '—'}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{flagEmoji(node.countryCode)} {node.city || node.country || '—'}</td>
                         <td className="px-3 py-2.5 text-center">{node.rpcOpen ? <span className="text-[var(--critical)] font-bold">OPEN</span> : <span className="text-[var(--success)]">✓</span>}</td>
                         <td className="px-3 py-2.5 text-center">{node.wsOpen ? <span className="text-[var(--warning)] font-bold">OPEN</span> : <span className="text-[var(--success)]">✓</span>}</td>
-                        <td className="px-3 py-2.5 text-center">{node.p2pOpen ? <span className="text-[var(--success)]">✓</span> : <span className="text-[var(--text-tertiary)]">—</span>}</td>
                         <td className="px-3 py-2.5">
                           <div className="flex flex-wrap gap-1">
                             {node.exposedModules.length === 0 && <span className="text-[var(--text-tertiary)]">—</span>}

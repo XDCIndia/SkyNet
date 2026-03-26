@@ -41,8 +41,9 @@ const cache = new Map<string, { data: ScanResult; ts: number }>();
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface NodeScanEntry {
   ip: string;
-  sources: string[];        // where we discovered this IP
+  sources: string[];
   rpcOpen: boolean;
+  rpcPort: number;
   wsOpen: boolean;
   p2pOpen: boolean;
   exposedModules: string[];
@@ -55,6 +56,11 @@ export interface NodeScanEntry {
   countryCode: string;
   city: string;
   findings: string[];
+  // Validator mapping
+  validatorAddress: string;
+  validatorName: string;
+  validatorRole: 'active' | 'standby' | 'penalized' | 'fullnode' | 'unknown';
+  isCandidate: boolean;
 }
 
 export interface MasternodeEntry {
@@ -323,20 +329,44 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
   // 4. Geolocate
   const geoMap = await geolocateBatch(allIPs);
 
-  // 5. Build result entries
-  const nodes: NodeScanEntry[] = probeResults.map(({ ip, rpcOpen, wsOpen, p2pOpen, modules, dangerous }) => {
+  // 5. Load audit IP→account mapping
+  let auditAccounts: Record<string, { account: string; name: string; port: number; isCandidate: boolean }> = {};
+  if (networkKey === 'mainnet') {
+    try {
+      const mod = await import('@/lib/audit-node-accounts.json') as { default: typeof auditAccounts };
+      auditAccounts = mod.default;
+    } catch { /* */ }
+  }
+
+  // Build result entries
+  const nodes: NodeScanEntry[] = probeResults.map(({ ip, rpcOpen, rpcPort, wsOpen, p2pOpen, modules, dangerous }) => {
     const geo = geoMap.get(ip) || { isp: 'Unknown', org: '', country: 'Unknown', countryCode: '', city: '' };
     const score = calcScore(rpcOpen, wsOpen, dangerous);
     const findings: string[] = [];
-    if (rpcOpen) findings.push('RPC port 8545 open');
+    if (rpcOpen) findings.push('RPC port ' + (rpcPort || 8545) + ' open');
     if (wsOpen) findings.push('WS port 8546 open');
     if (dangerous.includes('debug')) findings.push('debug namespace exposed');
     if (dangerous.includes('admin')) findings.push('admin namespace exposed');
     if (dangerous.includes('personal')) findings.push('personal namespace exposed');
+
+    const auditEntry = auditAccounts[ip];
+    const validatorAddress = auditEntry?.account || '';
+    const validatorName = auditEntry?.name || '';
+    const isCandidate = auditEntry?.isCandidate || false;
+    let validatorRole: NodeScanEntry['validatorRole'] = 'unknown';
+    if (validatorAddress) {
+      const addrLower = validatorAddress.toLowerCase();
+      if (mnSet.has(addrLower)) validatorRole = 'active';
+      else if (sbSet.has(addrLower)) validatorRole = 'standby';
+      else if (penSet.has(addrLower)) validatorRole = 'penalized';
+      else validatorRole = 'fullnode';
+    }
+
     return {
       ip,
       sources: Array.from(ipSources.get(ip) || []),
       rpcOpen,
+      rpcPort: rpcPort || 0,
       wsOpen,
       p2pOpen,
       exposedModules: modules,
@@ -349,6 +379,10 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
       countryCode: geo.countryCode,
       city: geo.city,
       findings,
+      validatorAddress,
+      validatorName,
+      validatorRole,
+      isCandidate,
     };
   });
 
@@ -440,6 +474,10 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
     masternodeList,
     activeCount: masternodes.length,
     standbyCount: standbynodes.length,
+    penalizedCount: penalized.length,
+    activeMNOpen: nodes.filter(n => n.validatorRole === 'active' && n.rpcOpen).length,
+    standbyOpen: nodes.filter(n => n.validatorRole === 'standby' && n.rpcOpen).length,
+    fullnodeOpen: nodes.filter(n => (n.validatorRole === 'fullnode' || n.validatorRole === 'unknown') && n.rpcOpen).length,
     ethstats: ethstatsData,
   };
 }

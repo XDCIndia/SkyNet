@@ -1,0 +1,1424 @@
+{
+  "161.97.155.86": {
+    "account": "0x92d32364313c376dcae272e113fd04cea194d2c8",
+    "name": "MercuryT1VDS",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "95.111.245.191": {
+    "account": "0x2d74d0125982bdc3a9f54a10216d82509379e821",
+    "name": "MercuryT3VDS",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "161.97.183.38": {
+    "account": "0xe494fe5a38b7212ab999152d1d45adab8d84a8a7",
+    "name": "MercuryRv8VDS",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "194.163.186.247": {
+    "account": "0xd5bb37763625bc16f2ad0791d87e2726004241e4",
+    "name": "MercuryRvDNS",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "5.189.158.155": {
+    "account": "0x72fb467ef6da285b6b0d8f7a25abd6049385d5fd",
+    "name": "MercuryRv2VDS",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "89.117.49.48": {
+    "account": "0x2a591f3d64f3ce6b1d2afeead839ad76aab9feb2",
+    "name": "CB_AtIndSoft",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "62.171.181.23": {
+    "account": "0x9fce52c5c451599235c17bc37e99f846d25ee6ec",
+    "name": "MercuryT2VDS",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "78.46.75.144": {
+    "account": "0x361faefbcd1c1b7f2d18723d178633202ccc5858",
+    "name": "JPS05_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "213.133.101.14": {
+    "account": "0x618e706c531e57f44a739cef129bf08cbd912d6a",
+    "name": "JPS45_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "157.180.63.99": {
+    "account": "0x07412d23fcb408e2bf278613160d24bf1e2b1da1",
+    "name": "Enosys",
+    "port": 8545,
+    "isCandidate": false
+  },
+  "65.108.0.32": {
+    "account": "0xe6e81594de1ecd828db9e5a3d69bd7a023bd71c1",
+    "name": "04.xdcrpc.com_OpenScan.AI",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "164.68.101.30": {
+    "account": "0x450d714e65f4de007937c56fb1c4686efd4fb4ec",
+    "name": "MercuryRv5VDS",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "213.136.72.182": {
+    "account": "0xdb2e141595d8edf6b1ce40b10d57ca5b83855ec5",
+    "name": "yupifix",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "95.217.77.20": {
+    "account": "0x26642abb59631c57728da1480674cf4c0d4a72da",
+    "name": "windows-full-node-3",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "173.249.10.67": {
+    "account": "0xe865a5b2bf699a4b498de8a8c55da14bb0d94b21",
+    "name": "MercuryRv1VDS",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "168.119.67.58": {
+    "account": "0xa70b87c39a1237ba53953a1da04b23d4db28eace",
+    "name": "xdc-mainnet-58",
+    "port": 8545,
+    "isCandidate": true
+  },
+  "5.189.144.192": {
+    "account": "0xf91367b2192919f3b5044690e6d623362dffb289",
+    "name": "Remix.Xinfin.Network_XF",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "45.58.149.95": {
+    "account": "0x00021c85d8cf9ef6c73e8f95740f8e874e4c9d1f",
+    "name": "JPS37_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "185.70.186.99": {
+    "account": "0xee68d8bf300b427f6bfefdb27972abb7e7f97c81",
+    "name": "BlockWorks-MasterNode-01",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "116.202.175.242": {
+    "account": "0x370b541c7a48ec62f55bf45819a98f3f14640481",
+    "name": "JPS53_XF",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "45.76.87.117": {
+    "account": "0x8f2fb5da850042b7da5097061f098493f8ec6dd8",
+    "name": "JapanXinFinNew",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "45.10.162.64": {
+    "account": "0xdccd99da1c942a36c5dcaf26d19b98c815dfcb73",
+    "name": "Masternode_Neferu_AtIndSo",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "149.102.148.150": {
+    "account": "0x014428e60faa874f8266d0648c52a83506dd9ec6",
+    "name": "Nicolas Rejeili",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "185.218.204.110": {
+    "account": "0x3962aa27c5e04dbfe1c301ffe06f20261c51699f",
+    "name": "XDC.Network_02",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "207.180.240.193": {
+    "account": "0x2edd3a45eaa753d1a40897730e1b89cbc9619f06",
+    "name": "JPS55_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.242.202.39": {
+    "account": "0x785076b971f2a90b029b680f90d4d609060c01d5",
+    "name": "B22N-CN2",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "109.123.255.175": {
+    "account": "0x417b06236ecc5bf200a59152e92cd4923867409c",
+    "name": "BacktotheFuture",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "37.60.244.133": {
+    "account": "0xaf3db8ad8154820303adc6be0d9b10ef8e33024f",
+    "name": "BXT12_AtIndsoft",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "161.97.130.13": {
+    "account": "0xbb0830e2d006d557541935362a621d002b0d6b00",
+    "name": "JPS11_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "64.20.34.122": {
+    "account": "0x1d393817ab218ebade3e8ad591593ec3b132b1f6",
+    "name": "FAITH-in-XDC-PS8",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "107.152.35.42": {
+    "account": "0x2ef71f18269020b825aecbdacf5218ace2523454",
+    "name": "XPOPO",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "149.102.132.114": {
+    "account": "0x07f3c360acd8334dc96e854f3414cacc7dd6f8fb",
+    "name": "PluginFullNodeFiveContabo",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "194.147.214.186": {
+    "account": "0x42f6fe0ee65be7d421cc9d3892c39c309d47b837",
+    "name": "xswaprpc_AT_Indsoft",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "168.119.4.162": {
+    "account": "0xa72ce94a09db26dce57a4852409abc2fff07a962",
+    "name": "XDC_Mainnet_Node1",
+    "port": 8545,
+    "isCandidate": true
+  },
+  "147.135.10.26": {
+    "account": "0xa6de68568ee540d217fa1514dfaf894d5449df9c",
+    "name": "JPS57_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "81.0.220.137": {
+    "account": "0x0f0c5cb5e6284c977d9c4b47e5dcd3eb0ccafeed",
+    "name": "JPS56_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "75.119.155.142": {
+    "account": "0xb38aba47a5563fa4aedc2a649ef819b9fb160b6a",
+    "name": "RavikumarJ_AtIndSoft_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "149.102.139.253": {
+    "account": "0x555d4cd195bcb7d4196f2005db46a4b71c36c5a4",
+    "name": "AmitKumarPatel2_AtIndSoft",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "194.163.138.98": {
+    "account": "0xccab2f5267bc66b69f1688560c2e075216908a2c",
+    "name": "U_AtIndSoft_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.242.209.74": {
+    "account": "0x49d3fa92eec838f644e8cacf2c93533d29b6c713",
+    "name": "B22N-CN",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "37.60.243.5": {
+    "account": "0x03d9e17ae3ff2c6712e44e25b09ac5ee91f6c9ff",
+    "name": "BXT05_AtIndSoft_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "161.97.129.254": {
+    "account": "0xc428369353c7de2782370ee634be1516d836ddad",
+    "name": "AE_StandBy_17_AtIndSoft_X",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "185.252.234.115": {
+    "account": "0xb1693d224d4fd70ad6c9c9bdc44faa3ce21fb40d",
+    "name": "DynamicDiversifiedInvestm",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "91.230.111.137": {
+    "account": "0xc941ce0b1fc36d594c8609dcb6adcaf53d1266db",
+    "name": "Rushabh-Snapshot-Node",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "62.171.147.107": {
+    "account": "0x05604f16f7adf5006a0d3c82404f2031affc5977",
+    "name": "PluginFullNodeFourContabo",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "149.102.140.32": {
+    "account": "0xe495a6242b78fe35211116839ad1882e7c4fc564",
+    "name": "AmitkumarPatel3_AtIndSoft",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "167.86.126.97": {
+    "account": "0xd22fdac1459760f698618d927bbe22249e2b29b9",
+    "name": "MercuryRv7VDS",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "164.68.115.24": {
+    "account": "0xff90bb99a2e0b638340dd2c9a230bd46e2faabfa",
+    "name": "DK-xdc-37",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "116.202.175.246": {
+    "account": "0x3056a8bff9a17b12d08f1837d0b44cf1e2018fbe",
+    "name": "Indsoft-1",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "85.190.246.191": {
+    "account": "0x25c65b4b379ac37cf78357c4915f73677022eaff",
+    "name": "JPS03_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "74.207.225.194": {
+    "account": "0x1ae7aa6f9acf86525e99e527717a4f666b80d21a",
+    "name": "YOUR_NODE_NAME",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "144.126.139.207": {
+    "account": "0xc67c2dec79da735d6587d8db3c23271d557196ab",
+    "name": "TRUST-in-XDC-PS6",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "173.212.216.152": {
+    "account": "0x621996eb1d03a6e9614ddf150f6123c5602c8418",
+    "name": "JPS16_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "185.130.224.211": {
+    "account": "0xb570b13fa9ca093347448dc600ed0d09333ac9fa",
+    "name": "JPS35_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "185.130.224.247": {
+    "account": "0x249f443d5c8400d7bc638a199d1f458b47a41a47",
+    "name": "JPS48_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "142.132.150.202": {
+    "account": "0x4beed5d129cda18902ffe74dd2a8b17f2ae7faab",
+    "name": "Archive_SnapShot_Node",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "152.53.242.25": {
+    "account": "0x92b384a6e9da89c7c834d9dacb4845800567ac11",
+    "name": "xf_node_XDCMST1",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "84.247.183.213": {
+    "account": "0x3b8a906602422fe9f316e6fa0c1728cfaa238766",
+    "name": "JPS20_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "5.39.216.187": {
+    "account": "0xa451235cb2284dda8942a16aead3eb494b46d508",
+    "name": "Charmander",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "78.46.98.24": {
+    "account": "0x070eed0a2c77650dd41599920b5a0089dc60bfe6",
+    "name": "JPS19_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "176.9.17.66": {
+    "account": "0xf480c3a498edc29d57e1d9bccb45759f1930442d",
+    "name": "Hetzner2",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "193.247.82.157": {
+    "account": "0xe8bc0e78114ad8dc4290eaed78bcb9e3f5b91e32",
+    "name": "JPS41_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.242.155.60": {
+    "account": "0x43bb2e3bb47d0a12d45c87dcdbd6d16a47e1000a",
+    "name": "RiverFlowsinYou",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "78.46.75.143": {
+    "account": "0x58f25975086b8d23c028ebb651be064da0360367",
+    "name": "JPS39_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "185.70.184.28": {
+    "account": "0x75ea95b0e9a56417ce1434aac37b0afcba0c5221",
+    "name": "JPS30_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "45.32.95.89": {
+    "account": "0x3396803b0cb3b5790911bb51b6c5193e9940793f",
+    "name": "BLACK-BOX-5000",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "146.0.76.67": {
+    "account": "0xe3bc38418f89c386d1093aee89d606564012e329",
+    "name": "XDC_Worldwide_AtIndSoft",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "109.199.104.176": {
+    "account": "0x21396ca79a433a20b5904c9a77aa9a4f110ef80e",
+    "name": "JPS49_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "78.46.98.23": {
+    "account": "0x9e057cebf2101a5e3e57906b834a2a82893b7739",
+    "name": "Hetzner-JPS33_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "152.114.195.62": {
+    "account": "0x5a39debded5481a5e5b73a1551fd31208b88da4e",
+    "name": "DK-XDC-22",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "152.114.194.218": {
+    "account": "0xc7bf1cd426e6f47d879fbaba789d7c5740ce9b4b",
+    "name": "JPS46_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "103.7.54.103": {
+    "account": "0x59c4aa10ab424cb33868c05af2626e72c1d41a6d",
+    "name": "DK-xdc-39",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "95.217.77.10": {
+    "account": "0x349563f9b0e3167f816cc39b272e3f888e23d3f3",
+    "name": "JPS36_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "152.114.194.220": {
+    "account": "0x13afe4210b6340723883be07618d3a4f019c2adc",
+    "name": "Ravi_Panchal_Node_2",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "158.255.5.206": {
+    "account": "0x6e5bbbf0d9d1851599a21676c99b1a8cc012753d",
+    "name": "JPS02_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "152.114.194.219": {
+    "account": "0x74f297c0197bab5ecf21add9ad9ced96ad42b61f",
+    "name": "JPS17_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "161.97.131.145": {
+    "account": "0x35898873c021f9f4fa01a76c7fa595159f5523e7",
+    "name": "DK-XDC-06",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "109.123.242.198": {
+    "account": "0xdef4bd67f9e2627ca495b5f71794fab1bab40619",
+    "name": "DK-XDC-10",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "152.114.192.194": {
+    "account": "0x360ccc91b0a92c1e5084284dc4af45c41c3f9575",
+    "name": "REINSTALLstandbynode2",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "152.114.192.49": {
+    "account": "0x41785a0e7aa7324a6217327c460973f7c9e72e34",
+    "name": "Standbynode345",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "94.130.249.61": {
+    "account": "0xe45141d1688e287723f4c21185429c02eb9b6d85",
+    "name": "JPS58_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "139.84.210.193": {
+    "account": "0x5651290bdd3a952357066b324f9334b544100140",
+    "name": "BLACK-BOX-2000",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "213.133.101.8": {
+    "account": "0xd64c15787bb52bbfe0d195df0d954725469a318e",
+    "name": "JPS44_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "109.199.104.167": {
+    "account": "0xe4710a854b24062ff37ab6636bd9a456e24c1635",
+    "name": "BuzzNjay1",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "149.102.140.198": {
+    "account": "0x74d3ac0efc4c22ea05150d7501c95c610b130c4b",
+    "name": "DynamicDiversifiedInvestm",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "144.126.142.140": {
+    "account": "0x64e2e07bb17d978108824219741b9cc9e52b4443",
+    "name": "JPS01_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "194.180.206.170": {
+    "account": "0x9bbf9e3af8a473124a17656f0e84d99aa8b51864",
+    "name": "JPS24_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "66.151.42.217": {
+    "account": "0xba96294248d34b90f5b893ef82fd736cc1cc00ad",
+    "name": "DK-XDC-03",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "205.172.57.65": {
+    "account": "0x4288545139bb238d1671b96e8f8016b0b3793ad4",
+    "name": "JPS28_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "45.32.117.169": {
+    "account": "0x7bda7752b3533b3b71346ff02f6314b8fe77ec43",
+    "name": "BLACK-BOX-4000",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "156.67.29.219": {
+    "account": "0xc533d1fdd6f4728d37fbed50caaecfce477f784c",
+    "name": "Samsung",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "104.152.209.76": {
+    "account": "0x619f838ea2a12cdb508e759c3e0697e021d52ceb",
+    "name": "GA_XINFIN-SERVERZ2_AtIndS",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "209.250.245.222": {
+    "account": "0x8e455bb521212bdcf8cb326e32dc1183cb3fd887",
+    "name": "BLACK-BOX-1000",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "65.109.25.162": {
+    "account": "0x7c0f72d80d9d8b822e2fb217e56be732a12fc8c9",
+    "name": "JPS18_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "65.21.216.184": {
+    "account": "0x226ddc05e1adc6872285d95d4277a498fdce375b",
+    "name": "JPS42_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "194.34.236.239": {
+    "account": "0x1ef3e8390e8e47b3c1705f480b53a2a069672bff",
+    "name": "arpc03_ATINDSOFT",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "158.255.5.87": {
+    "account": "0x1cad85be8d097ed7a9b74ef5fbc9c75f2e2aa3bb",
+    "name": "DK-XDC-02",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "147.93.152.231": {
+    "account": "0x89e07253f5eb733fc3aefe983b53189cfeafa141",
+    "name": "DK-xdc-35",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "54.37.200.146": {
+    "account": "0x9fa4f04529a0d1b97ad9c13a3f75ebf23ed49987",
+    "name": "olivia.xdc",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "66.151.40.197": {
+    "account": "0x562f34a25d1c71119d4a7f71bfe34665aa00b4da",
+    "name": "StandbyNode2",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "194.180.207.188": {
+    "account": "0xe02ca8d829b3e0185d168c62aeef3960e6c0882e",
+    "name": "JPS08_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "167.224.64.239": {
+    "account": "0x6f356f6a7ff84c46f59fee691a2a161494871eec",
+    "name": "JPS34_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "144.126.150.58": {
+    "account": "0x0afe5a6890cf357022dfdaac7e2d6e248755cdfd",
+    "name": "VNGB_AtIndSoft_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "158.255.6.164": {
+    "account": "0xeb0f1565b5d3bbf4489deb67972b814ee84c6cb7",
+    "name": "AirnetzNet_Node_At_IndSof",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "46.17.97.100": {
+    "account": "0x83e12760c1e324b16fe68bc23ffc69b37d17ee23",
+    "name": "JPS06_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "158.255.0.91": {
+    "account": "0xef7ce03b7fdea2d0bf2ad6e0a1e9b0f2ed547447",
+    "name": "JPS15_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "46.250.244.219": {
+    "account": "0x07319b7ea222e725b41fdc8ab70fd91ad0a86cd8",
+    "name": "Chaindox",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "5.180.174.145": {
+    "account": "0x695ce237df312f9a6c6a5386b91b37ae249d07dd",
+    "name": "JPS40_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "45.77.17.1": {
+    "account": "0x0278c350152e15fa6ffc712a5a73d704ce73e2e1",
+    "name": "BLACK-BOX-3000",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "5.180.172.41": {
+    "account": "0x95153ca7ad8408777f1384d2eaa5f21031a89b09",
+    "name": "earpc02_archive_ATIndsoft",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "103.7.54.72": {
+    "account": "0x35a920157e79dcf88d3faa0ff5a19dc0083cef71",
+    "name": "Archive-XDC.Network_02",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "86.48.31.130": {
+    "account": "0x44d21022e104d605235c863cf86c96045fad9505",
+    "name": "JPS10_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "62.212.86.103": {
+    "account": "0xe7a5556c87fe764dcba9bcd31e1f4aa27b638117",
+    "name": "Deutsche-Telekom",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "65.21.27.213": {
+    "account": "0x4995c0c97b8118e4026b1b52eca0c300795f5870",
+    "name": "xdc-prod-213-gp5",
+    "port": 8545,
+    "isCandidate": false
+  },
+  "167.86.89.240": {
+    "account": "0x65c90c2d3e99d8366f90db7f4d25f23a0a569d49",
+    "name": "MercuryRv3VDS",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "167.86.80.198": {
+    "account": "0x497c44f4a22099109ad7d194aad4fbe78dceb788",
+    "name": "MercuryRv6VDS",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "161.97.77.36": {
+    "account": "0x360b9e5870fc91e375f902fc134f91739f4a99c7",
+    "name": "MercuryRv4VDS",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "158.255.5.175": {
+    "account": "0x9682520376f26a733a75588c0bdede7645bdfc4a",
+    "name": "AFT01_AtIndSoft",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "209.126.11.108": {
+    "account": "0x4b7076c988da8a0ef87f1af137f7abc39557b746",
+    "name": "DK-XDC-07",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "157.180.107.94": {
+    "account": "0x154d6c9a0e3dc8d5bd643f5aa5372341097ca43b",
+    "name": "Lion4",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "157.180.108.19": {
+    "account": "0x902ea1b5974eed015c3c55cd8649b60315e35484",
+    "name": "Spirit3",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "38.49.208.244": {
+    "account": "0x6555c75cbbe01166b7ae2f6e49d7671c1d8aca01",
+    "name": "earpc04_archive_ATIndsoft",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "157.180.111.172": {
+    "account": "0xd9de17fc85b7e336c29d293d6ec1c753d18e849a",
+    "name": "Thanos7",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "77.42.7.160": {
+    "account": "0xd97d7434af4ad873585c71df55fce07996e27a82",
+    "name": "XDCtotheMoon8",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "157.180.107.160": {
+    "account": "0xa52808fa0e21732fe850155b6b8dfca4dba32fd2",
+    "name": "Pleb2",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "157.180.107.209": {
+    "account": "0xc94d1f0cc80730ed75c59b38b39c50c2f18f29e0",
+    "name": "Globe5",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "157.180.106.249": {
+    "account": "0xfaafbb6cf2379d33e7345b706a6cd00e940e514d",
+    "name": "Jujutsu_K6",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "147.93.157.137": {
+    "account": "0x1a7c3d7481adc7e067f2f73f35f44143d7bf02d4",
+    "name": "BXT10_AtIndSoft_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "161.97.131.6": {
+    "account": "0x5454edee66858dfcc14871cc8b26f57ef528bedc",
+    "name": "JPS12_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "104.152.209.119": {
+    "account": "0x1e0103ba7665d15328b3886927d4f0a85f8b2299",
+    "name": "DK-XDC-12",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "212.237.219.94": {
+    "account": "0xde1470c0f478ca7efd151be5a13c2addcfff328c",
+    "name": "JPS04_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "85.239.236.10": {
+    "account": "0x205720bb184a61d69c270a77789ae94b7d2c5e88",
+    "name": "DK-xdc-38",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "157.180.107.161": {
+    "account": "0xa8226b2d1c1384de31fa34de3ad387220991495d",
+    "name": "Piron1",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "175.45.183.249": {
+    "account": "0xb6b6af8326113371e2d1aec2c4f9ec965eda1a3e",
+    "name": "BRock-Subnet-001",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "205.172.58.173": {
+    "account": "0xc50f2fb8e5cbddaa69907c29e00de9c6893b7f7d",
+    "name": "DK_ERPC_New_Node_XF",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "185.175.45.97": {
+    "account": "0xd6186ecff065b90c824a07b54db276cddf2b2f68",
+    "name": "dev_env",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "38.49.210.154": {
+    "account": "0xe79ef2d92a8e4d758d78dfcc8e61b2fa377ee78d",
+    "name": "JPS43_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.210.78": {
+    "account": "0x451b95ecda57240a59b1849c94937db303b2afb1",
+    "name": "SideshhArchive",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "162.250.189.221": {
+    "account": "0x391f3d21d9062ebbdd958e436b26d4b40928658c",
+    "name": "JPS32_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "158.255.0.100": {
+    "account": "0x9200e4fe8959f0268eb9daf06aba4756e595b99f",
+    "name": "JPS31_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.102.87.214": {
+    "account": "0x7b0704722600979fd7da53afb1618aab3b9ddeb4",
+    "name": "JPS51_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.210.253": {
+    "account": "0xbbd2d417a8b6f1b1d7a267cd1d7402b443f35cfe",
+    "name": "Sebastian",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.212.117": {
+    "account": "0x5fc5333d263fc20c850dfd9d6b96a2ca88e2111e",
+    "name": "arpc02_ATINDSOFT",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "38.49.210.133": {
+    "account": "0xa828c2381bb91fc96cc269de73b99a4314ac4b5b",
+    "name": "JPS26_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "154.12.117.54": {
+    "account": "0x3dd865a9c6d00f94d5b8485031016296251d1c62",
+    "name": "Mewtwo",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.212.52": {
+    "account": "0x12febeefe9f889105652cf8452783398c22f5bf7",
+    "name": "siddhesh_mainnet",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "109.123.232.199": {
+    "account": "0x24eaf6eda6b6bdde516c71bb3445712ce57a3ea0",
+    "name": "BlockWorks-MasterNode-02",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "141.105.70.104": {
+    "account": "0xf18b71757cc8a70746dc2b3c6137ddb19bde9916",
+    "name": "host5_XF_MasterNode",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "104.152.210.117": {
+    "account": "0x4e111142fbf2edacc4ab122feb54b031dc3d95d9",
+    "name": "BXT09_AtIndSoft_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.216.166": {
+    "account": "0x0d84236e477245909819adf277d5d6667998e847",
+    "name": "Servica-StandBy-216.166",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "162.250.191.160": {
+    "account": "0xe230905c99aaa7b68402af8611b89ceda743191e",
+    "name": "DynamicDiversifiedInvestm",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.102.87.174": {
+    "account": "0x051572edba4a8290bf45dd2d7ab80eb6cd56ccc6",
+    "name": "DK-XDC-32",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.102.124.216": {
+    "account": "0xfce02e190f722e790be06b3a6ec43e2f606dba65",
+    "name": "DK-xdc-30",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "104.152.209.131": {
+    "account": "0xcfccdea1006a5cfa7d9484b5b293b46964c265c0",
+    "name": "XDCscan1",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "104.152.209.134": {
+    "account": "0x19a1e02fec5d52be689f59b22d9c0f1765bd7052",
+    "name": "Indsoft-MN",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "162.250.191.70": {
+    "account": "0xc02aed857b01b4d60b378096221db3b60afadc37",
+    "name": "DK-XDC-08",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "104.152.210.97": {
+    "account": "0xc7d49d0a2cf198deebd6ce581af465944ec8b2bb",
+    "name": "RK",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "207.90.192.188": {
+    "account": "0x67a24b5821724419bbc0710cbbb3122d84703318",
+    "name": "GiodeaX",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "149.5.247.30": {
+    "account": "0xec4a5fbd2e46e97be98c212e668ef1d08d695440",
+    "name": "DynamicDiversifiedInvestm",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.212.98": {
+    "account": "0x241ff0d3096e2e0b477780f9f551918a06827c05",
+    "name": "FINNIXNR",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.209.177": {
+    "account": "0x239b8e6cfe09d9324cf99412dd069788446385bc",
+    "name": "DK-XDC-36",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.143.58.166": {
+    "account": "0xe2bc9a03d5ae35e130c8bf99ea50c022de375db7",
+    "name": "DK-XDC-09",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.102.124.164": {
+    "account": "0x9043fafbe8833adafb449b559cef300a9632763f",
+    "name": "DynamicDiversifiedInvestm",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.210.149": {
+    "account": "0x04a76d9f7ae68f1e3771f5d1c8bd319bb0b09e13",
+    "name": "DK-xdc-42",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "104.152.209.110": {
+    "account": "0x29a66147543707ef83d5d15e0a1d9f65cbe90e7c",
+    "name": "QNODE_S_G",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "104.152.211.94": {
+    "account": "0x90c87c9ff588e9268a1c7c79a5986886e98c2f04",
+    "name": "DK-XDC-15",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.102.84.166": {
+    "account": "0x33e45ae78f3bee669e97e13a14619f6cb51bde3a",
+    "name": "DK-XDC-33",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.208.253": {
+    "account": "0x3dd28884ec3ea0904f0f6697c31b7d273a899480",
+    "name": "Servica-StandBy1",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.102.124.162": {
+    "account": "0xb9a3a97f6a02a86483bf02cb33f8b33d2d117708",
+    "name": "BXT07_AtIndSoft_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.102.85.251": {
+    "account": "0xb594c78a71763d543d10358b2dde579ff041319a",
+    "name": "JPS14_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "152.114.192.47": {
+    "account": "0x0407b8f788fbd763280212be6f7a672351009487",
+    "name": "JPS07_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "89.117.146.4": {
+    "account": "0x05f4c54ffc16b943b98713248c751ce98f924cbd",
+    "name": "Wakanda4Eva1",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "134.209.151.56": {
+    "account": "0xe682606d47f6ebfc0551b524118697ea0f8389e4",
+    "name": "xdc-mainnet-fullnode-01",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "38.102.85.50": {
+    "account": "0x39dae44e488ad467b5fa48889053758fb4e15acb",
+    "name": "DK-XDC-34",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "209.126.1.25": {
+    "account": "0x609cc32e7513135349fbe9ebd78ea8cdcfd9f819",
+    "name": "Kerryman1983_AtIndSoft_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "162.250.191.5": {
+    "account": "0xa4657c02208797985adedcbd048efc82291dbdb2",
+    "name": "BXT02_AtIndSoft_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "104.152.210.110": {
+    "account": "0x906bc3308bdbf14c6ae56d68cf008b50d131a328",
+    "name": "StandBy17",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "154.38.161.222": {
+    "account": "0x944dd93e0f6d213b0dce27590bd5a9a4351fafd6",
+    "name": "TheCallofKtulu",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.102.84.145": {
+    "account": "0xe8e8194c0a8e5a32306c7a86052a4e8ca4b8729d",
+    "name": "DK-XDC-13",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "144.126.154.51": {
+    "account": "0xa6d916b338291ae14402d67af2b9d9e19bf72fd5",
+    "name": "MoonlightSonata",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "85.239.242.163": {
+    "account": "0x53fca59ae84841ba3c57fd709e57a01fe18801ab",
+    "name": "BlockWorks-MasterNode-03",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "209.126.2.33": {
+    "account": "0xcaeb8bef9689e70135023d4dfb85864832f968bf",
+    "name": "PR2_AtIndSoft",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "144.126.136.27": {
+    "account": "0xa43a99c9752166ec30c8369ce1e84de43be1e617",
+    "name": "Casterman_Advisory_Node_A",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "207.244.252.29": {
+    "account": "0x449bed0b27afe708a30a481329733bcbcba2bc21",
+    "name": "JPS13_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "209.126.9.230": {
+    "account": "0x7525f63e5f739ef952fbea50c1dc97ef5d5bd984",
+    "name": "DK-XDC-11",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "209.126.1.10": {
+    "account": "0x2e32b4db98ae68ea725212040f5f29abc61ce18f",
+    "name": "JPS23_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "54.219.223.79": {
+    "account": "0x03a4cf6ee2a8e8011c2825c562e1a8350caa25ec",
+    "name": "lucksin3",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "158.255.5.45": {
+    "account": "0xdaf2d705b6e511dd055294bbad25492060093ba2",
+    "name": "Standbynode12",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "139.64.164.35": {
+    "account": "0x19e945a26b15e4d6f96386a4f8596b6313311b7e",
+    "name": "xin-100008",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "154.38.167.154": {
+    "account": "0x39ffd4aa42b02f1b55ed822267da57219f11fc6a",
+    "name": "HoustonTX",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "139.64.164.59": {
+    "account": "0x5fca7280f7b3f743bc3248261d05f7b57651ec3c",
+    "name": "xin-100025",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "69.50.95.203": {
+    "account": "0xd5384163e03481b8b1c13e8da611e05e2612586c",
+    "name": "xin-100003",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "69.50.95.191": {
+    "account": "0xd438128b57cf71ab2168a263f24708263775c54f",
+    "name": "xin-100009",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "139.64.165.183": {
+    "account": "0x2f86476faa31c3f5a3d5b9376282e1b02b4dfa00",
+    "name": "xin-100023",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.102.87.54": {
+    "account": "0x44be22c331e507df9f1fe245a952080c77743280",
+    "name": "T_xdc000",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "38.49.210.142": {
+    "account": "0xa9c2b73ba170ddf37bc92fee1bafaf54e138ce87",
+    "name": "JPS21_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.209.215": {
+    "account": "0x0b80bf9615e7fb34d48504dc51386da3cabf20ef",
+    "name": "DK-XDC-42",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.186.48.83": {
+    "account": "0x5cbdd86a2fa8dc4bddd8a8f69dba48572eec07fb",
+    "name": "big-XD_XF_5_XF",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "216.106.184.93": {
+    "account": "0xe605f21f8e96ad62c11f85de891fa5e977df5e76",
+    "name": "xin-rpc-000004",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "67.220.70.103": {
+    "account": "0x1aff171caa8c1ea93bac4c27676f356d054412b4",
+    "name": "xin-100024",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.114.123.74": {
+    "account": "0xd2fefdd118aa2bea5991dc079fd341d3e7a92caf",
+    "name": "xin-100001",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "162.250.188.70": {
+    "account": "0xc16081add160633616fccff4d20fcf199f21e56e",
+    "name": "nodoraemon-01",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "149.5.246.158": {
+    "account": "0xe845d8b690f3cba8d302f16f354b60fabe8d024d",
+    "name": "host4_XF_MasterNode",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "38.102.87.32": {
+    "account": "0x8eeeeafaca49e507bc9bba121dac97ec75774ff2",
+    "name": "JPS27_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.210.232": {
+    "account": "0xf48aa29de23c45c54a96c2a7b8ce5218abf46874",
+    "name": "XDSEA_MONKEYS_AtIndSoft_X",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "38.102.124.68": {
+    "account": "0x346ada489c70c85ca665428389f1a971abbee960",
+    "name": "XDC-Eco-System_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "162.250.191.14": {
+    "account": "0xf04f32c46f1a16663bc7f6409b35b33f3daa9a03",
+    "name": "DynamicDiversifiedInvestm",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.213.162": {
+    "account": "0xe7cebca2be3b34fa7dfb014fd6026e5b084be023",
+    "name": "Servica_Archivenodetestin",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "38.49.212.92": {
+    "account": "0x077961a99e124088bc386c3183b369187c5be295",
+    "name": "earpc03_archive_ATIndsoft",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "162.250.189.149": {
+    "account": "0x24c0832d9df8189166d8e4e2cedc40ad69077b17",
+    "name": "DK-XDC-05",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.210.249": {
+    "account": "0xfd65b556175f32d98673ec32a2046b50dc39e12d",
+    "name": "DK-xdc-41",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "154.12.117.49": {
+    "account": "0x047ffe1fc7f6d0b7168c4ccc312221089629f470",
+    "name": "DK-XDC-04",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.208.227": {
+    "account": "0x079d87904cd707143dd39c8be595bbe7a2181fb4",
+    "name": "JPS50_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.209.153": {
+    "account": "0x0b0afb41c14dd921a9a4511c226dc29254ba0d8f",
+    "name": "js_kyl_XDC_AtIndSoft",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.208.229": {
+    "account": "0x2a4559e84ca53e00b05d9d53086005432926a992",
+    "name": "JPS47_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "94.130.249.58": {
+    "account": "0x565efca58c6ab9d2697a0e53932905dd3a573f26",
+    "name": "Hetzner-249.58",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "38.102.87.4": {
+    "account": "0xa298a84dfb015bbcb9ce1cb59e0bddc95223d554",
+    "name": "xdcjp",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "103.4.235.212": {
+    "account": "0x4bcdd234c20da32ec34a7ff85d6c1e6c832604d4",
+    "name": "BRock-Subnet-002",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.208.252": {
+    "account": "0xa45457cc0153092a7e717e8e6d41221b827c28ae",
+    "name": "JPS09_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.102.124.161": {
+    "account": "0x7fca0e918c06ff0b4e51ecf76670e07714e44a9c",
+    "name": "JPS29_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.49.210.110": {
+    "account": "0x5cbdd86a2fa8dc4bddd8a8f69dba48572eec07fb",
+    "name": "DK-XDC-14",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "38.102.86.242": {
+    "account": "0x1bc85db77617515381cbbb28fdd2b1a10264de11",
+    "name": "DK-XDC-31",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "104.152.209.135": {
+    "account": "0xfab275bfc83c3bc8aa17c16ed5a0b4e60caca299",
+    "name": "JPS52_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.102.87.241": {
+    "account": "0x7b03e5e7912b0ce65f8be7549e23cb08392e369c",
+    "name": "Uel_Leite",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "154.12.117.180": {
+    "account": "0x39ee018a85e4469a1b335efe014067e315bd6594",
+    "name": "London_UK_MasterNode_Nirv",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "162.250.190.246": {
+    "account": "0xc3e2a9a73881fcce6fc9367a0a3ddbd658d20e37",
+    "name": "BXT01_AtIndSoft_XF",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "46.250.240.52": {
+    "account": "0xebf8e4904fe2bd561475e9e0e65a3336c56f83d3",
+    "name": "JPS38_XF",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "45.32.44.106": {
+    "account": "0x1a1a8229e4a2fa06f73a564092976ba2dfe6aab8",
+    "name": "ANASTASMN1.7",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "38.143.58.165": {
+    "account": "0xc0a2bd8f19c6a729e7b15a5fcc845e99eecda295",
+    "name": "XDCScan_Node_At_IndSoft",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "112.213.33.28": {
+    "account": "0x51aa6a6b6a738d44e6a4e00d6e02faa991cf44be",
+    "name": "dddxxx",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "176.9.17.98": {
+    "account": "0x2eabcb285725d09bb6c9e0000c6da7d1fbf0b6d4",
+    "name": "hetznerarchive",
+    "port": 8989,
+    "isCandidate": false
+  },
+  "84.247.172.33": {
+    "account": "0x3534baae65418946b017727702f6d263de1365b7",
+    "name": "-3534baae65418946b0177277",
+    "port": 8545,
+    "isCandidate": false
+  },
+  "167.235.13.113": {
+    "account": "0xd061bd0b45c6d804a8f15398f9c72f5ff260f38e",
+    "name": "xdc03-gp5-113",
+    "port": 8545,
+    "isCandidate": false
+  },
+  "194.233.95.220": {
+    "account": "0x3534baae65418946b017727702f6d263de1365b7",
+    "name": "-xdc3534baae65418946b0177",
+    "port": 8545,
+    "isCandidate": false
+  },
+  "104.152.210.92": {
+    "account": "0xfcbddd58be4616042543637a84ad18cb065adba4",
+    "name": "CityNode_AtIndsoft",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "209.209.8.252": {
+    "account": "0x4466ca98bdcd08d54a9672d5ca76a69909c4b59e",
+    "name": "Ravi_Panchal_Node_AtIndso",
+    "port": 8989,
+    "isCandidate": true
+  },
+  "3.209.179.245": {
+    "account": "0x3cb5b525924f158a7884b647d3334619d16f92de",
+    "name": "Circularity-Finance-RPC",
+    "port": 8989,
+    "isCandidate": false
+  }
+}
