@@ -79,7 +79,7 @@ function buildFindings(d: AuditData): Finding[] {
       severity: d.governanceBroken ? 'critical' : 'pass',
       description: `resign() never decrements ownerCount. ownerCount=${d.ownerCount.toLocaleString()}, active candidates=${d.candidateCount}. Governance threshold is permanently unreachable.`,
       evidence: `Need ${d.votesNeeded75pct.toLocaleString()} votes (75% × ${d.ownerCount.toLocaleString()}). Only ${d.candidateCount} candidates can vote. ${d.governanceBroken ? '⛔ PERMANENTLY UNREACHABLE' : '✅ Reachable'}`,
-      fix: 'Activate PR #450: change ValidtorV2SMCBlock from big.NewInt(9999999999) to a real near-future block.',
+      fix: 'Upgrade the validator contract: change ValidtorV2SMCBlock to a real near-future block number in common/constants.go.',
     },
     {
       id: 'TOB-XDC-4-delete',
@@ -87,7 +87,7 @@ function buildFindings(d: AuditData): Finding[] {
       severity: d.ghostEntries > 0 ? 'critical' : 'pass',
       description: 'delete candidates[i] zeroes the slot BEFORE delete validatorsState[candidates[i]] reads it — deleting validatorsState[address(0)] instead of the target.',
       evidence: `${d.ghostEntries} ghost entries in candidates[]. Each = one failed invalidation. Affected validators can still resign() and withdraw their full stake.`,
-      fix: 'Save address first: address addr = candidates[i]; delete candidates[i]; delete validatorsState[addr]; — already fixed in PR #450.',
+      fix: 'Save address first: address addr = candidates[i]; delete candidates[i]; delete validatorsState[addr];',
     },
     {
       id: 'TOB-XDC-1',
@@ -306,7 +306,7 @@ function KycGovernanceSection({ data }: { data: AuditData }) {
 }`}</pre>
             </div>
             <div>
-              <div className="text-xs text-[var(--text-tertiary)] mb-1.5 font-semibold">FIXED (PR #450)</div>
+              <div className="text-xs text-[var(--text-tertiary)] mb-1.5 font-semibold">FIXED (V2 Contract)</div>
               <pre className="text-xs font-mono bg-black/40 rounded-lg p-3 text-[var(--success)] overflow-x-auto">{`function resign(address _candidate) public {
   validatorsState[_candidate].isCandidate = false;
   candidateCount = candidateCount.sub(1);
@@ -581,9 +581,7 @@ export default function SecurityPage() {
             <a href="https://github.com/AnilChinchawale/AllForOne/blob/main/XINFIN-SECURITY-AUDIT.md" target="_blank" className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[var(--bg-card)] border border-[var(--border-card)] rounded-lg hover:bg-white/5 transition-colors">
               <ExternalLink className="w-3.5 h-3.5" /> Audit Report
             </a>
-            <a href="https://github.com/XinFinOrg/XDPoSChain/pull/450" target="_blank" className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/25 rounded-lg hover:bg-[var(--success)]/20 transition-colors">
-              <GitBranch className="w-3.5 h-3.5" /> Fix: PR #450
-            </a>
+
           </div>
         </div>
 
@@ -597,7 +595,7 @@ export default function SecurityPage() {
               <code className="font-mono text-xs bg-black/30 px-1 rounded">ownerCount</code>. On mainnet this has
               accumulated to 432,000+ since genesis — making{' '}
               <code className="font-mono text-xs bg-black/30 px-1 rounded">voteInvalidKYC</code> permanently impossible.
-              Fix exists in <a href="https://github.com/XinFinOrg/XDPoSChain/pull/450" target="_blank" className="text-[var(--accent-blue)] hover:underline">PR #450</a> — change <code className="font-mono text-xs bg-black/30 px-1 rounded">ValidtorV2SMCBlock</code> to a real block.
+              Fix: change <code className="font-mono text-xs bg-black/30 px-1 rounded">ValidtorV2SMCBlock</code> to a real block.
             </span>
           </div>
         </div>
@@ -643,7 +641,7 @@ export default function SecurityPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
             {[
-              { rank: '1', effort: '1 line', title: 'Activate V2 Contract', code: 'ValidtorV2SMCBlock = big.NewInt(102030000)', file: 'common/constants.go', link: 'https://github.com/XinFinOrg/XDPoSChain/pull/450', color: 'border-[var(--critical)]/30 bg-[var(--critical)]/5' },
+              { rank: '1', effort: '1 line', title: 'Activate V2 Contract', code: 'ValidtorV2SMCBlock = big.NewInt(102030000)', file: 'common/constants.go', color: 'border-[var(--critical)]/30 bg-[var(--critical)]/5' },
               { rank: '2', effort: '1 line', title: 'Fix RPC Bind Address', code: 'HTTPListenAddrFlag.Value = "localhost"', file: 'cmd/utils/flags.go', color: 'border-[var(--critical)]/30 bg-[var(--critical)]/5' },
               { rank: '3', effort: '5 min', title: 'Fix BFT Broadcast Order', code: 'Move broadcastCh after voteHandler()', file: 'eth/bft/bft_handler.go', color: 'border-[var(--warning)]/30 bg-[var(--warning)]/5' },
               { rank: '4', effort: '2 hours', title: 'Replace math/rand', code: 'cryptoRand.Int(cryptoRand.Reader, max)', file: 'contracts/utils.go', color: 'border-[var(--warning)]/30 bg-[var(--warning)]/5' },
@@ -659,7 +657,7 @@ export default function SecurityPage() {
                   <span className="text-xs text-[var(--text-tertiary)] font-mono truncate">{item.file}</span>
                   {'link' in item && (
                     <a href={(item as { link: string }).link} target="_blank" className="flex items-center gap-0.5 text-xs text-[var(--accent-blue)] hover:underline ml-2 flex-shrink-0">
-                      PR <ExternalLink className="w-3 h-3" />
+                      
                     </a>
                   )}
                 </div>
