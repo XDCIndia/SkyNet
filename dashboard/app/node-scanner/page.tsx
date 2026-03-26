@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import {
   Server, Shield, RefreshCw, Clock, XCircle, CheckCircle,
-  AlertTriangle, Globe, ExternalLink, Copy, Check,
+  AlertTriangle, Globe, ExternalLink, Copy, Check, Download,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -107,6 +107,37 @@ export default function NodeScannerPage() {
   }, [network]);
 
   useEffect(() => { runScan(); }, [runScan]);
+
+  const downloadCSV = () => {
+    if (!data?.nodes) return;
+    const atRisk = data.nodes.filter(n => n.securityLabel !== 'secure');
+    const headers = ['IP','Security Score','Label','RPC Open','RPC Port','WS Open','P2P Open','ISP','Org','Country','City','Exposed Modules','Dangerous Modules','Findings','Sources'];
+    const rows = atRisk.map(n => [
+      n.ip,
+      n.securityScore,
+      n.securityLabel,
+      n.rpcOpen ? 'YES' : 'NO',
+      (n as NodeScanEntry & {rpcPort?: number}).rpcPort || '',
+      n.wsOpen ? 'YES' : 'NO',
+      n.p2pOpen ? 'YES' : 'NO',
+      `"${(n.isp || '').replace(/"/g, '""')}"`,
+      `"${(n.org || '').replace(/"/g, '""')}"`,
+      n.country,
+      n.city,
+      `"${n.exposedModules.join(', ')}"`,
+      `"${n.dangerousModules.join(', ')}"`,
+      `"${n.findings.join('; ')}"`,
+      `"${n.sources.join('; ')}"`,
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `xdc-at-risk-nodes-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const scoreColor = (s: number) => s >= 80 ? 'text-[var(--success)]' : s >= 50 ? 'text-[var(--warning)]' : 'text-[var(--critical)]';
   const scoreBg = (l: string) => ({ secure: 'bg-[var(--success)]/15 text-[var(--success)] border-[var(--success)]/25', caution: 'bg-[var(--warning)]/15 text-[var(--warning)] border-[var(--warning)]/25', risk: 'bg-[var(--critical)]/15 text-[var(--critical)] border-[var(--critical)]/25' }[l] || '');
@@ -316,6 +347,13 @@ export default function NodeScannerPage() {
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-[var(--critical)]" />
                   <span className="font-semibold text-sm">Port Security Scan — {data.totalIPs} IPs Probed</span>
+                  {data.nodes.filter(n => n.securityLabel !== 'secure').length > 0 && (
+                    <button onClick={downloadCSV}
+                      className="flex items-center gap-1 px-2.5 py-1 text-xs bg-[var(--critical)]/10 text-[var(--critical)] border border-[var(--critical)]/25 rounded-lg hover:bg-[var(--critical)]/20 transition-colors ml-2">
+                      <Download className="w-3.5 h-3.5" />
+                      CSV ({data.nodes.filter(n => n.securityLabel !== 'secure').length} at risk)
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-1">
                   {(['all', 'risk', 'open'] as const).map(f => (
