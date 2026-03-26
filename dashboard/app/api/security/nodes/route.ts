@@ -74,6 +74,29 @@ async function rpcPost(url: string, method: string, params: unknown[]): Promise<
   return d.result;
 }
 
+async function ethCall(url: string, to: string, data: string): Promise<string> {
+  return rpcPost(url, 'eth_call', [{ to, data }, 'latest']) as Promise<string>;
+}
+
+function decodeAddressArray(hex: string): string[] {
+  if (!hex || hex.length < 10) return [];
+  const data = hex.slice(2);
+  if (data.length < 128) return [];
+  const arrLen = parseInt(data.slice(64, 128), 16);
+  const addrs: string[] = [];
+  for (let i = 0; i < arrLen; i++) {
+    const start = 128 + i * 64;
+    if (start + 64 > data.length) break;
+    addrs.push('0x' + data.slice(start + 24, start + 64));
+  }
+  return addrs;
+}
+
+function hexToInt(hex: string | null | undefined): number {
+  if (!hex || hex === '0x') return 0;
+  return parseInt(hex, 16);
+}
+
 // TCP port probe using Node.js net module
 function probeTCP(ip: string, port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -288,7 +311,7 @@ async function runScan(): Promise<ScanResult> {
   const penSet = new Set(penalized.map(a => a.toLowerCase()));
 
   // Get all active candidates
-  const candidatesHex = await ethCall(rpcUrl, VALIDATOR, '0x06a49fce');
+  const candidatesHex = await ethCall(RPC, VALIDATOR, '0x06a49fce');
   const allCandidates = decodeAddressArray(candidatesHex).filter(a => parseInt(a, 16) !== 0);
 
   // Batch fetch stake + owner for all candidates (in groups of 25 to avoid rate limits)
@@ -300,8 +323,8 @@ async function runScan(): Promise<ScanResult> {
         const capSel = '0x58e7525f' + '0'.repeat(24) + addr.slice(2);
         const ownerSel = '0xb642facd' + '0'.repeat(24) + addr.slice(2);
         const [capHex, ownerHex] = await Promise.all([
-          ethCall(rpcUrl, VALIDATOR, capSel),
-          ethCall(rpcUrl, VALIDATOR, ownerSel),
+          ethCall(RPC, VALIDATOR, capSel),
+          ethCall(RPC, VALIDATOR, ownerSel),
         ]);
         const capWei = BigInt(capHex || '0x0');
         const stakeXDC = Math.round(Number(capWei) / 1e18);
