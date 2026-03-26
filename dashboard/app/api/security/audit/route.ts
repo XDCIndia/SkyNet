@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const VALIDATOR  = '0x0000000000000000000000000000000000000088';
+const VALIDATOR   = '0x0000000000000000000000000000000000000088';
 const BLOCKSIGNER = '0x0000000000000000000000000000000000000089';
 const RANDOMIZE   = '0x0000000000000000000000000000000000000090';
 const ZERO_ADDR   = '0x0000000000000000000000000000000000000000';
@@ -8,13 +8,14 @@ const ZERO_ADDR   = '0x0000000000000000000000000000000000000000';
 const NETWORKS: Record<string, { name: string; rpc: string; fallbacks: string[] }> = {
   mainnet: {
     name: 'XDC Mainnet',
-    rpc: 'https://rpc.xdcrpc.com',
-    fallbacks: ['https://rpc.xinfin.network', 'https://rpc1.xinfin.network', 'https://erpc.xinfin.network'],
+    // Ankr public RPC as primary — no key needed
+    rpc: 'https://rpc.ankr.com/xdc',
+    fallbacks: ['https://rpc.xdcrpc.com', 'https://rpc.xinfin.network', 'https://rpc1.xinfin.network'],
   },
   apothem: {
     name: 'Apothem Testnet',
-    rpc: 'https://apothem.xdcrpc.com',
-    fallbacks: ['https://rpc.apothem.network'],
+    rpc: 'https://rpc.ankr.com/xdc_testnet',
+    fallbacks: ['https://apothem.xdcrpc.com', 'https://rpc.apothem.network'],
   },
 };
 
@@ -26,7 +27,7 @@ async function rpcPost(url: string, method: string, params: unknown[]): Promise<
     signal: AbortSignal.timeout(8000),
   });
   const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
+  if (data.error) throw new Error(data.error.message ?? JSON.stringify(data.error));
   return data.result;
 }
 
@@ -53,43 +54,50 @@ function decodeAddressArray(hex: string): string[] {
   return addrs;
 }
 
-async function findWorkingRpc(config: { rpc: string; fallbacks: string[] }): Promise<string> {
+// Try RPCs in order, return first working one
+async function findWorkingRpc(config: { rpc: string; fallbacks: string[] }): Promise<{ url: string; blockNumber: number }> {
   const urls = [config.rpc, ...config.fallbacks];
   for (const url of urls) {
     try {
-      await rpcPost(url, 'eth_blockNumber', []);
-      return url;
+      const blockHex = await rpcPost(url, 'eth_blockNumber', []) as string;
+      const blockNumber = hexToInt(blockHex);
+      if (blockNumber > 0) return { url, blockNumber };
     } catch { continue; }
   }
-  throw new Error(`No working RPC for ${urls[0]}`);
+  throw new Error(`No working RPC available. Tried: ${urls.join(', ')}`);
 }
 
 async function runAudit(networkKey: string) {
   const config = NETWORKS[networkKey];
   if (!config) throw new Error(`Unknown network: ${networkKey}`);
 
-  const rpcUrl = await findWorkingRpc(config);
-  const blockHex = await rpcPost(rpcUrl, 'eth_blockNumber', []) as string;
-  const blockNumber = hexToInt(blockHex);
+  const { url: rpcUrl, blockNumber } = await findWorkingRpc(config);
 
-  // Core counters + candidates array in parallel
-  const [candidateCountHex, ownerCountHex, candidatesHex, minCapHex, maxValHex, candDelayHex, voterDelayHex, bsCode, rzCode] =
-    await Promise.all([
-      ethCall(rpcUrl, VALIDATOR, '0xa9a981a3'),  // candidateCount()
-      ethCall(rpcUrl, VALIDATOR, '0xa9ff959e'),  // getOwnerCount()
-      ethCall(rpcUrl, VALIDATOR, '0x06a49fce'),  // getCandidates()
-      ethCall(rpcUrl, VALIDATOR, '0x33aca42f'),  // minCandidateCap()
-      ethCall(rpcUrl, VALIDATOR, '0x09dfdc2f'),  // maxValidatorNumber()
-      ethCall(rpcUrl, VALIDATOR, '0x4d11d8fe'),  // candidateWithdrawDelay()
-      ethCall(rpcUrl, VALIDATOR, '0x6fd55014'),  // voterWithdrawDelay()
-      rpcPost(rpcUrl, 'eth_getCode', [BLOCKSIGNER, 'latest']) as Promise<string>,
-      rpcPost(rpcUrl, 'eth_getCode', [RANDOMIZE, 'latest']) as Promise<string>,
-    ]);
+  // Parallel fetch all contract data
+  const [
+    candidateCountHex, ownerCountHex, candidatesHex,
+    minCapHex, maxValHex, candDelayHex, voterDelayHex,
+    bsCode, rzCode,
+  ] = await Promise.all([
+    ethCall(rpcUrl, VALIDATOR, '0xa9a981a3'),  // candidateCount()
+    ethCall(rpcUrl, VALIDATOR, '0xa9ff959e'),  // getOwnerCount()
+    ethCall(rpcUrl, VALIDATOR, '0x06a49fce'),  // getCandidates()
+    ethCall(rpcUrl, VALIDATOR, '0x33aca42f'),  // minCandidateCap()
+    ethCall(rpcUrl, VALIDATOR, '0x09dfdc2f'),  // maxValidatorNumber()
+    ethCall(rpcUrl, VALIDATOR, '0x4d11d8fe'),  // candidateWithdrawDelay()
+    ethCall(rpcUrl, VALIDATOR, '0x6fd55014'),  // voterWithdrawDelay()
+    rpcPost(rpcUrl, 'eth_getCode', [BLOCKSIGNER, 'latest']),
+    rpcPost(rpcUrl, 'eth_getCode', [RANDOMIZE, 'latest']),
+  ]);
 
   const candidateCount = hexToInt(candidateCountHex);
   const ownerCount = hexToInt(ownerCountHex);
   const candidates = decodeAddressArray(candidatesHex);
-  const ghostEntries = candidates.filter(a => a.toLowerCase() === ZERO_ADDR || parseInt(a, 16) === 0).length;
+
+  const ZERO = ZERO_ADDR.toLowerCase();
+  const ghostEntries = candidates.filter(a => a.toLowerCase() === ZERO || parseInt(a, 16) === 0).length;
+  const activeCandidates = candidates.filter(a => a.toLowerCase() !== ZERO && parseInt(a, 16) !== 0);
+
   const votesNeeded75pct = Math.floor(ownerCount * 0.75) + 1;
   const governanceBroken = votesNeeded75pct > candidateCount;
 
@@ -102,7 +110,7 @@ async function runAudit(networkKey: string) {
   const blockSignerHasCode = !!(bsCode as string) && (bsCode as string) !== '0x' && (bsCode as string).length > 4;
   const randomizeHasCode   = !!(rzCode as string) && (rzCode as string) !== '0x' && (rzCode as string).length > 4;
 
-  // RPC modules
+  // RPC modules (best-effort)
   let exposedModules: string[] = [];
   let dangerousModules: string[] = [];
   try {
@@ -110,6 +118,58 @@ async function runAudit(networkKey: string) {
     exposedModules = Object.keys(modules);
     dangerousModules = exposedModules.filter(m => ['debug', 'admin', 'personal', 'miner'].includes(m));
   } catch { /* not all nodes expose this */ }
+
+  // KYC governance simulation:
+  // Show what voteInvalidKYC needs vs what's possible
+  const kycGovernance = {
+    ownerCount,
+    candidateCount,
+    threshold75pct: votesNeeded75pct,
+    maxPossibleVotes: candidateCount,
+    deficitVotes: Math.max(0, votesNeeded75pct - candidateCount),
+    governanceBroken,
+    ghostEntries,
+    activeCandidatesSample: activeCandidates.slice(0, 5),
+    // Steps in flow
+    flowSteps: [
+      {
+        step: 1,
+        fn: 'uploadKYC(string kychash)',
+        status: 'broken',
+        description: 'Anyone can upload any string as KYC. No admin approval, no identity check. Just pushing a string makes you "KYC whitelisted".',
+        selector: '0x9d888e86',
+      },
+      {
+        step: 2,
+        fn: 'propose(address _candidate)',
+        status: governanceBroken ? 'broken' : 'ok',
+        description: `propose() increments ownerCount on first call per address (currently ${ownerCount.toLocaleString()}), but resign() NEVER decrements it. This is the root cause of governance failure.`,
+        selector: '0x01267951',
+      },
+      {
+        step: 3,
+        fn: 'voteInvalidKYC(address _invalidCandidate)',
+        status: 'broken',
+        description: `Requires invalidKYCCount * 100 / getOwnerCount() >= 75. With ownerCount=${ownerCount.toLocaleString()}, need ${votesNeeded75pct.toLocaleString()} votes. Only ${candidateCount} candidates exist. Permanently unreachable.`,
+        selector: '0x8f35a75e',
+      },
+      {
+        step: 4,
+        fn: 'delete candidates[i] then delete validatorsState[candidates[i]]',
+        status: 'broken',
+        description: `Even if threshold were reached: delete candidates[i] first zeros the slot to address(0), then delete validatorsState[address(0)] deletes the WRONG state. The invalidated validator keeps isCandidate=true and can resign()+withdraw().`,
+        selector: 'internal',
+      },
+    ],
+    validationQuery: {
+      rpc: rpcUrl,
+      contract: VALIDATOR,
+      getOwnerCount: { selector: '0xa9ff959e', result: ownerCount },
+      candidateCount: { selector: '0xa9a981a3', result: candidateCount },
+      candidatesArrayLength: candidates.length,
+      ghostEntries,
+    },
+  };
 
   return {
     network: config.name,
@@ -130,6 +190,7 @@ async function runAudit(networkKey: string) {
     randomizeHasCode,
     exposedModules,
     dangerousModules,
+    kycGovernance,
     timestamp: new Date().toISOString(),
   };
 }
