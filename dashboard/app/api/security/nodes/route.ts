@@ -246,6 +246,16 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
     ipSources.get(ip)!.add(source);
   };
 
+  // Source A0: Known audit IPs (238 nodes from security assessment)
+  if (networkKey === 'mainnet') {
+    try {
+      const auditNodes = await import('@/lib/audit-known-nodes.json') as { default: Array<{ ip: string; port: number }> };
+      for (const node of auditNodes.default) {
+        addIP(node.ip, `audit:port${node.port}`);
+      }
+    } catch { /* audit nodes file not found */ }
+  }
+
   // Source A: admin_peers from local nodes
   const localNodes = network.localNodes;
 
@@ -275,19 +285,37 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
   // 3. Probe all discovered IPs
   const allIPs = Array.from(ipSources.keys());
 
-  // Parallel probe: RPC (8545), WS (8546), P2P (30303)
+  // Parallel probe: RPC (8545 + 8989), WS (8546), P2P (30303)
   const probeResults = await scanWithConcurrency(
     allIPs,
     async (ip) => {
-      const [rpcOpen, wsOpen, p2pOpen] = await Promise.all([
+      const [rpc8545, rpc8989, wsOpen, p2pOpen] = await Promise.all([
         probeTCP(ip, 8545),
+        probeTCP(ip, 8989),
         probeTCP(ip, 8546),
         probeTCP(ip, 30303),
       ]);
+      const rpcOpen = rpc8545 || rpc8989;
+      const rpcPort = rpc8545 ? 8545 : rpc8989 ? 8989 : 0;
       let modules: string[] = [];
-      if (rpcOpen) modules = await getRpcModules(ip);
+      if (rpcOpen) {
+        modules = await getRpcModules(ip + (rpcPort === 8989 ? ':8989' : ''));
+        if (modules.length === 0 && rpc8989) {
+          // Try port 8989 explicitly
+          try {
+            const res = await fetch(`http://${ip}:8989`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jsonrpc: '2.0', method: 'rpc_modules', params: [], id: 1 }),
+              signal: AbortSignal.timeout(3000),
+            });
+            const d = await res.json();
+            if (d.result) modules = Object.keys(d.result);
+          } catch { /* */ }
+        }
+      }
       const dangerous = modules.filter(m => ['debug', 'admin', 'personal', 'miner'].includes(m));
-      return { ip, rpcOpen, wsOpen, p2pOpen, modules, dangerous };
+      return { ip, rpcOpen, rpcPort, wsOpen, p2pOpen, modules, dangerous };
     },
     PROBE_CONCURRENCY
   );
