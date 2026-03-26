@@ -244,6 +244,11 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
   const standbynodes = mnData.Standbynodes || [];
   const penalized = mnData.Penalty || [];
 
+  // Create lookup sets for role matching
+  const mnSet = new Set(masternodes.map((a: string) => a.toLowerCase()));
+  const sbSet = new Set(standbynodes.map((a: string) => a.toLowerCase()));
+  const penSet = new Set(penalized.map((a: string) => a.toLowerCase()));
+
   // 2. Collect IPs from multiple sources
   const ipSources = new Map<string, Set<string>>(); // ip -> set of sources
 
@@ -420,9 +425,7 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
   const uniqueProviders = new Set(nodes.map(n => n.isp || n.org).filter(Boolean)).size;
 
   // 6. Run ethstats + masternode enrichment IN PARALLEL (both are slow)
-  const mnSet = new Set(masternodes.map(a => a.toLowerCase()));
-  const sbSet = new Set(standbynodes.map(a => a.toLowerCase()));
-  const penSet = new Set(penalized.map(a => a.toLowerCase()));
+  // mnSet/sbSet/penSet already created above
 
   // Start ethstats scrape immediately (5s WS collection)
   const ethstatsPromise = (async () => {
