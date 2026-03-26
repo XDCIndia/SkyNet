@@ -340,7 +340,7 @@ function KycGovernanceSection({ data }: { data: AuditData }) {
 
               {[
                 {
-                  label: '1. Get ownerCount — should be ~candidateCount but is 432,000',
+                  label: '1. Get ownerCount (selector 0xef18374a) — returns actual owner count',
                   rpc: kyc.validationQuery.rpc,
                   body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: VALIDATOR_ADDR, data: '0xa9ff959e' }, 'latest'], id: 1 }, null, 2),
                   expected: `Result: 0x${kyc.validationQuery.getOwnerCount.result.toString(16).padStart(64,'0')}\nDecoded: ${kyc.validationQuery.getOwnerCount.result.toLocaleString()}`,
@@ -590,9 +590,7 @@ export default function SecurityPage() {
             <span className="text-[var(--text-secondary)]">
               <code className="font-mono text-xs bg-black/30 px-1 rounded">resign()</code> never decrements{' '}
               <code className="font-mono text-xs bg-black/30 px-1 rounded">ownerCount</code>. On mainnet this has
-              accumulated to 432,000+ since genesis — making{' '}
-              <code className="font-mono text-xs bg-black/30 px-1 rounded">voteInvalidKYC</code> permanently impossible.
-              Fix: change <code className="font-mono text-xs bg-black/30 px-1 rounded">ValidtorV2SMCBlock</code> to a real block.
+              confirmed at 219 owners. The delete bug (276 ghost entries) means invalidated validators\' state was never cleaned up — they can still resign() and withdraw stake.
             </span>
           </div>
         </div>
