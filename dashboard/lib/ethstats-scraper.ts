@@ -6,7 +6,7 @@
  * Direct connection to the raw stats server IP works: ws://45.82.64.150:3000
  */
 
-import WebSocket from 'ws';
+// ws imported dynamically inside function to avoid Next.js bundling issues
 
 const DEFAULT_ETHSTATS_IP = '45.82.64.150';
 const DEFAULT_ETHSTATS_PORT = 3000;
@@ -45,7 +45,9 @@ export async function scrapeEthstats(ip?: string, port?: number): Promise<Ethsta
     let msgCount = 0;
     let startTime = 0;
 
-    const ws = new WebSocket(wsUrl + '?_primuscb=' + Date.now() + '-0', {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const WS = require('ws') as typeof import('ws').default;
+    const ws = new WS(wsUrl + '?_primuscb=' + Date.now() + '-0', {
       headers: {
         'Origin': 'https://stats.xinfin.network',
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
@@ -98,7 +100,7 @@ export async function scrapeEthstats(ip?: string, port?: number): Promise<Ethsta
       }, COLLECT_DURATION_MS);
     });
 
-    ws.on('message', (data: WebSocket.Data) => {
+    ws.on('message', (data: Buffer | string) => {
       msgCount++;
       try {
         const msg = JSON.parse(data.toString());
