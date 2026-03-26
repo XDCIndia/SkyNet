@@ -8,14 +8,14 @@ const ZERO_ADDR   = '0x0000000000000000000000000000000000000000';
 const NETWORKS: Record<string, { name: string; rpc: string; fallbacks: string[] }> = {
   mainnet: {
     name: 'XDC Mainnet',
-    // Ankr public RPC as primary — no key needed
-    rpc: 'https://rpc.ankr.com/xdc',
-    fallbacks: ['https://rpc.xdcrpc.com', 'https://rpc.xinfin.network', 'https://rpc1.xinfin.network'],
+    // Own RPCs first (reliable), Ankr last as public fallback
+    rpc: 'https://rpc.xdcrpc.com',
+    fallbacks: ['https://rpc.xdc.network', 'https://rpc.xinfin.network', 'https://rpc1.xinfin.network', 'https://rpc.ankr.com/xdc'],
   },
   apothem: {
     name: 'Apothem Testnet',
-    rpc: 'https://rpc.ankr.com/xdc_testnet',
-    fallbacks: ['https://apothem.xdcrpc.com', 'https://rpc.apothem.network'],
+    rpc: 'https://apothem.xdcrpc.com',
+    fallbacks: ['https://rpc.apothem.network', 'https://rpc.ankr.com/xdc_testnet'],
   },
 };
 
@@ -55,16 +55,36 @@ function decodeAddressArray(hex: string): string[] {
 }
 
 // Try RPCs in order, return first working one
+// Skips rate-limited endpoints and continues to next fallback
 async function findWorkingRpc(config: { rpc: string; fallbacks: string[] }): Promise<{ url: string; blockNumber: number }> {
   const urls = [config.rpc, ...config.fallbacks];
+  const errors: string[] = [];
   for (const url of urls) {
     try {
-      const blockHex = await rpcPost(url, 'eth_blockNumber', []) as string;
-      const blockNumber = hexToInt(blockHex);
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1 }),
+        signal: AbortSignal.timeout(6000),
+      });
+      const data = await res.json();
+      // Rate limited — skip to next, don't throw
+      if (data.error?.code === -32090 || data.error?.message?.includes('rate limit')) {
+        errors.push(`${url} (rate limited)`);
+        continue;
+      }
+      if (data.error) {
+        errors.push(`${url} (${data.error.message})`);
+        continue;
+      }
+      const blockNumber = hexToInt(data.result);
       if (blockNumber > 0) return { url, blockNumber };
-    } catch { continue; }
+      errors.push(`${url} (block=0)`);
+    } catch (e) {
+      errors.push(`${url} (${(e as Error).message})`);
+    }
   }
-  throw new Error(`No working RPC available. Tried: ${urls.join(', ')}`);
+  throw new Error(`No working RPC available. Tried: ${errors.join(' | ')}`);
 }
 
 async function runAudit(networkKey: string) {
@@ -76,16 +96,17 @@ async function runAudit(networkKey: string) {
   // Parallel fetch all contract data
   const [
     candidateCountHex, ownerCountHex, candidatesHex,
-    minCapHex, maxValHex, candDelayHex, voterDelayHex,
+    minCapHex, minVoterCapHex, maxValHex, candDelayHex, voterDelayHex,
     bsCode, rzCode,
   ] = await Promise.all([
     ethCall(rpcUrl, VALIDATOR, '0xa9a981a3'),  // candidateCount()
-    ethCall(rpcUrl, VALIDATOR, '0xa9ff959e'),  // getOwnerCount()
+    ethCall(rpcUrl, VALIDATOR, '0xef18374a'),  // getOwnerCount()  ← corrected
     ethCall(rpcUrl, VALIDATOR, '0x06a49fce'),  // getCandidates()
-    ethCall(rpcUrl, VALIDATOR, '0x33aca42f'),  // minCandidateCap()
-    ethCall(rpcUrl, VALIDATOR, '0x09dfdc2f'),  // maxValidatorNumber()
-    ethCall(rpcUrl, VALIDATOR, '0x4d11d8fe'),  // candidateWithdrawDelay()
-    ethCall(rpcUrl, VALIDATOR, '0x6fd55014'),  // voterWithdrawDelay()
+    ethCall(rpcUrl, VALIDATOR, '0xd55b7dff'),  // minCandidateCap() ← corrected
+    ethCall(rpcUrl, VALIDATOR, '0xf8ac9dd5'),  // minVoterCap()     ← corrected
+    ethCall(rpcUrl, VALIDATOR, '0xd09f1ab4'),  // maxValidatorNumber() ← corrected
+    ethCall(rpcUrl, VALIDATOR, '0xd161c767'),  // candidateWithdrawDelay() ← corrected
+    ethCall(rpcUrl, VALIDATOR, '0xa9ff959e'),  // voterWithdrawDelay() ← corrected
     rpcPost(rpcUrl, 'eth_getCode', [BLOCKSIGNER, 'latest']),
     rpcPost(rpcUrl, 'eth_getCode', [RANDOMIZE, 'latest']),
   ]);
@@ -103,6 +124,7 @@ async function runAudit(networkKey: string) {
 
   const minCapWei = BigInt(minCapHex || '0x0');
   const minCandidateCap = (Number(minCapWei) / 1e18).toFixed(0);
+  // minVoterCapHex available but not used in audit output currently
   const maxValidatorNumber = hexToInt(maxValHex);
   const candidateWithdrawDelayBlocks = hexToInt(candDelayHex);
   const voterWithdrawDelayBlocks = hexToInt(voterDelayHex);
