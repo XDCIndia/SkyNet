@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as net from 'net';
+import * as fs from 'fs';
+import * as path from 'path';
 import { scrapeEthstats, EthstatsNode } from '@/lib/ethstats-scraper';
 
 export const maxDuration = 120; // Allow up to 120 seconds for full scan
@@ -255,10 +257,11 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
   // Source A0: Known audit IPs (238 nodes from security assessment)
   if (networkKey === 'mainnet') {
     try {
-      const auditNodes = await import('@/lib/audit-known-nodes.json');
-      const nodeList = (auditNodes as { default: Array<{ ip: string; port: number }> }).default || auditNodes;
-      for (const node of (nodeList as Array<{ ip: string; port: number }>)) {
-        addIP(node.ip, `audit:port${node.port}`);
+      const auditPath = path.join(process.cwd(), 'lib', 'audit-known-nodes.json');
+      const auditRaw = fs.readFileSync(auditPath, 'utf-8');
+      const auditNodesList: Array<{ ip: string; port: number }> = JSON.parse(auditRaw);
+      for (const node of auditNodesList) {
+        addIP(node.ip, 'audit:port' + node.port);
       }
     } catch { /* audit nodes file not found */ }
   }
@@ -334,8 +337,8 @@ async function runScan(networkKey: string = 'mainnet'): Promise<ScanResult> {
   let auditAccounts: Record<string, { account: string; name: string; port: number; isCandidate: boolean }> = {};
   if (networkKey === 'mainnet') {
     try {
-      const mod = await import('@/lib/audit-node-accounts.json');
-      auditAccounts = (mod as { default: Record<string, { account: string; name: string; port: number; isCandidate: boolean }> }).default || mod;
+      const acctPath = path.join(process.cwd(), 'lib', 'audit-node-accounts.json');
+      auditAccounts = JSON.parse(fs.readFileSync(acctPath, 'utf-8'));
     } catch { /* */ }
   }
 
