@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const RPC = 'https://rpc.xdcrpc.com';
+const VALIDATOR = '0x0000000000000000000000000000000000000088';
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 const PROBE_TIMEOUT_MS = 2500;
 const PROBE_CONCURRENCY = 25;
