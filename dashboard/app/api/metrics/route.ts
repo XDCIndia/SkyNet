@@ -106,8 +106,25 @@ export async function GET() {
     ] = results;
 
     // Calculate sync percentage
+    // Fix #31: prefer fleet max block from DB over eth_syncing.highestBlock
+    // highestBlock from Prometheus is just this node's eth_syncing target, not the network tip
     const currentHeight = blockHeight || 0;
-    const highest = highestBlock || currentHeight;
+    let highest = highestBlock || currentHeight;
+
+    // Query fleet max block from skynet DB to get actual network height
+    try {
+      const { queryAll: dbQueryAll } = await import('@/lib/db');
+      const fleetRes = await dbQueryAll(
+        `SELECT COALESCE(MAX(block_height), 0) as max_height
+         FROM skynet.node_metrics
+         WHERE collected_at > NOW() - INTERVAL '5 minutes'`
+      );
+      const fleetMax = parseInt(fleetRes[0]?.max_height || '0');
+      if (fleetMax > highest) {
+        highest = fleetMax;
+      }
+    } catch { /* fallback to Prometheus highestBlock */ }
+
     const syncPercent = highest > 0 ? Math.min(100, (currentHeight / highest) * 100) : 100;
     const isSyncing = syncPercent < 99.9;
 

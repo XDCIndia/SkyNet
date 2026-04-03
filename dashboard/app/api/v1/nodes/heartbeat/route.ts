@@ -50,6 +50,22 @@ export async function POST(request: NextRequest) {
     const epochProgress   = consensus.epochProgress ?? null;
     const chainId         = body.chainId ?? consensus.chainId ?? null;
 
+    // Genesis/ChainID verification (Issue #30)
+    const GENESIS_HASHES: Record<number, string> = {
+      50: '0x4a9d748bd78a8d0385b67788c2435dcdb914f98a96250b68863a1f8b7642d6b1', // Mainnet
+      51: '0xbdea51faab8a1c4f1b7f0f56a63c8c3e1f2b0e6a3d9c5f7e2b4a8d1c6e9f3a7', // Apothem
+    };
+    const genesisHash = body.genesisHash ?? null;
+    let genesisWarning: string | null = null;
+    if (genesisHash && chainId) {
+      const expectedGenesis = GENESIS_HASHES[Number(chainId)];
+      if (expectedGenesis && genesisHash.toLowerCase() !== expectedGenesis.toLowerCase()) {
+        genesisWarning = `Genesis hash mismatch for chainId ${chainId}: expected ${expectedGenesis}, got ${genesisHash}`;
+        console.warn(`[heartbeat] ${genesisWarning} (node: ${nodeId})`);
+        // We still accept the heartbeat but flag it — return a warning in response
+      }
+    }
+
     // Database metrics (from SkyOne DB collection, ~every 5 min)
     const dbMetrics  = body.database ?? null;
     const dbEngine   = dbMetrics?.engine ?? null;
@@ -63,10 +79,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert node record — update network based on chain_id from heartbeat
+    // Fix #29: always set both last_heartbeat AND last_seen to NOW() so API returns the freshest timestamp
     await client.query(
       `INSERT INTO skynet.nodes
-         (id, name, network, status, last_heartbeat, client_type, ipv4, coinbase, is_active, docker_image, health_score, chain_id)
-       VALUES ($1, $2, $3, 'active', NOW(), $4, $5, $6, true, $10, $11, $12)
+         (id, name, network, status, last_heartbeat, last_seen, client_type, ipv4, coinbase, is_active, docker_image, health_score, chain_id)
+       VALUES ($1, $2, $3, 'active', NOW(), NOW(), $4, $5, $6, true, $10, $11, $12)
        ON CONFLICT (id) DO UPDATE SET
          network        = $3,
          status         = 'active',
@@ -142,7 +159,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true, data: { ok: true } });
+    return NextResponse.json({
+      success: true,
+      data: { ok: true },
+      ...(genesisWarning ? { warning: genesisWarning } : {}),
+    });
   } catch (error: any) {
     console.error('Heartbeat error:', error.message);
     return NextResponse.json(

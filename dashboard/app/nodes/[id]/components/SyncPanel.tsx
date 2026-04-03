@@ -55,11 +55,13 @@ export default function SyncPanel({ status, metrics }: SyncPanelProps) {
   const displaySyncRate = useAnimatedNumber(syncRatePerMin, 1000);
   
   // Calculate ETA
+  // Fix #31: Use networkHeight (fleet max across healthy nodes) instead of
+  // eth_syncing.highestBlock which is a single node's self-reported target
   const eta = useMemo(() => {
     if (!status.isSyncing || (status.syncPercent || 0) >= 99.9) return null;
     
     const currentBlock = status.blockHeight || 0;
-    const highestBlock = status.highestBlock || currentBlock;
+    const highestBlock = status.networkHeight || status.highestBlock || currentBlock;
     const blocksRemaining = highestBlock - currentBlock;
     
     if (blocksRemaining <= 0) return null;
@@ -132,8 +134,8 @@ export default function SyncPanel({ status, metrics }: SyncPanelProps) {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-2xl font-bold font-mono-nums text-[var(--text-primary)]">
-              {status.highestBlock && status.blockHeight 
-                ? formatNumber(status.highestBlock - status.blockHeight)
+              {(status.networkHeight || status.highestBlock) && status.blockHeight 
+                ? formatNumber((status.networkHeight || status.highestBlock || 0) - status.blockHeight)
                 : '—'}
             </span>
           </div>
@@ -164,7 +166,7 @@ export default function SyncPanel({ status, metrics }: SyncPanelProps) {
             <span className="font-mono-nums" style={{ color: syncColor }}>
               Behind: {(100 - (status.syncPercent || 0)).toFixed(2)}%
             </span>
-            <span className="font-mono-nums">{formatNumber(status.highestBlock || 0)}</span>
+            <span className="font-mono-nums">{formatNumber(status.networkHeight || status.highestBlock || 0)}</span>
           </div>
         </div>
       )}
