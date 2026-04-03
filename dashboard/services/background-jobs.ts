@@ -5,6 +5,7 @@
  * 
  * Issue: #684 - Alert Trigger Engine Not Connected
  * Issue: #33  - Cross-Client Block Hash Divergence (60-second job)
+ * Issue: #34  - 'Invalid Ancestor' Sync Error Detection
  */
 
 import { startAlertEngine as startLegacyAlertEngine } from './alert-trigger';
@@ -253,6 +254,102 @@ function startDivergenceDetector(): void {
   setInterval(checkBlockHashDivergence, 60_000);
 }
 
+// ──────────────────────────────────────────────────────────────
+// Issue #34: Invalid Ancestor Error Detection
+// Polls skynet.node_logs for 'invalid ancestor' pattern every 5 minutes.
+// Creates an incident with root_cause='bad_block' when found.
+// ──────────────────────────────────────────────────────────────
+
+async function checkInvalidAncestorErrors(): Promise<void> {
+  try {
+    // Query node_logs for 'invalid ancestor' pattern in last 10 minutes
+    const logsResult = await query(`
+      SELECT
+        nl.node_id,
+        n.name AS node_name,
+        nl.log_line,
+        nl.collected_at
+      FROM skynet.node_logs nl
+      JOIN skynet.nodes n ON nl.node_id = n.id
+      WHERE nl.log_line ILIKE '%invalid ancestor%'
+        AND nl.collected_at > NOW() - INTERVAL '10 minutes'
+      ORDER BY nl.collected_at DESC
+      LIMIT 50
+    `).catch(() => ({ rows: [] })); // Table may not exist yet
+
+    if (!logsResult.rows.length) return;
+
+    // Deduplicate by node_id
+    const seen = new Set<string>();
+    for (const row of logsResult.rows) {
+      if (seen.has(row.node_id)) continue;
+      seen.add(row.node_id);
+
+      logger.warn('[InvalidAncestor] Detected invalid ancestor error', {
+        nodeId: row.node_id,
+        nodeName: row.node_name,
+        logLine: row.log_line?.slice(0, 200),
+      });
+
+      // Create incident (idempotent via fingerprint)
+      const fingerprint = `invalid_ancestor-${row.node_id}-${new Date().toISOString().slice(0, 13)}`; // hourly dedup
+      try {
+        await query(
+          `INSERT INTO skynet.alerts
+             (node_id, severity, title, message, status, fingerprint, triggered_at)
+           VALUES ($1, 'critical', $2, $3, 'active', $4, NOW())
+           ON CONFLICT (fingerprint) DO NOTHING`,
+          [
+            row.node_id,
+            `Invalid Ancestor Error: ${row.node_name}`,
+            `Node ${row.node_name} reported 'invalid ancestor' — possible bad block or fork. Log: ${(row.log_line ?? '').slice(0, 300)}`,
+            fingerprint,
+          ]
+        );
+
+        // Also create an incident with root_cause tag
+        await query(
+          `INSERT INTO skynet.incidents
+             (node_id, node_name, type, severity, title, description, status, root_cause, detected_at)
+           VALUES ($1, $2, 'sync_error', 'critical', $3, $4, 'active', 'bad_block', NOW())
+           ON CONFLICT DO NOTHING`,
+          [
+            row.node_id,
+            row.node_name,
+            `Invalid Ancestor: ${row.node_name}`,
+            `Detected 'invalid ancestor' error in node logs. This indicates a bad block or chain fork. Log excerpt: ${(row.log_line ?? '').slice(0, 400)}`,
+          ]
+        ).catch((err: any) => {
+          // incidents table may not have root_cause column yet — try without it
+          if (err.message?.includes('root_cause')) {
+            return query(
+              `INSERT INTO skynet.incidents
+                 (node_id, node_name, type, severity, title, description, status, detected_at)
+               VALUES ($1, $2, 'sync_error', 'critical', $3, $4, 'active', NOW())
+               ON CONFLICT DO NOTHING`,
+              [row.node_id, row.node_name,
+               `Invalid Ancestor: ${row.node_name}`,
+               `Detected 'invalid ancestor' error. Bad block suspected. Log: ${(row.log_line ?? '').slice(0, 300)}`]
+            );
+          }
+        });
+      } catch (insertErr: any) {
+        if (!insertErr.message?.includes('does not exist')) {
+          logger.error('[InvalidAncestor] Failed to create incident', { insertErr });
+        }
+      }
+    }
+  } catch (err) {
+    logger.error('[InvalidAncestor] Error in checkInvalidAncestorErrors', { err });
+  }
+}
+
+function startInvalidAncestorDetector(): void {
+  logger.info('[InvalidAncestor] Starting invalid ancestor error detector (5-min interval)');
+  setTimeout(() => checkInvalidAncestorErrors(), 60_000); // 1-min delay on startup
+  setInterval(checkInvalidAncestorErrors, 5 * 60_000);
+}
+
 // Configure all background jobs
 const jobs: JobConfig[] = [
   {
@@ -288,6 +385,13 @@ const jobs: JobConfig[] = [
     enabled: process.env.ENABLE_HEALTH_CHECKER !== 'false',
     intervalMs: 60_000,
     startFunction: startHealthChecker,
+  },
+  // Issue #34: Invalid Ancestor Error Detector
+  {
+    name: 'InvalidAncestorDetector',
+    enabled: process.env.ENABLE_INVALID_ANCESTOR_DETECTOR !== 'false',
+    intervalMs: 5 * 60_000,
+    startFunction: startInvalidAncestorDetector,
   },
 ];
 

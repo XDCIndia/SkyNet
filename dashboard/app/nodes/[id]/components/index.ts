@@ -21,5 +21,12 @@ export { default as SyncProgressPanel } from './SyncProgressPanel';
 export { default as PeerListPanel } from './PeerListPanel';
 export { default as LogViewerPanel } from './LogViewerPanel';
 
+// Phase 5 panels (Issues #3, #10, #11, #40, #74)
+export { default as ChainDataPanel } from './ChainDataPanel';
+export { default as SyncTimeline } from './SyncTimeline';
+export { default as P2PProtocolPanel } from './P2PProtocolPanel';
+export { default as SecurityPanel } from './SecurityPanel';
+export { default as PeerInjectionWidget } from './PeerInjectionWidget';
+
 // Export types
 export * from './types';

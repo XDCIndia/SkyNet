@@ -1,3 +1,85 @@
+/**
+ * Issue #18 — In-Memory TTL Cache
+ *
+ * Simple Map-based cache to reduce DB load.
+ * No Redis required. Falls back transparently if Redis is unavailable.
+ *
+ * TTLs:
+ *   - Node list: 30s
+ *   - Single node: 5s
+ *   - Fleet status: 5s
+ *   - Metrics: 30s
+ */
+
+// ──────────────────────────────────────────────────────────────
+// In-Memory Cache (always available, zero dependencies)
+// ──────────────────────────────────────────────────────────────
+
+interface MemCacheEntry<T = unknown> {
+  value: T;
+  expiresAt: number;
+}
+
+const memStore = new Map<string, MemCacheEntry>();
+
+/** In-memory TTL cache — get a value or undefined if missing/expired */
+export function memGet<T>(key: string): T | undefined {
+  const entry = memStore.get(key);
+  if (!entry) return undefined;
+  if (Date.now() > entry.expiresAt) {
+    memStore.delete(key);
+    return undefined;
+  }
+  return entry.value as T;
+}
+
+/** In-memory TTL cache — set a value with TTL in seconds */
+export function memSet<T>(key: string, value: T, ttlSeconds: number): void {
+  memStore.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
+}
+
+/** In-memory TTL cache — delete a key */
+export function memDel(key: string): void {
+  memStore.delete(key);
+}
+
+/** In-memory TTL cache — delete all keys matching a prefix */
+export function memDelPrefix(prefix: string): void {
+  for (const key of memStore.keys()) {
+    if (key.startsWith(prefix)) memStore.delete(key);
+  }
+}
+
+/**
+ * getMemCached — Fetch from in-memory cache or call fetcher and cache result.
+ * Drop-in replacement for getCached() when Redis is not available.
+ *
+ * @example
+ * const nodes = await getMemCached('skynet:nodes', () => db.query(...), 30);
+ */
+export async function getMemCached<T>(
+  key: string,
+  fetcher: () => Promise<T>,
+  ttlSeconds: number
+): Promise<T> {
+  const cached = memGet<T>(key);
+  if (cached !== undefined) return cached;
+
+  const fresh = await fetcher();
+  memSet(key, fresh, ttlSeconds);
+  return fresh;
+}
+
+// Prune expired entries periodically to prevent memory leaks
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of memStore.entries()) {
+      if (now > entry.expiresAt) memStore.delete(key);
+    }
+  }, 60_000);
+}
+
 import Redis from 'ioredis';
 
 // Redis client singleton

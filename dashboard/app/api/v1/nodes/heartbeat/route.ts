@@ -27,7 +27,17 @@ export async function POST(request: NextRequest) {
     const peerCount  = body.peerCount ?? 0;
     const network    = body.network ?? 'mainnet';
     const isSyncing  = body.syncing ?? body.isSyncing ?? false;
-    const clientType = body.clientType ?? 'unknown';
+    // Issue #32 — Client type auto-detection from RPC fingerprint
+    // If clientType not provided or 'unknown', detect from web3_clientVersion string.
+    let clientType = body.clientType ?? 'unknown';
+    const clientVersionRaw: string = body.clientVersion ?? '';
+    if (!clientType || clientType === 'unknown' || clientType === '') {
+      const cv = clientVersionRaw.toLowerCase();
+      if (cv.includes('nethermind')) clientType = 'nethermind';
+      else if (cv.includes('erigon')) clientType = 'erigon';
+      else if (cv.includes('reth')) clientType = 'reth';
+      else if (cv.includes('xdc') || cv.includes('geth') || cv.includes('go-ethereum')) clientType = 'geth';
+    }
 
     // Rich fields from official skynet-agent.sh
     const sys        = body.system ?? {};
