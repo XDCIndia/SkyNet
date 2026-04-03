@@ -186,7 +186,7 @@ export default function DatabasePanel({ nodeId, dbEngine }: DatabasePanelProps) 
             <Database className="w-5 h-5 text-[var(--accent-blue)]" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Database Deep-Dive</h2>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">Database Deep-Dive <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full uppercase tracking-wide">New</span></h2>
             <p className="text-sm text-[var(--text-tertiary)]">No DB metrics yet — SkyOne agent collecting on next cycle</p>
           </div>
         </div>
@@ -213,7 +213,7 @@ export default function DatabasePanel({ nodeId, dbEngine }: DatabasePanelProps) 
           <Database className="w-5 h-5 text-[var(--accent-blue)]" />
         </div>
         <div className="flex-1">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Database Deep-Dive</h2>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">Database Deep-Dive <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full uppercase tracking-wide">New</span></h2>
           <div className="text-sm text-[var(--text-tertiary)]">
             On-chain data breakdown &amp; growth tracking
           </div>

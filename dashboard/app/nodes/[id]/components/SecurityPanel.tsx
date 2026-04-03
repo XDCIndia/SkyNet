@@ -108,7 +108,7 @@ export default function SecurityPanel({ node, status }: SecurityPanelProps) {
             <Shield className="w-5 h-5 text-[#10B981]" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">Security Score</h2>
+            <h2 className="text-lg font-semibold flex items-center gap-2">Security Score <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full uppercase tracking-wide">New</span></h2>
             <p className="text-xs text-[#64748B]">From SkyOne agent security scan</p>
           </div>
         </div>
@@ -130,7 +130,7 @@ export default function SecurityPanel({ node, status }: SecurityPanelProps) {
           <Icon className="w-5 h-5" style={{ color }} />
         </div>
         <div className="flex-1">
-          <h2 className="text-lg font-semibold">Security Score</h2>
+          <h2 className="text-lg font-semibold flex items-center gap-2">Security Score <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full uppercase tracking-wide">New</span></h2>
           <p className="text-xs text-[#64748B]">From SkyOne agent security scan</p>
         </div>
         <span

@@ -128,7 +128,7 @@ export default function ErigonPanel({ status, metrics }: Props) {
     <div className="bg-gray-800 rounded-xl p-5">
       <div className="flex items-center gap-2 mb-4">
         <div className="w-2 h-6 rounded-full bg-purple-500" />
-        <h2 className="text-lg font-semibold text-white">Erigon Dual-Sentry</h2>
+        <h2 className="text-lg font-semibold text-white flex items-center gap-2">Erigon Dual-Sentry <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full uppercase tracking-wide">New</span></h2>
         <span className="ml-auto text-xs bg-gray-700 rounded-full px-3 py-1 text-gray-300">
           {totalPeers} total peers
         </span>

@@ -105,7 +105,7 @@ export default function P2PProtocolPanel({ peers }: P2PProtocolPanelProps) {
             <Network className="w-5 h-5 text-[#1E90FF]" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">P2P Protocol Versions</h2>
+            <h2 className="text-lg font-semibold flex items-center gap-2">P2P Protocol Versions <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full uppercase tracking-wide">New</span></h2>
             <p className="text-xs text-[#64748B]">Multi-client protocol negotiation</p>
           </div>
         </div>
@@ -121,7 +121,7 @@ export default function P2PProtocolPanel({ peers }: P2PProtocolPanelProps) {
           <Network className="w-5 h-5 text-[#1E90FF]" />
         </div>
         <div className="flex-1">
-          <h2 className="text-lg font-semibold">P2P Protocol Versions</h2>
+          <h2 className="text-lg font-semibold flex items-center gap-2">P2P Protocol Versions <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full uppercase tracking-wide">New</span></h2>
           <p className="text-xs text-[#64748B]">Protocol negotiation across {peers.length} peers</p>
         </div>
         <div className="flex items-center gap-2 text-xs text-[#64748B]">

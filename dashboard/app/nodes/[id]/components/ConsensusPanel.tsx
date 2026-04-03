@@ -55,7 +55,7 @@ export function ConsensusPanel({
           <Layers className="w-5 h-5 text-[#1E90FF]" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold">XDPoS Consensus</h2>
+          <h2 className="text-lg font-semibold flex items-center gap-2">XDPoS Consensus <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full uppercase tracking-wide">New</span></h2>
           <p className="text-xs text-[#64748B]">Epoch progress &amp; protocol version</p>
         </div>
 

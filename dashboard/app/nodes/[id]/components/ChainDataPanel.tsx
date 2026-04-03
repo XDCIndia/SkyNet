@@ -149,7 +149,7 @@ export default function ChainDataPanel({ nodeId, status }: ChainDataPanelProps) 
           <Layers className="w-5 h-5 text-[#3B82F6]" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-white">Chain Data Breakdown</h2>
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">Chain Data Breakdown <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full uppercase tracking-wide">New</span></h2>
           <p className="text-sm text-[#64748B]">
             Headers / bodies / receipts / state / freezer
           </p>

@@ -1,6 +1,6 @@
 'use client';
 
-import { FileText, CheckCircle2, XCircle, AlertTriangle, Layers, Loader2 } from 'lucide-react';
+import { FileText, CheckCircle2, XCircle, AlertTriangle, Layers, Loader2, Info } from 'lucide-react';
 import { useAnimatedNumber } from '@/lib/animations';
 import { formatNumber } from '@/lib/formatters';
 import type { NodeStatus } from './types';
@@ -27,29 +27,39 @@ function DonutChart({
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="transform -rotate-90">
-        {data.map((item) => {
-          const percentage = total > 0 ? item.value / total : 0;
-          const dashArray = percentage * circumference;
-          const offset = currentOffset;
-          currentOffset += dashArray;
-          
-          return (
-            <circle
-              key={item.label}
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              fill="none"
-              stroke={item.color}
-              strokeWidth={strokeWidth}
-              strokeDasharray={`${dashArray} ${circumference - dashArray}`}
-              strokeDashoffset={-offset}
-              style={{
-                transition: 'all 0.5s ease-out',
-              }}
-            />
-          );
-        })}
+        {total === 0 ? (
+          // Empty state ring
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="rgba(255,255,255,0.06)"
+            strokeWidth={strokeWidth}
+          />
+        ) : (
+          data.map((item) => {
+            const percentage = total > 0 ? item.value / total : 0;
+            const dashArray = percentage * circumference;
+            const offset = currentOffset;
+            currentOffset += dashArray;
+            
+            return (
+              <circle
+                key={item.label}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={item.color}
+                strokeWidth={strokeWidth}
+                strokeDasharray={`${dashArray} ${circumference - dashArray}`}
+                strokeDashoffset={-offset}
+                style={{ transition: 'all 0.5s ease-out' }}
+              />
+            );
+          })
+        )}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-xl font-bold font-mono-nums text-[var(--text-primary)]">
@@ -61,12 +71,51 @@ function DonutChart({
   );
 }
 
+function SyncProgressBar({ blockHeight, networkHeight, syncPercent }: {
+  blockHeight?: number;
+  networkHeight?: number;
+  syncPercent?: number;
+}) {
+  const pct = syncPercent ?? (
+    blockHeight && networkHeight && networkHeight > 0
+      ? Math.min(100, (blockHeight / networkHeight) * 100)
+      : 0
+  );
+
+  const color = pct >= 99 ? '#10B981' : pct >= 90 ? '#F59E0B' : '#1E90FF';
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-[var(--text-secondary)]">Sync Progress</span>
+        <span className="font-semibold font-mono-nums" style={{ color }}>{pct.toFixed(2)}%</span>
+      </div>
+      <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, backgroundColor: color, boxShadow: `0 0 8px ${color}60` }}
+        />
+      </div>
+      {blockHeight !== undefined && networkHeight !== undefined && networkHeight > 0 && (
+        <div className="flex justify-between text-xs text-[var(--text-tertiary)] font-mono-nums">
+          <span>Block {blockHeight.toLocaleString()}</span>
+          <span>of {networkHeight.toLocaleString()}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function TxPoolPanel({ status }: TxPoolPanelProps) {
   const isSyncing = status.isSyncing;
   
   const pending = status.txPoolPending || 0;
   const queued = status.txPoolQueued || 0;
   const total = pending + queued;
+
+  const blockHeight = status.blockHeight;
+  const networkHeight = status.networkHeight;
+  const syncPercent = status.syncPercent;
   
   const donutData = [
     { label: 'Pending', value: pending, color: 'var(--accent-blue)' },
@@ -75,8 +124,15 @@ export default function TxPoolPanel({ status }: TxPoolPanelProps) {
   
   const displayPending = useAnimatedNumber(pending, 800);
   const displayQueued = useAnimatedNumber(queued, 800);
-  
-  // Render syncing state
+
+  // Compute sync pct for display
+  const pct = syncPercent ?? (
+    blockHeight && networkHeight && networkHeight > 0
+      ? Math.min(100, (blockHeight / networkHeight) * 100)
+      : 0
+  );
+
+  // Render syncing state — improved
   if (isSyncing) {
     return (
       <div className="card-xdc">
@@ -89,20 +145,59 @@ export default function TxPoolPanel({ status }: TxPoolPanelProps) {
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">Transaction Pool</h2>
             <div className="flex items-center gap-2 text-sm text-[var(--warning)]">
               <Loader2 className="w-3 h-3 animate-spin" />
-              <span>Node is syncing...</span>
+              <span>Syncing — {pct.toFixed(2)}% complete</span>
             </div>
           </div>
         </div>
-        
-        <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Loader2 className="w-12 h-12 text-[var(--warning)] animate-spin mb-4" />
-          <p className="text-[var(--text-secondary)]">Transaction pool data unavailable while syncing</p>
-          <p className="text-sm text-[var(--text-tertiary)] mt-2">TxPool will be available once sync is complete</p>
+
+        <div className="space-y-4">
+          {/* Informative message */}
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-[var(--warning)]/5 border border-[var(--warning)]/20">
+            <Info className="w-4 h-4 text-[var(--warning)] mt-0.5 shrink-0" />
+            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+              Transaction pool populates after sync reaches chain tip.{' '}
+              {blockHeight !== undefined && networkHeight !== undefined && networkHeight > 0 ? (
+                <>Currently at block <span className="font-semibold text-[var(--text-primary)] font-mono-nums">{blockHeight.toLocaleString()}</span> of <span className="font-semibold text-[var(--text-primary)] font-mono-nums">{networkHeight.toLocaleString()}</span> (<span className="font-semibold text-[var(--warning)]">{pct.toFixed(1)}%</span>)</>
+              ) : (
+                <>Waiting for sync data...</>
+              )}
+            </p>
+          </div>
+
+          {/* Sync progress bar */}
+          <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+            <SyncProgressBar
+              blockHeight={blockHeight}
+              networkHeight={networkHeight}
+              syncPercent={syncPercent}
+            />
+          </div>
+
+          {/* Remaining blocks / ETA hints */}
+          {blockHeight !== undefined && networkHeight !== undefined && networkHeight > blockHeight && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl bg-white/5 text-center">
+                <div className="text-xs text-[var(--text-tertiary)] mb-1">Blocks Remaining</div>
+                <div className="text-lg font-bold font-mono-nums text-[var(--warning)]">
+                  {(networkHeight - blockHeight).toLocaleString()}
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-white/5 text-center">
+                <div className="text-xs text-[var(--text-tertiary)] mb-1">Sync Progress</div>
+                <div className="text-lg font-bold font-mono-nums text-[var(--accent-blue)]">
+                  {pct.toFixed(2)}%
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
   }
-  
+
+  // Empty pool state (not syncing but 0 transactions)
+  const isEmpty = total === 0;
+
   return (
     <div className="card-xdc">
       {/* Header */}
@@ -113,10 +208,20 @@ export default function TxPoolPanel({ status }: TxPoolPanelProps) {
         <div>
           <h2 className="text-lg font-semibold text-[var(--text-primary)]">Transaction Pool</h2>
           <div className="text-sm text-[var(--text-tertiary)]">
-            {total > 0 ? `${formatNumber(total)} total transactions` : '0 transactions (empty pool)'}
+            {total > 0 ? `${formatNumber(total)} total transactions` : 'Pool is empty'}
           </div>
         </div>
       </div>
+
+      {/* Empty pool notice for non-mining nodes */}
+      {isEmpty && (
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-[var(--success)]/5 border border-[var(--success)]/20 mb-5">
+          <Info className="w-4 h-4 text-[var(--success)] mt-0.5 shrink-0" />
+          <p className="text-sm text-[var(--text-secondary)]">
+            Transaction pool is empty — this is normal for non-mining nodes
+          </p>
+        </div>
+      )}
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Donut Chart */}

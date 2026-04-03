@@ -1,8 +1,7 @@
 'use client';
 
-import { HardDrive, Database, TrendingUp, Gauge, ArrowUpDown } from 'lucide-react';
-import { useAnimatedNumber } from '@/lib/animations';
-import { formatBytes, formatNumber } from '@/lib/formatters';
+import { HardDrive, Database, TrendingUp, Gauge, ArrowUpDown, Server, MapPin, AlertCircle, Zap } from 'lucide-react';
+import { formatBytes } from '@/lib/formatters';
 import { Sparkline } from '@/components/charts/Sparkline';
 import type { NodeStatus, MetricHistory } from './types';
 
@@ -11,92 +10,144 @@ interface StoragePanelProps {
   metrics: MetricHistory[];
 }
 
-function CacheHitGauge({ rate }: { rate: number }) {
-  const size = 100;
-  const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (rate / 100) * circumference;
-  
-  const color = rate >= 90 ? '#10B981' : rate >= 70 ? '#F59E0B' : '#EF4444';
-  
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="transform -rotate-90">
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="rgba(255, 255, 255, 0.06)"
-            strokeWidth={strokeWidth}
-          />
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            style={{
-              transition: 'stroke-dashoffset 0.5s ease-out',
-              filter: `drop-shadow(0 0 4px ${color}50)`,
-            }}
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-xl font-bold font-mono-nums" style={{ color }}>
-            {rate.toFixed(0)}%
-          </span>
-        </div>
-      </div>
-      <span className="section-header mt-2">Cache Hit Rate</span>
-    </div>
-  );
+function StorageTypeIcon({ type }: { type: string }) {
+  if (type.includes('NVMe')) return <Zap className="w-4 h-4 text-[#10B981]" />;
+  if (type.includes('SSD')) return <Server className="w-4 h-4 text-[#3B82F6]" />;
+  return <HardDrive className="w-4 h-4 text-[#F59E0B]" />;
 }
 
-function DistributionBar({ label, value, color, max }: { label: string; value: number; color: string; max: number }) {
-  const percentage = max > 0 ? (value / max) * 100 : 0;
-  
+function IOPSGauge({ iops }: { iops: number }) {
+  // Typical max: NVMe ~100K, SSD ~50K, HDD ~200
+  const maxIops = iops > 50000 ? 200000 : iops > 1000 ? 100000 : 1000;
+  const pct = Math.min(100, (iops / maxIops) * 100);
+  const color = iops > 50000 ? '#10B981' : iops > 5000 ? '#3B82F6' : '#F59E0B';
+
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-[var(--text-secondary)]">{label}</span>
-        <span className="text-sm font-medium font-mono-nums text-[var(--text-primary)]">{formatBytes(value)}</span>
+    <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+      <div className="flex items-center gap-2 mb-3">
+        <Gauge className="w-4 h-4 text-[var(--warning)]" />
+        <span className="text-xs uppercase tracking-wide text-[var(--text-tertiary)] font-medium">IOPS Estimate</span>
       </div>
-      <div className="w-full h-2 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-        <div 
+      <div className="text-2xl font-bold font-mono-nums mb-2" style={{ color }}>
+        {iops >= 1000 ? `${(iops / 1000).toFixed(1)}K` : iops}
+        <span className="text-sm font-normal text-[var(--text-tertiary)] ml-1">IOPS</span>
+      </div>
+      <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+        <div
           className="h-full rounded-full transition-all duration-500"
-          style={{
-            width: `${Math.min(100, percentage)}%`,
-            backgroundColor: color,
-          }}
+          style={{ width: `${pct}%`, backgroundColor: color }}
         />
       </div>
     </div>
   );
 }
 
+function DiskUsageBar({ usedGb, totalGb }: { usedGb: number; totalGb: number }) {
+  const pct = totalGb > 0 ? Math.min(100, (usedGb / totalGb) * 100) : 0;
+  const color = pct > 90 ? '#EF4444' : pct > 75 ? '#F59E0B' : '#10B981';
+
+  return (
+    <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs uppercase tracking-wide text-[var(--text-tertiary)] font-medium">Disk Usage</span>
+        <span className="text-sm font-semibold font-mono-nums" style={{ color }}>
+          {pct.toFixed(1)}%
+        </span>
+      </div>
+      <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden mb-2">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${pct}%`, backgroundColor: color }}
+        />
+      </div>
+      <div className="flex justify-between text-xs text-[var(--text-tertiary)] font-mono-nums">
+        <span>{usedGb.toFixed(1)} GB used</span>
+        <span>{totalGb.toFixed(1)} GB total</span>
+      </div>
+    </div>
+  );
+}
+
+function ChainVsDbBar({ chainDataBytes, databaseBytes }: { chainDataBytes: number; databaseBytes: number }) {
+  const total = databaseBytes > 0 ? databaseBytes : chainDataBytes;
+  if (total === 0) return null;
+
+  const chainPct = Math.min(100, (chainDataBytes / total) * 100);
+  const overheadBytes = databaseBytes > chainDataBytes ? databaseBytes - chainDataBytes : 0;
+  const overheadPct = Math.min(100, (overheadBytes / total) * 100);
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs uppercase tracking-wide text-[var(--text-tertiary)] font-medium">Storage Distribution</div>
+
+      {/* Stacked bar */}
+      <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden flex">
+        <div
+          className="h-full transition-all duration-500 bg-purple-500"
+          style={{ width: `${chainPct}%` }}
+          title={`Chain data: ${formatBytes(chainDataBytes)}`}
+        />
+        {overheadPct > 0 && (
+          <div
+            className="h-full transition-all duration-500 bg-blue-400/60"
+            style={{ width: `${overheadPct}%` }}
+            title={`DB overhead: ${formatBytes(overheadBytes)}`}
+          />
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-sm bg-purple-500 shrink-0" />
+          <div>
+            <div className="text-[var(--text-tertiary)]">Chain Data</div>
+            <div className="font-semibold font-mono-nums text-[var(--text-primary)]">{formatBytes(chainDataBytes)}</div>
+          </div>
+        </div>
+        {databaseBytes > 0 && (
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-sm bg-blue-400/60 shrink-0" />
+            <div>
+              <div className="text-[var(--text-tertiary)]">Total DB</div>
+              <div className="font-semibold font-mono-nums text-[var(--text-primary)]">{formatBytes(databaseBytes)}</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function StoragePanel({ status, metrics }: StoragePanelProps) {
-  const chainDataSize = status.storage?.chainDataSize || 0;
-  const databaseSize = status.storage?.databaseSize || 0;
-  
-  // Convert GB to bytes if needed (assume GB if value is small)
+  const storage = status.storage;
+
+  // Check if we have real storage data
+  const diskUsedGb = storage?.diskUsedGb ?? 0;
+  const diskTotalGb = storage?.diskTotalGb ?? 0;
+  const chainDataSize = storage?.chainDataSize ?? 0;
+  const databaseSize = storage?.databaseSize ?? 0;
+  const storageType = storage?.storageType;
+  const iopsEstimate = storage?.iopsEstimate ?? 0;
+  const mountPoint = storage?.mountPoint;
+
+  const hasRealData = diskTotalGb > 0 || chainDataSize > 0 || databaseSize > 0;
+
+  // Convert to bytes if the values look like GB (< 100000) rather than bytes
   const chainDataBytes = chainDataSize > 1000 ? chainDataSize : chainDataSize * 1024 * 1024 * 1024;
   const databaseBytes = databaseSize > 1000 ? databaseSize : databaseSize * 1024 * 1024 * 1024;
-  
-  const totalSize = databaseBytes > 0 ? databaseBytes : chainDataBytes * 1.1;
-  
-  // Get storage history for sparkline
+
+  // Storage history for sparkline
   const storageHistory = metrics
     .slice(-30)
     .map(m => m.chain_data_size || m.database_size || 0)
     .filter(v => v > 0);
-  
+
+  // Storage type styling
+  const storageTypeStyle =
+    storageType?.includes('NVMe') ? { bg: 'bg-[#10B981]/10', text: 'text-[#10B981]', border: 'border-[#10B981]/20' } :
+    storageType?.includes('SSD') ? { bg: 'bg-[#3B82F6]/10', text: 'text-[#3B82F6]', border: 'border-[#3B82F6]/20' } :
+    { bg: 'bg-[#F59E0B]/10', text: 'text-[#F59E0B]', border: 'border-[#F59E0B]/20' };
+
   return (
     <div className="card-xdc">
       {/* Header */}
@@ -104,138 +155,94 @@ export default function StoragePanel({ status, metrics }: StoragePanelProps) {
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--purple)]/20 to-[var(--pink)]/10 flex items-center justify-center">
           <HardDrive className="w-5 h-5 text-[var(--purple)]" />
         </div>
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Storage & Database</h2>
+        <div className="flex-1">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Storage &amp; Database</h2>
           <div className="text-sm text-[var(--text-tertiary)] flex items-center gap-2 flex-wrap">
             <span>Chain data metrics</span>
-            {status.storage?.storageType && status.storage.storageType !== 'unknown' && (
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                status.storage.storageType.includes('NVMe') ? 'bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20' :
-                status.storage.storageType.includes('SSD') ? 'bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/20' :
-                'bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20'
-              }`}>
-                {status.storage.storageType}
-                {(status.storage.iopsEstimate || 0) > 0 && ` · ~${((status.storage.iopsEstimate || 0) / 1000).toFixed(1)}K IOPS`}
+            {storageType && storageType !== 'unknown' && (
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium border flex items-center gap-1 ${storageTypeStyle.bg} ${storageTypeStyle.text} ${storageTypeStyle.border}`}>
+                <StorageTypeIcon type={storageType} />
+                {storageType}
+                {iopsEstimate > 0 && ` · ~${iopsEstimate >= 1000 ? `${(iopsEstimate / 1000).toFixed(1)}K` : iopsEstimate} IOPS`}
               </span>
             )}
           </div>
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: Storage Stats */}
+
+      {/* No data fallback */}
+      {!hasRealData ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-[var(--warning)]/10 flex items-center justify-center">
+            <AlertCircle className="w-6 h-6 text-[var(--warning)]" />
+          </div>
+          <div>
+            <p className="text-[var(--text-secondary)] font-medium">Storage metrics unavailable</p>
+            <p className="text-sm text-[var(--text-tertiary)] mt-1">
+              Ensure SkyOne agent v2 is running on this node
+            </p>
+          </div>
+        </div>
+      ) : (
         <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-[var(--purple)]/5 border border-[var(--purple)]/10">
-            <div className="flex items-center gap-3 mb-3">
-              <Database className="w-5 h-5 text-[var(--purple)]" />
+          {/* Storage Type prominent display */}
+          {storageType && storageType !== 'unknown' && (
+            <div className={`flex items-center gap-3 p-4 rounded-xl border ${storageTypeStyle.bg} ${storageTypeStyle.border}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-white/5`}>
+                <StorageTypeIcon type={storageType} />
+              </div>
               <div>
-                <div className="section-header">Chain Data Size</div>
-                <div className="text-2xl font-bold font-mono-nums text-[var(--text-primary)]">
-                  {chainDataBytes > 0 ? formatBytes(chainDataBytes) : <span className="text-[var(--text-tertiary)]">—</span>}
+                <div className={`text-lg font-bold ${storageTypeStyle.text}`}>{storageType}</div>
+                <div className="text-xs text-[var(--text-tertiary)]">
+                  {storageType.includes('NVMe') ? 'High-performance NVMe — optimal for blockchain workloads' :
+                   storageType.includes('SSD') ? 'SSD storage — good performance for sync and state access' :
+                   'HDD storage — consider upgrading for better sync performance'}
                 </div>
               </div>
             </div>
-            {databaseBytes > 0 && (
-              <div className="text-sm text-[var(--text-secondary)]">
-                Total DB: <span className="font-semibold text-[var(--text-primary)]">{formatBytes(databaseBytes)}</span>
-              </div>
-            )}
-          </div>
-          
-          {/* Distribution Bars */}
-          {chainDataBytes > 0 && (
-            <div className="space-y-3">
-              <div className="section-header">Storage Distribution</div>
-                          
-              <DistributionBar
-                label="Chain Data"
-                value={chainDataBytes}
-                color="var(--purple)"
-                max={totalSize}
-              />
-              
-              <DistributionBar
-                label="Database Total"
-                value={totalSize}
-                color="var(--accent-blue)"
-                max={totalSize}
-              />
-            </div>
           )}
-          
-          {/* Mount Point Info */}
-          {status.storage?.mountPoint && (
-            <div className="p-3 rounded-xl bg-[rgba(139,92,246,0.03)] border border-[rgba(139,92,246,0.08)]">
-              <div className="section-header mb-2">Data Mount</div>
-              <div className="text-xs space-y-1">
-                <div><span className="text-[var(--text-tertiary)]">Mount:</span> <span className="text-[var(--text-primary)] font-mono">{status.storage.mountPoint}</span></div>
-                {(status.storage.mountPercent || 0) > 0 && (
-                  <div className="mt-2">
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-[var(--text-tertiary)]">Disk usage</span>
-                      <span className={`font-medium ${(status.storage.mountPercent || 0) > 90 ? 'text-[var(--critical)]' : (status.storage.mountPercent || 0) > 75 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}`}>
-                        {status.storage.mountPercent}%
-                      </span>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-[rgba(255,255,255,0.06)]">
-                      <div className={`h-full rounded-full ${(status.storage.mountPercent || 0) > 90 ? 'bg-[var(--critical)]' : (status.storage.mountPercent || 0) > 75 ? 'bg-[var(--warning)]' : 'bg-[var(--purple)]'}`}
-                        style={{ width: `${Math.min(100, status.storage.mountPercent || 0)}%` }} />
-                    </div>
-                  </div>
-                )}
+
+          {/* IOPS Gauge */}
+          {iopsEstimate > 0 && <IOPSGauge iops={iopsEstimate} />}
+
+          {/* Disk Usage Progress Bar */}
+          {diskTotalGb > 0 && <DiskUsageBar usedGb={diskUsedGb} totalGb={diskTotalGb} />}
+
+          {/* Mount Point */}
+          {mountPoint && (
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+              <MapPin className="w-4 h-4 text-[var(--accent-blue)] shrink-0" />
+              <div>
+                <div className="text-xs text-[var(--text-tertiary)]">Mount Point</div>
+                <div className="text-sm font-mono text-[var(--text-primary)]">{mountPoint}</div>
               </div>
             </div>
           )}
-          
-          {/* Storage History Sparkline */}
+
+          {/* Chain Data vs Database bar chart */}
+          {(chainDataBytes > 0 || databaseBytes > 0) && (
+            <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+              <ChainVsDbBar chainDataBytes={chainDataBytes} databaseBytes={databaseBytes} />
+            </div>
+          )}
+
+          {/* Storage Growth Sparkline */}
           {storageHistory.length >= 2 && (
-            <div className="mt-4">
-              <div className="section-header mb-2">Storage Growth</div>
-              <Sparkline 
-                data={storageHistory} 
-                color="var(--warning)" 
-                height={60} 
+            <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-4 h-4 text-[var(--warning)]" />
+                <span className="text-xs uppercase tracking-wide text-[var(--text-tertiary)] font-medium">Storage Growth</span>
+              </div>
+              <Sparkline
+                data={storageHistory}
+                color="var(--warning)"
+                height={60}
                 width={300}
               />
             </div>
           )}
         </div>
-        
-        {/* Right: Stats */}
-        <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-[var(--bg-hover)] flex flex-col items-center">
-            <CacheHitGauge rate={85} />
-          </div>
-          
-          <div className="p-4 rounded-xl bg-[var(--bg-hover)]">
-            <div className="flex items-center gap-2 mb-2">
-              <ArrowUpDown className="w-4 h-4 text-[var(--accent-blue)]" />
-              <span className="section-header">Read/Write Activity</span>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <div className="text-xs text-[var(--text-tertiary)]">Read</div>
-                <div className="text-lg font-semibold font-mono-nums text-[var(--accent-blue)]">Active</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-[var(--text-tertiary)]">Write</div>
-                <div className="text-lg font-semibold font-mono-nums text-[var(--success)]">Active</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="p-4 rounded-xl bg-[var(--bg-hover)]">
-            <div className="flex items-center gap-2 mb-2">
-              <Gauge className="w-4 h-4 text-[var(--warning)]" />
-              <span className="section-header">Compaction Status</span>
-            </div>
-            <div className="text-lg font-semibold text-[var(--text-primary)]">
-              Normal
-            </div>
-            <div className="text-xs text-[var(--text-tertiary)]">Background compaction running</div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -86,7 +86,7 @@ export default function PeerInjectionWidget({ nodeId }: PeerInjectionWidgetProps
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="text-xs font-medium text-white">Peer Injection</div>
+        <div className="text-xs font-medium text-white flex items-center gap-1.5">Peer Injection <span className="px-1.5 py-0.5 text-[9px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full uppercase tracking-wide">New</span></div>
         {latest ? (
           <div className="text-xs text-[#64748B]">
             Last:{' '}
