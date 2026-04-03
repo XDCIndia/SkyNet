@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import { broadcastNewBlock, broadcastNodeStatus } from '@/lib/websocket';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://gateway:gateway@localhost:5433/xdc_gateway'
@@ -7,8 +8,18 @@ const pool = new Pool({
 
 export async function POST(request: NextRequest) {
   const client = await pool.connect();
+  let body: any;
   try {
-    const body = await request.json();
+    // Issue #38: log JSON parse errors instead of silently dropping them
+    try {
+      body = await request.json();
+    } catch (parseError: any) {
+      console.error('[heartbeat] JSON parse error from', request.headers.get('x-forwarded-for') ?? 'unknown', ':', parseError.message);
+      return NextResponse.json(
+        { success: false, error: 'Invalid JSON body', detail: parseError.message },
+        { status: 400 }
+      );
+    }
 
     // Support both official agent format and legacy format
     const nodeId     = body.nodeId;
@@ -152,11 +163,20 @@ export async function POST(request: NextRequest) {
     // Evaluate every 5th heartbeat to reduce DB load (use modulo on timestamp minutes)
     const now = new Date();
     if (now.getMinutes() % 5 === 0) {
-      // Fire-and-forget: call the evaluate API internally via relative URL
-      // Use the pool directly to avoid circular HTTP calls
-      evaluateAlertsAsync(client, nodeId).catch(err => 
+      evaluateAlertsAsync(client, nodeId).catch(err =>
         console.error('Background alert evaluation error:', err)
       );
+    }
+
+    // Issue #15: broadcast real-time WS events (fire-and-forget)
+    try {
+      // block:new — notify if block height changed
+      broadcastNewBlock({ nodeId, blockHeight });
+      // node:status — derive current status
+      const nodeStatus = isSyncing ? 'syncing' : 'online';
+      broadcastNodeStatus({ nodeId, status: nodeStatus as any, blockHeight, peerCount });
+    } catch (_wsErr) {
+      // WS errors must never break the heartbeat response
     }
 
     return NextResponse.json({

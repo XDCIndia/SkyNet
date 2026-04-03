@@ -6,7 +6,8 @@
  * Issue: #684 - Alert Trigger Engine Not Connected
  */
 
-import { startAlertEngine } from './alert-trigger';
+import { startAlertEngine as startLegacyAlertEngine } from './alert-trigger';
+import { startAlertEngine } from '@/lib/alert-trigger-engine';
 import { logger } from '@/lib/logger';
 
 interface JobConfig {
