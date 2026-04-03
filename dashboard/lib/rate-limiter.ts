@@ -33,17 +33,17 @@ export const RATE_LIMIT_TIERS = {
   // Public / unauthenticated requests — 60 req/min per IP
   public: {
     windowMs: 60_000,
-    maxRequests: parseInt(process.env.RATE_LIMIT_PUBLIC || '60', 10),
+    maxRequests: parseInt(process.env.RATE_LIMIT_PUBLIC || '600', 10),
   },
   // Authenticated (API-key) requests — 300 req/min per key
   authenticated: {
     windowMs: 60_000,
-    maxRequests: parseInt(process.env.RATE_LIMIT_AUTHENTICATED || '300', 10),
+    maxRequests: parseInt(process.env.RATE_LIMIT_AUTHENTICATED || '1200', 10),
   },
   // Heartbeat — 120 req/min per node (allows ~2 req/s)
   heartbeat: {
     windowMs: 60_000,
-    maxRequests: parseInt(process.env.RATE_LIMIT_HEARTBEAT || '120', 10),
+    maxRequests: parseInt(process.env.RATE_LIMIT_HEARTBEAT || '600', 10),
   },
 } as const;
 
