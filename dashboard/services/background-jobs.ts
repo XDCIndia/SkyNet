@@ -12,6 +12,7 @@ import { startAlertEngine } from '@/lib/alert-trigger-engine';
 import { query } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { startNodeDiscovery } from './node-discovery';
+import { startHealthChecker } from './health-checker';
 
 interface JobConfig {
   name: string;
@@ -117,6 +118,135 @@ async function checkBlockHashDivergence(): Promise<void> {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue #67: Cross-Client Consensus Divergence Resolution
+// When divergence is detected, identify the minority (wrong) node(s) by
+// comparing against the majority hash and create a resolution incident.
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function resolveDivergence(): Promise<void> {
+  try {
+    // Look for unresolved divergence events
+    const events = await query(`
+      SELECT DISTINCT block_height
+        FROM skynet.block_divergence_events
+       WHERE resolved_at IS NULL
+         AND detected_at > NOW() - INTERVAL '10 minutes'
+    `).catch(() => ({ rows: [] as any[] }));
+
+    for (const event of events.rows) {
+      const height = Number(event.block_height);
+
+      // Get all nodes reporting at this height
+      const nodesAtHeight = await query(
+        `SELECT id AS node_id, name AS node_name, client_type, block_hash
+           FROM skynet.nodes
+          WHERE block_height = $1
+            AND block_hash IS NOT NULL
+            AND is_active = true`,
+        [height]
+      );
+
+      if (nodesAtHeight.rows.length < 2) continue;
+
+      // Count votes per hash (majority wins)
+      const hashVotes = new Map<string, { count: number; nodes: any[] }>();
+      for (const node of nodesAtHeight.rows) {
+        const h = String(node.block_hash).toLowerCase();
+        if (!hashVotes.has(h)) hashVotes.set(h, { count: 0, nodes: [] });
+        const entry = hashVotes.get(h)!;
+        entry.count++;
+        entry.nodes.push(node);
+      }
+
+      // Majority hash = the one with the most votes
+      let majorityHash = '';
+      let majorityCount = 0;
+      for (const [hash, data] of hashVotes.entries()) {
+        if (data.count > majorityCount) {
+          majorityCount = data.count;
+          majorityHash = hash;
+        }
+      }
+
+      // Nodes NOT on the majority hash are the minority (likely wrong)
+      const minorityNodes: any[] = [];
+      for (const [hash, data] of hashVotes.entries()) {
+        if (hash !== majorityHash) {
+          minorityNodes.push(...data.nodes);
+        }
+      }
+
+      if (minorityNodes.length === 0) continue;
+
+      const rootCause =
+        minorityNodes.length === 1
+          ? `Node "${minorityNodes[0].node_name}" (${minorityNodes[0].client_type}) is on minority fork at block ${height}. ` +
+            `All other nodes (${majorityCount}) agree on hash ${majorityHash.slice(0, 10)}….`
+          : `${minorityNodes.length} nodes are on minority fork at block ${height}: ` +
+            `${minorityNodes.map((n: any) => n.node_name).join(', ')}. ` +
+            `Majority (${majorityCount} nodes) agree on hash ${majorityHash.slice(0, 10)}….`;
+
+      logger.warn('[Divergence] Resolution identified minority nodes', {
+        blockHeight: height,
+        minority: minorityNodes.map((n: any) => n.node_name),
+        majorityHash: majorityHash.slice(0, 12),
+      });
+
+      // Create an incident for the divergence resolution
+      const incidentFingerprint = `divergence-resolution-${height}`;
+      try {
+        await query(
+          `INSERT INTO skynet.incidents
+             (title, description, severity, status, fingerprint, created_at)
+           VALUES ($1, $2, 'critical', 'open', $3, NOW())
+           ON CONFLICT (fingerprint) DO NOTHING`,
+          [
+            `Consensus Divergence at Block #${height}`,
+            rootCause,
+            incidentFingerprint,
+          ]
+        );
+      } catch (incErr: any) {
+        // incidents table may not exist — try alerts instead
+        if (incErr.message?.includes('does not exist')) {
+          await query(
+            `INSERT INTO skynet.alerts
+               (node_id, severity, title, message, status, fingerprint, triggered_at)
+             VALUES ($1, 'critical', $2, $3, 'active', $4, NOW())
+             ON CONFLICT (fingerprint) DO NOTHING`,
+            [
+              minorityNodes[0].node_id,
+              `Consensus Divergence Resolved at Block #${height}`,
+              rootCause,
+              incidentFingerprint,
+            ]
+          ).catch(() => {});
+        } else {
+          logger.error('[Divergence] Failed to create resolution incident', { incErr });
+        }
+      }
+
+      // Mark the divergence events as resolved
+      await query(
+        `UPDATE skynet.block_divergence_events
+            SET resolved_at = NOW()
+          WHERE block_height = $1
+            AND resolved_at IS NULL`,
+        [height]
+      ).catch(() => {});
+    }
+  } catch (err) {
+    logger.error('[Divergence] resolveDivergence error', { err });
+  }
+}
+
+function startDivergenceResolver(): void {
+  logger.info('[Divergence] Starting divergence resolution engine (90s)');
+  setTimeout(resolveDivergence, 30_000); // delay first run so detector goes first
+  setInterval(resolveDivergence, 90_000);
+}
+
 function startDivergenceDetector(): void {
   logger.info('[Divergence] Starting cross-client block hash divergence detector (60s)');
   checkBlockHashDivergence(); // Run immediately
@@ -144,6 +274,20 @@ const jobs: JobConfig[] = [
     enabled: process.env.ENABLE_NODE_DISCOVERY !== 'false',
     intervalMs: 5 * 60_000,
     startFunction: startNodeDiscovery,
+  },
+  // Issue #67: Cross-Client Consensus Divergence Resolution
+  {
+    name: 'DivergenceResolver',
+    enabled: process.env.ENABLE_DIVERGENCE_RESOLVER !== 'false',
+    intervalMs: 90_000,
+    startFunction: startDivergenceResolver,
+  },
+  // Issue #59: Container Health Checker
+  {
+    name: 'HealthChecker',
+    enabled: process.env.ENABLE_HEALTH_CHECKER !== 'false',
+    intervalMs: 60_000,
+    startFunction: startHealthChecker,
   },
 ];
 

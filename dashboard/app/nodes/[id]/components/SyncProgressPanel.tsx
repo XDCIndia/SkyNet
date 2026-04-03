@@ -14,10 +14,19 @@ interface SyncProgressPanelProps {
 
 function formatEta(seconds: number): string {
   if (seconds <= 0) return 'Done';
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-  if (seconds < 86400) return `${(seconds / 3600).toFixed(1)}h`;
-  return `${(seconds / 86400).toFixed(1)}d`;
+  if (seconds < 60) return `~${Math.round(seconds)}s`;
+  if (seconds < 3600) {
+    const m = Math.round(seconds / 60);
+    return `~${m}m`;
+  }
+  if (seconds < 86400) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.round((seconds % 3600) / 60);
+    return m > 0 ? `~${h}h ${m}m` : `~${h}h`;
+  }
+  const d = Math.floor(seconds / 86400);
+  const h = Math.round((seconds % 86400) / 3600);
+  return h > 0 ? `~${d}d ${h}h` : `~${d}d`;
 }
 
 function MiniChart({ data }: { data: { t: string; v: number }[] }) {
@@ -78,18 +87,37 @@ export default function SyncProgressPanel({ status, history }: SyncProgressPanel
   const target = highestBlock ?? networkHeight;
   const blocksLeft = target > blockHeight ? target - blockHeight : 0;
 
-  // Estimate blocks/sec from last two history points
+  // Issue #51: Rolling average blocks/sec over last 5 minutes of history
   let blocksPerSec: number | null = null;
   let etaSeconds: number | null = null;
   if (history.length >= 2) {
-    const last = history[history.length - 1];
-    const prev = history[history.length - 2];
-    const dt =
-      (new Date(last.timestamp).getTime() - new Date(prev.timestamp).getTime()) / 1000;
-    const db = last.block_height - prev.block_height;
-    if (dt > 0 && db > 0) {
-      blocksPerSec = db / dt;
-      etaSeconds = blocksPerSec > 0 ? blocksLeft / blocksPerSec : null;
+    const now = new Date(history[history.length - 1].timestamp).getTime();
+    const windowMs = 5 * 60 * 1000; // 5 minutes
+    const windowPoints = history.filter(
+      (h) => now - new Date(h.timestamp).getTime() <= windowMs
+    );
+
+    if (windowPoints.length >= 2) {
+      const oldest = windowPoints[0];
+      const newest = windowPoints[windowPoints.length - 1];
+      const dtWindow =
+        (new Date(newest.timestamp).getTime() - new Date(oldest.timestamp).getTime()) / 1000;
+      const dbWindow = newest.block_height - oldest.block_height;
+      if (dtWindow > 0 && dbWindow > 0) {
+        blocksPerSec = dbWindow / dtWindow;
+        etaSeconds = blocksPerSec > 0 ? blocksLeft / blocksPerSec : null;
+      }
+    } else {
+      // Fallback: last two points
+      const last = history[history.length - 1];
+      const prev = history[history.length - 2];
+      const dt =
+        (new Date(last.timestamp).getTime() - new Date(prev.timestamp).getTime()) / 1000;
+      const db = last.block_height - prev.block_height;
+      if (dt > 0 && db > 0) {
+        blocksPerSec = db / dt;
+        etaSeconds = blocksPerSec > 0 ? blocksLeft / blocksPerSec : null;
+      }
     }
   }
 
@@ -138,9 +166,15 @@ export default function SyncProgressPanel({ status, history }: SyncProgressPanel
           </p>
         </div>
         <div className="bg-gray-700 rounded-lg p-3">
-          <p className="text-gray-400 text-xs mb-1">ETA</p>
+          <p className="text-gray-400 text-xs mb-1">ETA (5-min avg)</p>
           <p className="text-white font-mono">
-            {etaSeconds != null ? formatEta(etaSeconds) : syncPercent >= 100 ? '—' : 'Calculating…'}
+            {etaSeconds != null
+              ? etaSeconds <= 0
+                ? 'Synced ✓'
+                : `Synced in ${formatEta(etaSeconds)}`
+              : syncPercent >= 100
+              ? 'Synced ✓'
+              : 'Calculating…'}
           </p>
         </div>
       </div>
