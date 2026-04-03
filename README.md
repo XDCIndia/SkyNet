@@ -698,11 +698,22 @@ npm run test       # Run tests
 
 ---
 
+## 📡 SkyOne Agent Documentation
+
+The **SkyOne Agent** is the node-side sidecar that reports to SkyNet. Full agent documentation lives in the [XDC Node Setup](https://github.com/XDCIndia/xdc-node-setup) repo, with the architecture doc mirrored here:
+
+| Document | Description |
+|----------|-------------|
+| [SkyOne Agent Feature Reference](https://github.com/XDCIndia/xdc-node-setup/blob/main/docs/SKYONE-AGENT.md) | Complete reference: heartbeat, auto-registration, metrics, self-healing, Phase 2 AI |
+| [SkyOne Architecture & Data Flow](docs/SKYONE-ARCHITECTURE.md) | ASCII diagrams: lifecycle, data flow, decision trees, fleet topology, API surface |
+
+---
+
 ## 🔗 Related Projects
 
 | Project | Description | Link |
 |---------|-------------|------|
-| **XDC Node Setup** | Node deployment toolkit (CLI, scripts, Docker) | [GitHub](https://github.com/AnilChinchawale/XDC-Node-Setup) |
+| **XDC Node Setup** | Node deployment toolkit (CLI, scripts, Docker) | [GitHub](https://github.com/XDCIndia/xdc-node-setup) |
 | **XDC Gateway** | Enterprise RPC infrastructure | [gateway.xdc.network](https://gateway.xdc.network) |
 | **XDC SkyNet** | Dashboard + API platform (this repo) | [xdc.openscan.ai](https://xdc.openscan.ai) |
 
