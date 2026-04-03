@@ -103,6 +103,30 @@ export async function POST(
       database,
     } = body;
 
+    // Issue #58: Pre-flight validation — reject incomplete heartbeats early
+    {
+      const preflightErrors: string[] = [];
+      if (!body.nodeName && !nodeId) {
+        preflightErrors.push('nodeName is required');
+      }
+      if (!body.chainId && !body.network) {
+        preflightErrors.push('chainId or network is required');
+      }
+      if (!clientType || clientType === '') {
+        preflightErrors.push('clientType is required');
+      }
+      if (preflightErrors.length > 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Pre-flight validation failed',
+            details: preflightErrors,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Normalize clientType from version string if needed
     if (clientType === 'XDC' || clientType === 'unknown' || !clientType) {
       if (version) {
@@ -359,6 +383,15 @@ export async function POST(
       await checkForForkAndCreateIncident(resolvedNodeId, blockHeight, blockHash, clientType);
     }
 
+    // Issue #36: Reth FCU Monitor
+    // If the reporting node is reth, check engine_forkchoiceUpdatedV1 status.
+    // rpcUrl stored on the node record is used for the engine API call.
+    if (clientType === 'reth') {
+      checkRethFCUStatus(resolvedNodeId).catch(err =>
+        console.error(`[FCU:${nodeId}] FCU check error:`, err)
+      );
+    }
+
     // Peer details collection (sent every ~5th heartbeat from agent)
     if (body.peerDetails && Array.isArray(body.peerDetails.peers) && body.peerDetails.peers.length > 0) {
       try {
@@ -518,6 +551,71 @@ export async function GET(
       { error: 'Failed to fetch heartbeat' },
       { status: 500 }
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Issue #36: Reth FCU Monitor
+// Queries engine_forkchoiceUpdatedV1 and stores the FCU status.
+// ─────────────────────────────────────────────────────────────
+
+async function checkRethFCUStatus(nodeId: string): Promise<void> {
+  try {
+    // Get the node's rpc_url
+    const nodeResult = await query(
+      'SELECT rpc_url, block_hash, block_height FROM skynet.nodes WHERE id = $1',
+      [nodeId]
+    );
+    const node = nodeResult.rows[0];
+    if (!node?.rpc_url) return; // No RPC URL configured — skip
+
+    const headHash = node.block_hash || '0x0000000000000000000000000000000000000000000000000000000000000000';
+    const safeHash = headHash;
+    const finalHash = headHash;
+
+    // Call engine_forkchoiceUpdatedV1 via JSON-RPC
+    const payload = {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'engine_forkchoiceUpdatedV1',
+      params: [
+        {
+          headBlockHash:      headHash,
+          safeBlockHash:      safeHash,
+          finalizedBlockHash: finalHash,
+        },
+        null,
+      ],
+    };
+
+    const response = await fetch(node.rpc_url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) return;
+
+    const json = await response.json();
+    const fcuStatus: string = json?.result?.payloadStatus?.status ?? 'UNKNOWN';
+
+    // Store FCU status on the node record
+    await query(
+      `UPDATE skynet.nodes
+       SET fcu_status = $1, fcu_checked_at = NOW()
+       WHERE id = $2`,
+      [fcuStatus, nodeId]
+    ).catch(() => {
+      // Column may not exist yet; silently ignore
+    });
+
+    if (fcuStatus === 'SYNCING') {
+      console.warn(`[FCU] Reth node ${nodeId} reports FCU=SYNCING`);
+    }
+  } catch (err: any) {
+    // Non-fatal — engine API may not be exposed
+    console.debug(`[FCU] ${nodeId} FCU check skipped: ${err.message}`);
   }
 }
 

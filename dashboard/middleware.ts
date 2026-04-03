@@ -132,8 +132,8 @@ function applyRateLimit(
   req: NextRequest,
   path: string
 ): { limited: boolean; result?: ReturnType<typeof checkRateLimit> } {
-  // Only apply to /api/v1/* routes
-  if (!path.startsWith('/api/v1/')) {
+  // Apply to /api/v1/* and /api/v2/* routes
+  if (!path.startsWith('/api/v1/') && !path.startsWith('/api/v2/')) {
     return { limited: false };
   }
 
@@ -252,8 +252,9 @@ export async function middleware(req: NextRequest) {
           );
         }
 
-        // Apply rate limiting for API routes (controlled by ENABLE_RATE_LIMIT env var)
-        const enableRateLimit = process.env.ENABLE_RATE_LIMIT === 'true';
+        // Issue #60: Apply per-API-key rate limiting for all API routes.
+        // Enabled by default; set ENABLE_RATE_LIMIT=false to disable.
+        const enableRateLimit = process.env.ENABLE_RATE_LIMIT !== 'false';
         const rateLimitCheck = enableRateLimit
           ? applyRateLimit(req, path)
           : { limited: false, result: null as any };

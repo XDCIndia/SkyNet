@@ -2,6 +2,7 @@
  * XDC SkyNet WebSocket / Socket.IO layer
  *
  * Issue #15: WebSocket for Live Updates
+ * Issue #24: Direct WS Bridge — subscribe to node newHeads and relay to clients
  *
  * Emits:
  *   block:new       – when any node reports a new block
@@ -13,6 +14,7 @@
 
 import { Server as NetServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
+import WebSocket from 'ws';
 import { query } from '@/lib/db';
 
 // Socket.io server instance (singleton)
@@ -71,6 +73,9 @@ export function initWebSocketServer(server: NetServer): SocketIOServer {
 
   // Polling loop — checks DB every 2 s for new blocks / status changes
   startPollingLoop();
+
+  // Issue #24: Start direct WS bridge to node endpoints
+  startDirectWSBridge();
 
   return io;
 }
@@ -148,6 +153,127 @@ export function broadcastTransaction(txData: any): void {
 
 export function getIO(): SocketIOServer | null {
   return io;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Issue #24: Direct WS Bridge (node → dashboard)
+// Subscribes to eth_subscribe newHeads on each node's WS endpoint.
+// Bypasses the DB polling loop for real-time block propagation.
+// ─────────────────────────────────────────────────────────────
+
+// Track active node WS connections: nodeId → WebSocket
+const nodeWSConnections = new Map<string, WebSocket>();
+
+/**
+ * Launch the Direct WS Bridge.
+ * Periodically queries the DB for nodes with a ws_url, then connects.
+ */
+function startDirectWSBridge(): void {
+  // Initial connect
+  connectAllNodeWS().catch(err => console.error('[WS Bridge] init error:', err));
+
+  // Refresh node list every 5 minutes (picks up new registrations)
+  setInterval(() => {
+    connectAllNodeWS().catch(err => console.error('[WS Bridge] refresh error:', err));
+  }, 5 * 60 * 1000);
+}
+
+async function connectAllNodeWS(): Promise<void> {
+  try {
+    const result = await query(`
+      SELECT id, name, ws_url
+      FROM skynet.nodes
+      WHERE is_active = true
+        AND ws_url IS NOT NULL
+        AND ws_url != ''
+    `);
+
+    for (const row of result.rows) {
+      if (!nodeWSConnections.has(row.id)) {
+        connectNodeWS(row.id, row.name, row.ws_url);
+      }
+    }
+  } catch (err) {
+    console.error('[WS Bridge] Failed to query nodes:', err);
+  }
+}
+
+function connectNodeWS(nodeId: string, nodeName: string, wsUrl: string): void {
+  if (nodeWSConnections.has(nodeId)) return; // already connected
+
+  let ws: WebSocket;
+  try {
+    ws = new WebSocket(wsUrl);
+  } catch (err) {
+    console.error(`[WS Bridge] Cannot create WS for node ${nodeName}:`, err);
+    return;
+  }
+
+  nodeWSConnections.set(nodeId, ws);
+
+  ws.on('open', () => {
+    console.log(`[WS Bridge] Connected to node ${nodeName} at ${wsUrl}`);
+    // Subscribe to new block headers
+    ws.send(JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'eth_subscribe',
+      params: ['newHeads'],
+    }));
+  });
+
+  ws.on('message', (data: WebSocket.RawData) => {
+    try {
+      const msg = JSON.parse(data.toString());
+      // eth_subscription newHeads notification
+      if (msg.method === 'eth_subscription' && msg.params?.result) {
+        const head = msg.params.result;
+        const blockHeight = head.number
+          ? parseInt(head.number, 16)
+          : 0;
+        const blockHash = head.hash || null;
+
+        if (blockHeight > 0) {
+          broadcastNewBlock({ nodeId, blockHeight, timestamp: new Date().toISOString() });
+          if (blockHash) {
+            // Also emit extended info for divergence detection consumers
+            if (io) {
+              io.to('blocks').emit('block:head', {
+                nodeId,
+                nodeName,
+                blockHeight,
+                blockHash,
+                parentHash: head.parentHash,
+                timestamp: head.timestamp,
+                source: 'direct-ws',
+              });
+            }
+          }
+        }
+      }
+    } catch (_) {
+      // Ignore parse errors
+    }
+  });
+
+  ws.on('error', (err) => {
+    console.error(`[WS Bridge] Error from node ${nodeName}:`, err.message);
+  });
+
+  ws.on('close', () => {
+    console.warn(`[WS Bridge] Disconnected from node ${nodeName}, will retry in 30s`);
+    nodeWSConnections.delete(nodeId);
+    // Reconnect after 30 s
+    setTimeout(() => connectNodeWS(nodeId, nodeName, wsUrl), 30_000);
+  });
+}
+
+/** Expose direct WS connection count for diagnostics */
+export function getDirectWSBridgeStats(): { connectedNodes: number; nodeIds: string[] } {
+  return {
+    connectedNodes: nodeWSConnections.size,
+    nodeIds: Array.from(nodeWSConnections.keys()),
+  };
 }
 
 // ─────────────────────────────────────────────────────────────

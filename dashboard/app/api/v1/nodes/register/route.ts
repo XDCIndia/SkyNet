@@ -61,11 +61,48 @@ function parseSmartNodeName(name: string): {
  * Public node registration endpoint
  * No authentication required
  * Supports smart node naming format: {client}-{version}-{type}-{ip}-{network}
+ *
+ * Issue #58 — Pre-Flight Checks:
+ * Validates nodeName (name), chainId, and clientType (client) before processing.
  */
 async function postHandler(request: NextRequest) {
-  const body = await request.json();
-  
-  // Validate request body
+  let rawBody: any;
+  try {
+    rawBody = await request.json();
+  } catch {
+    return NextResponse.json(
+      { success: false, error: 'Invalid JSON body' },
+      { status: 400 }
+    );
+  }
+
+  // Issue #58: Pre-flight field validation
+  const preflightErrors: string[] = [];
+  if (!rawBody?.name && !rawBody?.nodeName) {
+    preflightErrors.push('nodeName (name) is required');
+  }
+  if (!rawBody?.client && !rawBody?.clientType) {
+    preflightErrors.push('clientType (client) is required — must be one of: geth, erigon, gp5, nethermind, reth, XDC, unknown');
+  }
+  // chainId is optional in registration but warn if missing network context
+  if (!rawBody?.network && !rawBody?.chainId) {
+    preflightErrors.push('network or chainId is required — e.g. network: "mainnet" or chainId: 50');
+  }
+  if (preflightErrors.length > 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Pre-flight validation failed',
+        details: preflightErrors,
+      },
+      { status: 400 }
+    );
+  }
+
+  // Normalise: support both `nodeName` and `name`
+  const body = { ...rawBody, name: rawBody.name ?? rawBody.nodeName };
+
+  // Schema validation
   const validation = PublicRegistrationSchema.safeParse(body);
   if (!validation.success) {
     return NextResponse.json(
