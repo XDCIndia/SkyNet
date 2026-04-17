@@ -14,7 +14,7 @@ if [ -f .env ]; then
 fi
 
 # Set defaults
-export DATABASE_URL=${DATABASE_URL:-postgresql://gateway:gateway_secret_2026@localhost:5443/xdc_gateway}
+export DATABASE_URL=${DATABASE_URL:-postgresql://gateway:***@localhost:5433/xdc_gateway}
 export RPC_URL=${RPC_URL:-http://127.0.0.1:8989}
 export PROMETHEUS_URL=${PROMETHEUS_URL:-http://localhost:9090}
 export WS_PORT=${WS_PORT:-3006}

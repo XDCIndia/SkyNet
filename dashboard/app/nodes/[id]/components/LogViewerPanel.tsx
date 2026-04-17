@@ -34,7 +34,7 @@ function parseLine(raw: string): LogLine {
     const obj = JSON.parse(raw);
     return {
       ts: obj.t ?? obj.time ?? obj.ts ?? '',
-      level: (obj.lvl ?? obj.level ?? 'INFO').toUpperCase(),
+      level: (obj.lvl ?? obj.level ?? 'INFO')?.toUpperCase(),
       msg: obj.msg ?? obj.message ?? raw,
       raw,
     };

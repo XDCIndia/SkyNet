@@ -53,11 +53,11 @@ function parseNodeName(name: string): ParsedNodeName {
 function getClientStyle(client: string): { bg: string; text: string; label: string } {
   const c = client.toLowerCase();
   if (c === 'gp5' || c === 'geth-pr5') return { bg: 'bg-sky-500/15', text: 'text-sky-400', label: 'GP5' };
-  if (c === 'geth' || c === 'xdc') return { bg: 'bg-blue-500/15', text: 'text-blue-400', label: client.toUpperCase() };
+  if (c === 'geth' || c === 'xdc') return { bg: 'bg-blue-500/15', text: 'text-blue-400', label: client?.toUpperCase() };
   if (c === 'erigon') return { bg: 'bg-orange-500/15', text: 'text-orange-400', label: 'Erigon' };
   if (c === 'nm' || c === 'nethermind') return { bg: 'bg-purple-500/15', text: 'text-purple-400', label: c === 'nm' ? 'NM' : 'Nethermind' };
   if (c === 'reth') return { bg: 'bg-green-500/15', text: 'text-green-400', label: 'Reth' };
-  return { bg: 'bg-white/10', text: 'text-[#94A3B8]', label: client.toUpperCase() || '?' };
+  return { bg: 'bg-white/10', text: 'text-[#94A3B8]', label: client?.toUpperCase() || '?' };
 }
 
 function getNetworkStyle(network: string): { bg: string; text: string } {
@@ -357,7 +357,7 @@ export default function ComparisonPanel({ currentNodeId, currentNodeName }: Comp
             <div>
               <div className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3 flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#8B5CF6]" />
-                Same Client ({currentParsed.client.toUpperCase()}) — Cross Network
+                Same Client ({currentParsed.client?.toUpperCase()}) — Cross Network
               </div>
               <div className="flex gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:overflow-x-visible md:pb-0 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
                 {/* Current node first */}

@@ -136,7 +136,7 @@ function SeverityBadge({ s }: { s: Finding['severity'] }) {
     low:      'bg-blue-500/20 text-blue-400 border-blue-500/30',
     pass:     'bg-[var(--success)]/20 text-[var(--success)] border-[var(--success)]/30',
   }[s];
-  return <span className={`text-xs font-bold px-2 py-0.5 rounded border ${map}`}>{s.toUpperCase()}</span>;
+  return <span className={`text-xs font-bold px-2 py-0.5 rounded border ${map}`}>{s??.toUpperCase()}</span>;
 }
 
 function CopyButton({ text }: { text: string }) {

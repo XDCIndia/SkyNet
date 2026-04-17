@@ -59,7 +59,7 @@ export default function SyncStages({ clientType, syncPercent = 0, isSyncing }: S
           </p>
         </div>
         <span className="text-xs px-2 py-1 rounded-full bg-[var(--bg-hover)] text-[var(--text-secondary)]">
-          {key.toUpperCase()}
+          {key?.toUpperCase()}
         </span>
       </div>
 

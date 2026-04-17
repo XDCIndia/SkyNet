@@ -220,14 +220,14 @@ export default function V2RegisterPage() {
               <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 6, display: 'block' }}>Client Type</label>
               <select value={form.clientType} onChange={e => setForm({ ...form, clientType: e.target.value })}
                 style={{ ...inputStyle('clientType'), background: 'rgba(255,255,255,0.04)' }}>
-                {CLIENTS.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+                {CLIENTS.map(c => <option key={c} value={c}>{c.charAt(0)?.toUpperCase() + c.slice(1)}</option>)}
               </select>
             </div>
             <div>
               <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 6, display: 'block' }}>Network</label>
               <select value={form.network} onChange={e => setForm({ ...form, network: e.target.value })}
                 style={{ ...inputStyle('network'), background: 'rgba(255,255,255,0.04)' }}>
-                {NETWORKS.map(n => <option key={n} value={n}>{n.charAt(0).toUpperCase() + n.slice(1)}</option>)}
+                {NETWORKS.map(n => <option key={n} value={n}>{n.charAt(0)?.toUpperCase() + n.slice(1)}</option>)}
               </select>
             </div>
           </div>

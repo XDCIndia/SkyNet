@@ -101,7 +101,7 @@ function ChainBlocks() {
 
 function NodeCard({ node, index }: { node: NodeData; index: number }) {
   const sc = node.status === "healthy" ? "#30D158" : node.status === "syncing" ? "#0AD4FF" : node.status === "degraded" ? "#FF9F0A" : "#FF453A";
-  const clientLabel = (node.clientType || "?").charAt(0).toUpperCase() + (node.clientType || "").slice(1);
+  const clientLabel = (node.clientType || "?").charAt(0)?.toUpperCase() + (node.clientType || "").slice(1);
   const osLabel = node.os_info?.release ? node.os_info.release.replace(/\s+LTS/, "").split(" ").slice(0, 2).join(" ") : "Linux";
   const ago = (() => { const d = Date.now() - new Date(node.lastSeen).getTime(); return d < 60000 ? `${Math.floor(d / 1000)}s ago` : d < 3600000 ? `${Math.floor(d / 60000)}m ago` : `${Math.floor(d / 3600000)}h ago`; })();
   const spark = [0, 0, node.syncPercent * 0.4, node.syncPercent * 0.7, node.syncPercent, node.syncPercent, node.syncPercent].map(v => v + Math.random() * 0.2);
@@ -186,7 +186,7 @@ export default function SkyNetV2Dashboard() {
   const CLIENT_COLORS: Record<string, string> = { geth: "#0A84FF", erigon: "#FF9F0A", nethermind: "#BF5AF2", reth: "#30D158", xdc: "#0AD4FF" };
   const clientCounts: Record<string, number> = {};
   nodes.forEach(n => { const ct = n.clientType || 'unknown'; clientCounts[ct] = (clientCounts[ct] || 0) + 1; });
-  const clientData = Object.entries(clientCounts).filter(([, v]) => v > 0).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value, color: CLIENT_COLORS[name] || "#64D2FF" }));
+  const clientData = Object.entries(clientCounts).filter(([, v]) => v > 0).map(([name, value]) => ({ name: name.charAt(0)?.toUpperCase() + name.slice(1), value, color: CLIENT_COLORS[name] || "#64D2FF" }));
 
   const osCounts: Record<string, number> = {};
   nodes.forEach(n => { const os = n.os_info?.release?.includes('Ubuntu') ? 'Ubuntu' : n.os_info?.release?.includes('Alpine') ? 'Alpine' : 'Linux'; osCounts[os] = (osCounts[os] || 0) + 1; });

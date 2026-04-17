@@ -272,7 +272,7 @@ export default function V2AlertsPage() {
                 <select value={newRule.conditionType} onChange={e => setNewRule({ ...newRule, conditionType: e.target.value })}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: 13, outline: 'none' }}>
                   {['node_offline', 'sync_behind', 'disk_usage', 'peer_count', 'cpu_usage', 'memory_usage'].map(c => (
-                    <option key={c} value={c}>{c.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>
+                    <option key={c} value={c}>{c.replace(/_/g, ' ').replace(/\b\w/g, l => l?.toUpperCase())}</option>
                   ))}
                 </select>
               </div>

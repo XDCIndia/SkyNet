@@ -91,7 +91,7 @@ function SeverityBadge({ severity }: { severity: 'critical' | 'warning' | 'info'
   
   return (
     <span className={`px-2 py-0.5 text-xs font-medium rounded border ${styles[severity]}`}>
-      {severity.toUpperCase()}
+      {severity??.toUpperCase()}
     </span>
   );
 }
@@ -620,7 +620,7 @@ export default function FleetPage() {
                         </td>
                         <td className="py-3 px-3">
                           <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#1E90FF]/10 text-[#1E90FF] border border-[#1E90FF]/20">
-                            {(node.client_type || 'unknown').toUpperCase()}
+                            {(node.client_type || 'unknown')?.toUpperCase()}
                           </span>
                         </td>
                         <td className="py-3 px-3 text-xs text-[#64748B]" title={node.client_version}>

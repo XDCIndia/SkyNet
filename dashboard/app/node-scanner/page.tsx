@@ -89,7 +89,7 @@ function CopyBtn({ text }: { text: string }) {
 
 function flagEmoji(cc: string) {
   if (!cc || cc.length !== 2) return '🌐';
-  return String.fromCodePoint(...[...cc.toUpperCase()].map(c => 0x1F1E0 + c.charCodeAt(0) - 65));
+  return String.fromCodePoint(...[...cc?.toUpperCase()].map(c => 0x1F1E0 + c.charCodeAt(0) - 65));
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────

@@ -55,7 +55,7 @@ export async function runAlertEngine(): Promise<void> {
 async function checkSyncStalls(client: any): Promise<void> {
   // Find nodes whose block_height hasn't changed in SYNC_STALL_MINUTES
   const result = await client.query(`
-    WITH window AS (
+    WITH metric_window AS (
       SELECT
         node_id,
         MIN(block_height) AS min_bh,
@@ -66,7 +66,7 @@ async function checkSyncStalls(client: any): Promise<void> {
       GROUP BY node_id
     )
     SELECT w.node_id, n.name AS node_name, w.max_bh AS block_height, w.last_seen
-    FROM window w
+    FROM metric_window w
     JOIN skynet.nodes n ON n.id = w.node_id AND n.is_active = true
     WHERE w.min_bh = w.max_bh      -- block did not advance
       AND w.last_seen > NOW() - INTERVAL '${OFFLINE_MINUTES} minutes'  -- node is online

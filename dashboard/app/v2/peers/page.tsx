@@ -130,7 +130,7 @@ export default function V2PeersPage() {
           { label: 'ALL PEERS', value: peers.length, color: '#0AD4FF', sub: 'discovered' },
           { label: 'HEALTHY', value: healthyPeers.length, color: '#30D158', sub: 'high block height' },
           ...Object.entries(clientDist).slice(0, 2).map(([k, v]) => ({
-            label: k.toUpperCase(), value: v, color: clientColor(k), sub: `${((v / peers.length) * 100).toFixed(0)}% of peers`,
+            label: k?.toUpperCase(), value: v, color: clientColor(k), sub: `${((v / peers.length) * 100).toFixed(0)}% of peers`,
           })),
         ].map((c, i) => (
           <div key={i} className="glass-card" style={{ padding: 20, animationDelay: `${i * 0.05}s` }}>

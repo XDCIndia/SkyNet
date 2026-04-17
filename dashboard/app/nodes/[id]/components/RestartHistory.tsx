@@ -46,7 +46,7 @@ function ResultBadge({ result }: { result: RestartEvent['result'] }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded border ${styles[result] ?? styles.pending}`}>
       {icons[result]}
-      {result.charAt(0).toUpperCase() + result.slice(1)}
+      {result?.charAt(0).toUpperCase() + result.slice(1)}
     </span>
   );
 }

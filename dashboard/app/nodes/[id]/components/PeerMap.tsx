@@ -22,7 +22,7 @@ export default function PeerMap({ peers }: PeerMapProps) {
     peers.forEach(peer => {
       if (peer.country) {
         if (!stats[peer.country]) {
-          stats[peer.country] = { name: peer.country, count: 0, code: peer.country.slice(0, 2).toUpperCase() };
+          stats[peer.country] = { name: peer.country, count: 0, code: peer.country?.slice(0, 2).toUpperCase() };
         }
         stats[peer.country].count++;
       }

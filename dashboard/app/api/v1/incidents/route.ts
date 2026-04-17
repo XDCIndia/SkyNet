@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 
 const pool = new Pool({
-  connectionString: 'postgresql://gateway:gateway_secret_2026@localhost:5433/xdc_gateway',
+  connectionString: process.env.DATABASE_URL || 'postgresql://gateway:***@localhost:5433/xdc_gateway',
 });
 
 interface IncidentPayload {
