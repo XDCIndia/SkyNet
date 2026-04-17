@@ -170,7 +170,7 @@ function RoleBadge({ role }: { role: string }) {
   
   return (
     <span className={`px-2 py-0.5 text-[12px] font-medium rounded border ${colors[role] || colors.fullnode}`}>
-      {role.toUpperCase()}
+      {role?.toUpperCase()}
     </span>
   );
 }
@@ -199,7 +199,7 @@ function NodeTypeBadge({ nodeType }: { nodeType?: string }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[12px] font-medium rounded border ${style.bg}`}>
       {style.icon}
-      {nodeType.charAt(0).toUpperCase() + nodeType.slice(1)}
+      {nodeType?.charAt(0).toUpperCase() + nodeType.slice(1)}
     </span>
   );
 }

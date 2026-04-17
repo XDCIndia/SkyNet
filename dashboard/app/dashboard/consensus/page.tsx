@@ -318,7 +318,7 @@ export default function ConsensusDashboard() {
                     </div>
                   </div>
                   <div className={`px-3 py-1.5 rounded-full text-sm font-medium ${getScoreBg(healthScore.overallScore)} ${getScoreColor(healthScore.overallScore)}`}>
-                    {healthScore.status.toUpperCase()}
+                    {healthScore.status?.toUpperCase()}
                   </div>
                 </div>
               </div>
