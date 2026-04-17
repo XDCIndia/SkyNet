@@ -143,7 +143,7 @@ function SeverityBadge({ severity }: { severity: IssueSeverity }) {
   return (
     <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold ${config.color} ${config.bg} border ${config.border}`}>
       {config.icon}
-      {severity??.toUpperCase()}
+      {severity?.toUpperCase()}
     </span>
   );
 }
