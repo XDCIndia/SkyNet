@@ -169,7 +169,7 @@ export default function TopologyMap({
                   fontWeight="bold"
                   style={{ pointerEvents: 'none', userSelect: 'none' }}
                 >
-                  {node.clientType.slice(0, 4).toUpperCase()}
+                  {node.clientType?.slice(0, 4).toUpperCase()}
                 </text>
                 {/* Name below */}
                 <text

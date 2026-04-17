@@ -90,7 +90,7 @@ function StatusBadge({ status }: { status: 'active' | 'standby' | 'penalized' })
     <div className="flex items-center gap-2">
       <span className={`w-2.5 h-2.5 rounded-full ${pulses[status]}`} />
       <span className={`px-3 py-1 text-sm font-medium rounded border ${styles[status]}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {status?.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     </div>
   );
@@ -462,7 +462,7 @@ export default function MasternodeDetailPage() {
                     nodeHealth.status === 'degraded' ? 'bg-[var(--warning)]' :
                     'bg-[var(--critical)]'
                   }`} />
-                  {nodeHealth.status.charAt(0).toUpperCase() + nodeHealth.status.slice(1)}
+                  {nodeHealth.status?.charAt(0).toUpperCase() + nodeHealth.status.slice(1)}
                 </span>
                 <button
                   onClick={() => router.push(`/nodes/${nodeHealth.id}`)}

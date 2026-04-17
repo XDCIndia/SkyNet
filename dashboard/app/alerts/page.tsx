@@ -102,7 +102,7 @@ function StatusBadge({ status }: { status: string }) {
   
   return (
     <span className={`px-2 py-0.5 text-xs font-medium rounded ${styles[status as keyof typeof styles]}`}>
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {status?.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
 }

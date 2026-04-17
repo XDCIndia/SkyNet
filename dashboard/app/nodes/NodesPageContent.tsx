@@ -210,7 +210,7 @@ export default function NodesPageContent() {
     }
     
     // Otherwise return normal client type
-    return clientType.charAt(0).toUpperCase() + clientType.slice(1);
+    return clientType?.charAt(0).toUpperCase() + clientType.slice(1);
   };
 
   // Get client badge color

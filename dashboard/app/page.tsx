@@ -217,7 +217,7 @@ function getClientDisplayName(clientType?: string, clientVersion?: string): stri
   }
   
   // Otherwise return normal client type
-  return clientType.charAt(0).toUpperCase() + clientType.slice(1);
+  return clientType?.charAt(0).toUpperCase() + clientType.slice(1);
 }
 
 // Client Type Badge (XDC/Erigon/Geth)

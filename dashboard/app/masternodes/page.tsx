@@ -67,7 +67,7 @@ function StatusBadge({ status }: { status: 'active' | 'standby' | 'penalized' })
   
   return (
     <span className={`px-2 py-0.5 text-xs font-medium rounded border ${styles[status]}`}>
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {status?.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
 }
@@ -479,7 +479,7 @@ export default function MasternodesPage() {
                     filter === tab ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab?.charAt(0).toUpperCase() + tab.slice(1)}
                   <span className="ml-2 text-xs opacity-60">
                     {tab === 'active' ? stats?.totalActive : 
                      tab === 'standby' ? stats?.totalStandby : 
