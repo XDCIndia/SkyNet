@@ -91,7 +91,7 @@ function SeverityBadge({ severity }: { severity: 'critical' | 'warning' | 'info'
   
   return (
     <span className={`px-2 py-0.5 text-xs font-medium rounded border ${styles[severity]}`}>
-      {severity??.toUpperCase()}
+      {severity?.toUpperCase()}
     </span>
   );
 }

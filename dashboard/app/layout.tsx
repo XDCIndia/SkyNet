@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fira_Sans, Fira_Code } from "next/font/google";
+import { Fira_Sans, Fira_Code, DM_Sans, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
@@ -7,6 +7,7 @@ import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistratio
 // Import server initialization (only runs on server)
 import "@/lib/server-init";
 
+// Legacy fonts (keep during transition)
 const firaSans = Fira_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -18,6 +19,21 @@ const firaCode = Fira_Code({
   subsets: ["latin"],
   weight: ["400", "500"],
   variable: "--font-fira-code",
+  display: "swap",
+});
+
+// Precision Darkness fonts (Issue #76)
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "700", "900"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-jetbrains-mono",
   display: "swap",
 });
 
@@ -61,7 +77,7 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         <link rel="apple-touch-icon" href="/xdc-logo.png" />
       </head>
-      <body className={`${firaSans.variable} ${firaCode.variable} antialiased`}>
+      <body className={`${firaSans.variable} ${firaCode.variable} ${dmSans.variable} ${jetbrainsMono.variable} antialiased`}>
         <ThemeProvider
           attribute="data-theme"
           defaultTheme="dark"

@@ -833,3 +833,87 @@ input::placeholder, textarea::placeholder {
 .status-glow.critical::after {
   background: var(--critical);
 }
+
+/* ========================================
+   Precision Darkness Design System (Issue #76)
+   New tokens added alongside existing for Phase A
+   ======================================== */
+
+:root {
+  /* 5-Level Background Stack */
+  --void: #020408;        /* Page background - deepest */
+  --deep: #05080F;        /* Deepest inset areas */
+  --surface: #080D18;     /* Section alternating */
+  --raised: #0C1220;      /* Card backgrounds */
+  --lifted: #101828;      /* Hover states, elevated */
+
+  /* Brand Blue Palette (6 stops) */
+  --blue-50: #E6F4FF;
+  --blue-100: #B3DEFF;
+  --blue-200: #80C8FF;
+  --blue-300: #4DB2FF;    /* New primary accent */
+  --blue-400: #1E90FF;    /* Legacy fallback */
+  --blue-500: #1873CC;
+  --blue-600: #125699;
+
+  /* Text Hierarchy (4 levels) */
+  /* Note: Maps to existing with slight adjustments */
+  /* --text-primary: #F0F4F8;  (already defined) */
+  /* --text-secondary: #94A3B8; (already defined) */
+  /* --text-muted: #64748B;     (maps from --text-tertiary) */
+  --text-dimmed: #475569;  /* New: placeholders, disabled */
+
+  /* Blue-tinted Borders (replacing gray) */
+  --border-subtle-new: rgba(30, 144, 255, 0.06);
+  --border-card-new: rgba(30, 144, 255, 0.12);
+  --border-blue-glow-new: rgba(77, 178, 255, 0.30);
+  --border-input-new: rgba(30, 144, 255, 0.10);
+  --border-interactive: rgba(77, 178, 255, 0.40);
+
+  /* Shadow Tokens with blue glow */
+  --shadow-sm-new: 0 1px 2px rgba(0,0,0,0.50);
+  --shadow-md-new: 0 4px 12px rgba(0,0,0,0.60), 0 0 24px -4px rgba(77,178,255,0.15);
+  --shadow-lg-new: 0 8px 24px rgba(0,0,0,0.70), 0 0 32px -4px rgba(77,178,255,0.15);
+  --shadow-inset: inset 0 1px 2px rgba(0,0,0,0.40);
+  --blue-glow: rgba(77,178,255,0.15);
+
+  /* Spacing Rhythm */
+  --space-section: 48px;
+  --space-card-gap: 16px;
+  --space-card-pad: 20px;
+  --space-inset: 24px;
+}
+
+/* Section Alternation Utilities */
+.section-void {
+  background: var(--void);
+}
+
+.section-surface {
+  background: var(--surface);
+  border-top: 1px solid var(--border-subtle-new);
+  border-bottom: 1px solid var(--border-subtle-new);
+}
+
+/* Section Label (// section_name pattern) */
+.section-label {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  text-transform: none;
+}
+
+.section-label::before {
+  content: '// ';
+  color: var(--text-dimmed);
+}
+
+/* Gradient Text Utility */
+.text-gradient-new {
+  background: linear-gradient(135deg, var(--blue-300) 0%, var(--success) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
