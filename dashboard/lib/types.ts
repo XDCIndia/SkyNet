@@ -135,6 +135,11 @@ export interface SkyNetNode {
   os?: string;
   osType?: string;
   healthScore?: number;
+  syncStartedAt?: string;
+  syncCompletedAt?: string;
+  syncDurationSeconds?: number;
+  syncStartBlock?: number;
+  syncTargetBlock?: number;
 }
 
 export interface ClientDistributionItem {

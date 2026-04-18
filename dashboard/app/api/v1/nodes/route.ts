@@ -52,7 +52,12 @@ export async function GET(request: NextRequest) {
         m.os_release,
         m.os_arch,
         m.kernel_version,
-        m.collected_at   AS metrics_at
+        m.collected_at   AS metrics_at,
+        n.sync_started_at,
+        n.sync_completed_at,
+        n.sync_duration_seconds,
+        n.sync_start_block,
+        n.sync_target_block
       FROM skynet.nodes n
       LEFT JOIN LATERAL (
         SELECT * FROM skynet.node_metrics
@@ -66,7 +71,15 @@ export async function GET(request: NextRequest) {
     `;
 
     const result = await client.query(sql, params);
-    return NextResponse.json({ success: true, nodes: result.rows });
+    const nodes = result.rows.map((row: any) => ({
+      ...row,
+      syncStartedAt: row.sync_started_at,
+      syncCompletedAt: row.sync_completed_at,
+      syncDurationSeconds: row.sync_duration_seconds,
+      syncStartBlock: row.sync_start_block,
+      syncTargetBlock: row.sync_target_block,
+    }));
+    return NextResponse.json({ success: true, nodes });
   } catch (error: any) {
     console.error('Nodes error:', error.message);
     return NextResponse.json(
