@@ -169,6 +169,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Sync timing: start tracking when node begins syncing
+    await client.query(
+      `UPDATE skynet.nodes
+       SET sync_started_at = NOW(), sync_start_block = $1, sync_target_block = $2
+       WHERE id = $3 AND sync_started_at IS NULL AND $4 = true`,
+      [blockHeight, blockHeight, nodeId, isSyncing]
+    );
+
+    // Sync timing: mark complete when node finishes syncing
+    await client.query(
+      `UPDATE skynet.nodes
+       SET sync_completed_at = NOW(),
+           sync_duration_seconds = EXTRACT(EPOCH FROM NOW() - sync_started_at)::BIGINT
+       WHERE id = $1 AND sync_started_at IS NOT NULL AND sync_completed_at IS NULL AND $2 = false AND $3 > 0`,
+      [nodeId, isSyncing, blockHeight]
+    );
+
+    // Sync timing: keep target block updated while syncing
+    await client.query(
+      `UPDATE skynet.nodes SET sync_target_block = $1
+       WHERE id = $2 AND $3 = true AND $1 > COALESCE(sync_target_block, 0)`,
+      [blockHeight, nodeId, isSyncing]
+    );
+
     // Async alert evaluation — fire-and-forget, don't block heartbeat response
     // Evaluate every 5th heartbeat to reduce DB load (use modulo on timestamp minutes)
     const now = new Date();

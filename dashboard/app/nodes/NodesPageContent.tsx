@@ -92,6 +92,11 @@ export default function NodesPageContent() {
         os: node.os || node.os_type,
         osType: node.osType || node.os_type,
         healthScore: node.healthScore ?? 0,
+        syncStartedAt: node.syncStartedAt || node.sync_started_at || undefined,
+        syncCompletedAt: node.syncCompletedAt || node.sync_completed_at || undefined,
+        syncDurationSeconds: node.syncDurationSeconds ?? node.sync_duration_seconds ?? undefined,
+        syncStartBlock: node.syncStartBlock ?? node.sync_start_block ?? undefined,
+        syncTargetBlock: node.syncTargetBlock ?? node.sync_target_block ?? undefined,
       }));
       
       setNodes(mappedNodes);
@@ -246,6 +251,26 @@ export default function NodesPageContent() {
     if (os.includes('darwin') || os.includes('mac')) return '🍎';
     if (os.includes('win')) return '🪟';
     return '🐧'; // Default to Linux
+  };
+
+  // Format duration from seconds
+  const formatDuration = (seconds: number): string => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  };
+
+  // Format a timestamp as "Apr 18, 2:30 PM"
+  const formatDateTime = (timestamp: string): string => {
+    return new Date(timestamp).toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
   };
 
   // Format time ago
@@ -555,6 +580,50 @@ export default function NodesPageContent() {
                     />
                   </div>
                 </div>
+
+                {/* Sync Timing */}
+                {node.syncStartedAt && (
+                  <div className="mb-3 p-2 rounded-lg bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)] text-xs space-y-1">
+                    <div className="flex items-center gap-1 text-[#6B7280] mb-1.5">
+                      <Clock className="w-3 h-3" />
+                      <span className="font-medium text-[#9CA3AF]">Sync Timing</span>
+                    </div>
+                    {/* Sync Started */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#6B7280]">Started</span>
+                      <span className="text-[#D1D5DB] font-mono">
+                        {formatDateTime(node.syncStartedAt)}{' '}
+                        <span className="text-[#6B7280]">({formatTimeAgo(node.syncStartedAt)})</span>
+                      </span>
+                    </div>
+                    {/* Sync Duration */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#6B7280]">Duration</span>
+                      {node.syncCompletedAt && node.syncDurationSeconds !== undefined ? (
+                        <span className="text-[#10B981] font-mono">{formatDuration(node.syncDurationSeconds)}</span>
+                      ) : (
+                        <span className="text-[#F59E0B] font-mono flex items-center gap-1">
+                          {formatDuration(Math.floor((Date.now() - new Date(node.syncStartedAt).getTime()) / 1000))}
+                          <span className="text-[#6B7280] italic">syncing...</span>
+                        </span>
+                      )}
+                    </div>
+                    {/* Sync Progress blocks */}
+                    {(node.syncStartBlock !== undefined || node.syncTargetBlock !== undefined) && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#6B7280]">Blocks</span>
+                        <span className="text-[#D1D5DB] font-mono text-[10px]">
+                          {node.syncStartBlock !== undefined ? node.syncStartBlock.toLocaleString() : '?'}
+                          {' → '}
+                          <span className="text-[#1E90FF]">{node.blockHeight.toLocaleString()}</span>
+                          {node.syncTargetBlock !== undefined && (
+                            <span className="text-[#6B7280]"> / {node.syncTargetBlock.toLocaleString()}</span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Compact Resource + OS Row */}
                 <div className="mb-3 flex items-center gap-1.5 flex-wrap">
